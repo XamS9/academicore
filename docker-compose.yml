@@ -1,0 +1,48 @@
+services:
+
+  # ─────────────────────────────────────────────
+  # PostgreSQL 16
+  # ─────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: academicore_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-academicore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-academicore_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-academicore}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-academicore} -d ${POSTGRES_DB:-academicore}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # Express.js API
+  # ─────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: academicore_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-academicore}:${POSTGRES_PASSWORD:-academicore_pass}@db:5432/${POSTGRES_DB:-academicore}
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-secret-min-32-chars}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-to-another-long-random-secret-32}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
