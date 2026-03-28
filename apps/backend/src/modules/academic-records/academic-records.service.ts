@@ -36,24 +36,35 @@ export class AcademicRecordsService {
   async getStudentAverageByPeriod(studentId: string) {
     const records = await prisma.academicRecord.findMany({
       where: { studentId },
-      include: { academicPeriod: true },
+      include: {
+        academicPeriod: true,
+        group: { include: { subject: { select: { credits: true } } } },
+      },
     });
 
-    const byPeriod = new Map<string, { periodName: string; grades: number[] }>();
+    const byPeriod = new Map<string, { periodName: string; entries: Array<{ grade: number; credits: number }> }>();
     for (const r of records) {
       const key = r.academicPeriodId;
       if (!byPeriod.has(key)) {
-        byPeriod.set(key, { periodName: r.academicPeriod.name, grades: [] });
+        byPeriod.set(key, { periodName: r.academicPeriod.name, entries: [] });
       }
-      byPeriod.get(key)!.grades.push(Number(r.finalGrade));
+      byPeriod.get(key)!.entries.push({
+        grade: Number(r.finalGrade),
+        credits: r.group.subject.credits,
+      });
     }
 
-    return Array.from(byPeriod.entries()).map(([periodId, { periodName, grades }]) => ({
-      periodId,
-      periodName,
-      average: grades.reduce((a, b) => a + b, 0) / grades.length,
-      count: grades.length,
-    }));
+    return Array.from(byPeriod.entries()).map(([periodId, { periodName, entries }]) => {
+      const totalCredits = entries.reduce((sum, e) => sum + e.credits, 0);
+      const weightedSum = entries.reduce((sum, e) => sum + e.grade * e.credits, 0);
+      return {
+        periodId,
+        periodName,
+        average: totalCredits > 0 ? weightedSum / totalCredits : 0,
+        totalCredits,
+        count: entries.length,
+      };
+    });
   }
 
   async getPassedSubjects(studentId: string) {

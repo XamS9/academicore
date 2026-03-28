@@ -292,7 +292,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // ── 14. EVALUATIONS (3 per group, weights sum to 1.00) ───────────────────────
+  // ── 14. EVALUATIONS (3 per group, weights sum to 100) ────────────────────────
   // Helper: find existing evaluation by group+name or create it
   const findOrCreateEval = async (groupId: string, name: string, evaluationTypeId: string, weight: number) => {
     const existing = await prisma.evaluation.findFirst({ where: { groupId, name } });
@@ -304,9 +304,9 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
 
   const ensureEvals = async (groupId: string) => {
     const [exam, practice, project] = await Promise.all([
-      findOrCreateEval(groupId, 'Examen Parcial', examType.id,    0.40),
-      findOrCreateEval(groupId, 'Prácticas',      practiceType.id, 0.30),
-      findOrCreateEval(groupId, 'Proyecto Final', projectType.id,  0.30),
+      findOrCreateEval(groupId, 'Examen Parcial', examType.id,    40),
+      findOrCreateEval(groupId, 'Prácticas',      practiceType.id, 30),
+      findOrCreateEval(groupId, 'Proyecto Final', projectType.id,  30),
     ]);
     return { exam, practice, project };
   };
@@ -403,19 +403,24 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     prisma.certificationCriteria.upsert({
       where: { certificationType_careerId: { certificationType: 'DEGREE', careerId: career.id } },
       update: {},
-      create: { certificationType: 'DEGREE', careerId: career.id, minGrade: 7.0, validityMonths: 60, description: 'Título de licenciatura — promedio mínimo 7.0' },
-    }),
-    prisma.certificationCriteria.upsert({
-      where: { certificationType_careerId: { certificationType: 'TRANSCRIPT', careerId: null } },
-      update: {},
-      create: { certificationType: 'TRANSCRIPT', careerId: null, minGrade: 6.0, validityMonths: 12, description: 'Historial académico oficial' },
-    }),
-    prisma.certificationCriteria.upsert({
-      where: { certificationType_careerId: { certificationType: 'ENROLLMENT_PROOF', careerId: null } },
-      update: {},
-      create: { certificationType: 'ENROLLMENT_PROOF', careerId: null, minGrade: 0.0, validityMonths: 6, description: 'Constancia de inscripción vigente' },
+      create: { certificationType: 'DEGREE', careerId: career.id, minGrade: 7.0, validityMonths: 60, minCredits: 200, requireAllMandatory: true, description: 'Título de licenciatura — promedio mínimo 7.0, todas las materias obligatorias aprobadas' },
     }),
   ]);
+
+  // Criteria with null careerId — upsert doesn't support null in composite keys, use findFirst + create
+  for (const criteria of [
+    { certificationType: 'TRANSCRIPT' as const, minGrade: 6.0, validityMonths: 12, description: 'Historial académico oficial' },
+    { certificationType: 'ENROLLMENT_PROOF' as const, minGrade: 0.0, validityMonths: 6, description: 'Constancia de inscripción vigente' },
+  ]) {
+    const exists = await prisma.certificationCriteria.findFirst({
+      where: { certificationType: criteria.certificationType, careerId: null },
+    });
+    if (!exists) {
+      await prisma.certificationCriteria.create({
+        data: { ...criteria, careerId: null },
+      });
+    }
+  }
 
   // ── 18. SAMPLE CERTIFICATION ─────────────────────────────────────────────────
   const verificationCode = '00000000-seed-cert-0000-000000000001';

@@ -17,6 +17,8 @@ interface CreateCriteriaDto {
   careerId?: string;
   minGrade: number;
   validityMonths: number;
+  minCredits?: number;
+  requireAllMandatory?: boolean;
   description?: string;
 }
 
@@ -67,6 +69,68 @@ export class CertificationsService {
         ...(dto.careerId ? { careerId: dto.careerId } : { careerId: null }),
       },
     });
+
+    // ── Eligibility validation ──
+    if (criteria) {
+      const passedRecords = await prisma.academicRecord.findMany({
+        where: { studentId: dto.studentId, passed: true },
+        include: { group: { include: { subject: { select: { credits: true, id: true } } } } },
+      });
+
+      // 1. minGrade check: cumulative credit-weighted GPA
+      if (Number(criteria.minGrade) > 0) {
+        if (passedRecords.length === 0) {
+          throw new HttpError(400, 'El estudiante no tiene materias aprobadas');
+        }
+
+        const totalWeighted = passedRecords.reduce(
+          (sum, r) => sum + Number(r.finalGrade) * r.group.subject.credits, 0,
+        );
+        const totalCredits = passedRecords.reduce(
+          (sum, r) => sum + r.group.subject.credits, 0,
+        );
+        const cumulativeGPA = totalCredits > 0 ? totalWeighted / totalCredits : 0;
+
+        if (cumulativeGPA < Number(criteria.minGrade)) {
+          throw new HttpError(400,
+            `Promedio acumulado del estudiante (${cumulativeGPA.toFixed(2)}) es menor al mínimo requerido (${criteria.minGrade})`,
+          );
+        }
+      }
+
+      // 2. requireAllMandatory check
+      if (criteria.requireAllMandatory && dto.careerId) {
+        const mandatorySubjects = await prisma.careerSubject.findMany({
+          where: { careerId: dto.careerId, isMandatory: true },
+          select: { subjectId: true },
+        });
+
+        const passedSubjectIds = new Set(passedRecords.map((r) => r.group.subject.id));
+
+        const unpassedMandatory = mandatorySubjects.filter(
+          (ms) => !passedSubjectIds.has(ms.subjectId),
+        );
+
+        if (unpassedMandatory.length > 0) {
+          throw new HttpError(400,
+            `El estudiante no ha aprobado todas las materias obligatorias (${unpassedMandatory.length} pendientes)`,
+          );
+        }
+      }
+
+      // 3. minCredits check
+      if (criteria.minCredits) {
+        const totalCredits = passedRecords.reduce(
+          (sum, r) => sum + r.group.subject.credits, 0,
+        );
+
+        if (totalCredits < criteria.minCredits) {
+          throw new HttpError(400,
+            `El estudiante tiene ${totalCredits} créditos pero necesita ${criteria.minCredits}`,
+          );
+        }
+      }
+    }
 
     const now = new Date();
     const expiresAt = criteria
@@ -144,6 +208,8 @@ export class CertificationsService {
         careerId: dto.careerId ?? null,
         minGrade: dto.minGrade,
         validityMonths: dto.validityMonths,
+        minCredits: dto.minCredits ?? null,
+        requireAllMandatory: dto.requireAllMandatory ?? false,
         description: dto.description,
       },
     });

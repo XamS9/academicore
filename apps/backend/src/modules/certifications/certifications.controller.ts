@@ -15,6 +15,8 @@ const CreateCriteriaDto = z.object({
   careerId: z.string().uuid().optional(),
   minGrade: z.number().min(0).max(100).default(60),
   validityMonths: z.number().int().min(1),
+  minCredits: z.number().int().min(0).optional(),
+  requireAllMandatory: z.boolean().default(false),
   description: z.string().max(255).optional(),
 });
 

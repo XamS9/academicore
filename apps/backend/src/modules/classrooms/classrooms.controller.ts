@@ -49,6 +49,15 @@ class ClassroomsController {
       next(err);
     }
   };
+
+  softDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await classroomsService.softDelete(req.params.id);
+      res.status(204).send();
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export const classroomsController = new ClassroomsController();

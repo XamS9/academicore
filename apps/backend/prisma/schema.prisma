@@ -278,9 +278,10 @@ model Classroom {
   name      String   @db.VarChar(50)
   building  String?  @db.VarChar(100)
   capacity  Int      @db.SmallInt
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  isActive  Boolean   @default(true) @map("is_active")
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   groupClassrooms GroupClassroom[]
 
@@ -464,9 +465,11 @@ model CertificationCriteria {
   certificationType CertificationType @map("certification_type")
   careerId          String?           @map("career_id") @db.Uuid
   minGrade          Decimal           @default(60.00) @map("min_grade") @db.Decimal(5, 2)
-  validityMonths    Int               @map("validity_months") @db.SmallInt
-  description       String?           @db.VarChar(255)
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  validityMonths      Int               @map("validity_months") @db.SmallInt
+  minCredits          Int?              @map("min_credits") @db.SmallInt
+  requireAllMandatory Boolean           @default(false) @map("require_all_mandatory")
+  description         String?           @db.VarChar(255)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   career Career? @relation(fields: [careerId], references: [id])

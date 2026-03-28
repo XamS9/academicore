@@ -4,12 +4,14 @@ import { CreateClassroomDto, UpdateClassroomDto } from './classrooms.dto';
 
 class ClassroomsService {
   async findAll() {
-    return prisma.classroom.findMany();
+    return prisma.classroom.findMany({
+      where: { deletedAt: null },
+    });
   }
 
   async findById(id: string) {
-    const classroom = await prisma.classroom.findUnique({
-      where: { id },
+    const classroom = await prisma.classroom.findFirst({
+      where: { id, deletedAt: null },
     });
     if (!classroom) throw new HttpError(404, 'Classroom not found');
     return classroom;
@@ -34,6 +36,14 @@ class ClassroomsService {
     return prisma.classroom.update({
       where: { id },
       data: { isActive: !classroom.isActive },
+    });
+  }
+
+  async softDelete(id: string) {
+    await this.findById(id);
+    return prisma.classroom.update({
+      where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 }
