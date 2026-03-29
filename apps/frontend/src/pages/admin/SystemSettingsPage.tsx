@@ -19,7 +19,7 @@ interface SettingsForm {
 }
 
 const defaultForm: SettingsForm = {
-  passingGrade: 6.0,
+  passingGrade: 60,
   maxSubjectsPerEnrollment: 7,
   maxEvaluationWeight: 100,
   atRiskThreshold: 3,
@@ -85,9 +85,9 @@ export default function SystemSettingsPage() {
           label="Calificación aprobatoria"
           type="number"
           value={form.passingGrade}
-          onChange={(e) => setForm({ ...form, passingGrade: Math.max(0, Math.min(10, Number(e.target.value))) })}
-          inputProps={{ min: 0, max: 10, step: 0.1 }}
-          helperText="Calificación mínima para aprobar una materia (escala 0–10)"
+          onChange={(e) => setForm({ ...form, passingGrade: Math.max(0, Math.min(100, Number(e.target.value))) })}
+          inputProps={{ min: 0, max: 100, step: 1 }}
+          helperText="Calificación mínima para aprobar una materia (escala 0–100)"
           fullWidth
           margin="normal"
         />

@@ -580,7 +580,7 @@ model ContentItem {
 
 model SystemSettings {
   id                       String   @id @default(uuid()) @db.Uuid
-  passingGrade             Decimal  @default(6.0)  @map("passing_grade") @db.Decimal(5, 2)
+  passingGrade             Decimal  @default(60)   @map("passing_grade") @db.Decimal(5, 2)
   maxSubjectsPerEnrollment Int      @default(7)    @map("max_subjects_per_enrollment") @db.SmallInt
   maxEvaluationWeight      Decimal  @default(100)  @map("max_evaluation_weight") @db.Decimal(5, 2)
   atRiskThreshold          Int      @default(3)    @map("at_risk_threshold") @db.SmallInt

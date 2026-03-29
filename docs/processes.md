@@ -399,7 +399,7 @@ Single-row configuration table that controls system-wide academic parameters. Pr
 
 | Setting | Field | Default | Description |
 |---------|-------|---------|-------------|
-| Passing Grade | `passingGrade` | 6.0 | Minimum grade to pass a subject (0–10 scale). Used by DB trigger `fn_generate_academic_record`. |
+| Passing Grade | `passingGrade` | 60 | Minimum grade to pass a subject (0–100 scale). Used by DB trigger `fn_generate_academic_record`. |
 | Max Subjects per Enrollment | `maxSubjectsPerEnrollment` | 7 | Maximum subjects a student can enroll in per academic period. Enforced by `sp_enroll_student`. |
 | Max Evaluation Weight | `maxEvaluationWeight` | 100 | Maximum sum of evaluation weights per group. Enforced by the evaluations service. |
 | AT_RISK Threshold | `atRiskThreshold` | 3 | Number of failed subjects that triggers AT_RISK status. Used by DB trigger `fn_update_student_academic_status`. |

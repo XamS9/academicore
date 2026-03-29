@@ -311,10 +311,16 @@ export default function ContentPage() {
                       </IconButton>
                     </>
                   }
+                  sx={{ pr: 12 }}
                 >
                   <ListItemIcon sx={{ minWidth: 32 }}>{typeIcons[item.type]}</ListItemIcon>
                   <ListItemText
-                    primary={item.title}
+                    primary={
+                      <Box className="flex items-center gap-2">
+                        <span>{item.title}</span>
+                        <Chip label={typeLabels[item.type]} size="small" color={typeColors[item.type]} variant="outlined" />
+                      </Box>
+                    }
                     secondaryTypographyProps={{ component: 'div' }}
                     secondary={
                       item.type === 'LINK' || item.type === 'FILE_REF' ? (
@@ -326,7 +332,6 @@ export default function ContentPage() {
                       )
                     }
                   />
-                  <Chip label={typeLabels[item.type]} size="small" color={typeColors[item.type]} variant="outlined" sx={{ mr: 1 }} />
                 </ListItem>
               ))}
             </List>

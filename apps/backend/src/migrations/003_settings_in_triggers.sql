@@ -23,10 +23,10 @@ DECLARE
   v_attempt          SMALLINT;
   v_passing_grade    NUMERIC;
 BEGIN
-  -- Read passing grade from system settings (fallback: 6.0)
+  -- Read passing grade from system settings (fallback: 60)
   SELECT COALESCE(
     (SELECT passing_grade FROM system_settings LIMIT 1),
-    6.0
+    60.0
   ) INTO v_passing_grade;
 
   -- Get group_id from the evaluation

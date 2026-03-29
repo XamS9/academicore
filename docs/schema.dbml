@@ -378,7 +378,7 @@ Table content_items {
 
 Table system_settings {
   id                        uuid         [pk, default: `gen_random_uuid()`]
-  passing_grade             decimal(5,2) [not null, default: 6.00, note: 'Min grade to pass (0-10)']
+  passing_grade             decimal(5,2) [not null, default: 60.00, note: 'Min grade to pass (0-100)']
   max_subjects_per_enrollment smallint   [not null, default: 7, note: 'Max subjects per student per period']
   max_evaluation_weight     decimal(5,2) [not null, default: 100.00, note: 'Max sum of eval weights per group']
   at_risk_threshold         smallint     [not null, default: 3, note: 'Failed subjects for AT_RISK status']
