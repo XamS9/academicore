@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './store/auth.context';
+import PrivateRoute from './components/auth/PrivateRoute';
 import AppLayout from './components/layout/AppLayout';
 
 import LoginPage from './pages/LoginPage';
@@ -17,6 +18,16 @@ import SubjectsPage from './pages/admin/SubjectsPage';
 import AcademicPeriodsPage from './pages/admin/AcademicPeriodsPage';
 import ClassroomsPage from './pages/admin/ClassroomsPage';
 import GroupsPage from './pages/admin/GroupsPage';
+import EnrollmentsPage from './pages/admin/EnrollmentsPage';
+import EvaluationsPage from './pages/admin/EvaluationsPage';
+import GradesPage from './pages/admin/GradesPage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+import TeacherGroupsPage from './pages/teacher/TeacherGroupsPage';
+import StudentEnrollmentPage from './pages/student/StudentEnrollmentPage';
+import StudentGradesPage from './pages/student/StudentGradesPage';
+import ContentPage from './pages/admin/ContentPage';
+import StudentContentPage from './pages/student/StudentContentPage';
+import SystemSettingsPage from './pages/admin/SystemSettingsPage';
 
 export default function App() {
   return (
@@ -27,13 +38,15 @@ export default function App() {
         <Route path="/verify/:code" element={<ValidateCertPage />} />
         <Route path="/verify" element={<ValidateCertPage />} />
 
-        {/* App shell */}
+        {/* Auth guard → App shell */}
+        <Route element={<PrivateRoute />}>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="academic-history" element={<AcademicHistoryPage />} />
           <Route path="certifications" element={<CertificationsPage />} />
           <Route path="ui-standards" element={<UIStandardsPage />} />
+          {/* Admin */}
           <Route path="usuarios" element={<UsersPage />} />
           <Route path="estudiantes" element={<StudentsPage />} />
           <Route path="profesores" element={<TeachersPage />} />
@@ -42,7 +55,21 @@ export default function App() {
           <Route path="periodos" element={<AcademicPeriodsPage />} />
           <Route path="aulas" element={<ClassroomsPage />} />
           <Route path="grupos" element={<GroupsPage />} />
+          <Route path="inscripciones" element={<EnrollmentsPage />} />
+          <Route path="evaluaciones" element={<EvaluationsPage />} />
+          <Route path="calificaciones" element={<GradesPage />} />
+          <Route path="auditoria" element={<AuditLogsPage />} />
+          <Route path="configuracion" element={<SystemSettingsPage />} />
+          {/* Admin + Teacher */}
+          <Route path="contenido" element={<ContentPage />} />
+          {/* Teacher */}
+          <Route path="mis-grupos" element={<TeacherGroupsPage />} />
+          {/* Student */}
+          <Route path="mi-inscripcion" element={<StudentEnrollmentPage />} />
+          <Route path="mis-calificaciones" element={<StudentGradesPage />} />
+          <Route path="mi-contenido" element={<StudentContentPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
         </Route>
       </Routes>
     </AuthProvider>

@@ -29,8 +29,18 @@ import SchoolIcon from '@mui/icons-material/School';
 import WarningIcon from '@mui/icons-material/Warning';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import BlockIcon from '@mui/icons-material/Block';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 
 import { useAuth } from '../../store/auth.context';
+
+const statusConfig: Record<string, { color: 'success' | 'warning' | 'info' | 'error'; icon: React.ReactNode; label: string }> = {
+  ACTIVE: { color: 'success', icon: <CheckCircleIcon />, label: 'ACTIVO' },
+  AT_RISK: { color: 'warning', icon: <WarningIcon />, label: 'EN RIESGO' },
+  ELIGIBLE_FOR_GRADUATION: { color: 'info', icon: <EmojiEventsIcon />, label: 'ELEGIBLE PARA GRADUACIÓN' },
+  SUSPENDED: { color: 'error', icon: <BlockIcon />, label: 'SUSPENDIDO' },
+  GRADUATED: { color: 'success', icon: <SchoolIcon />, label: 'GRADUADO' },
+  WITHDRAWN: { color: 'warning', icon: <ExitToAppIcon />, label: 'BAJA' },
+};
 import { academicRecordsService } from '../../services/academic-records.service';
 import { studentsService } from '../../services/students.service';
 
@@ -41,7 +51,7 @@ interface AcademicRecord {
   passed: boolean;
   academicPeriodId: string;
   group: {
-    code: string;
+    groupCode: string;
     subject: { name: string };
     academicPeriod: { name: string };
   };
@@ -93,15 +103,17 @@ export default function AcademicHistoryPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    studentsService.getAll().then((data: StudentItem[]) => {
-      setStudents(data);
-      if (currentUser?.role === 'STUDENT') {
-        const me = data.find((s) => s.user.email === currentUser.email);
-        if (me) setSelectedStudentId(me.id);
-      } else if (data.length > 0) {
-        setSelectedStudentId(data[0].id);
-      }
-    }).catch(console.error);
+    if (currentUser?.role === 'STUDENT') {
+      studentsService.getByUserId(currentUser.id).then((data: StudentItem) => {
+        setStudents([data]);
+        setSelectedStudentId(data.id);
+      }).catch(console.error);
+    } else {
+      studentsService.getAll().then((data: StudentItem[]) => {
+        setStudents(data);
+        if (data.length > 0) setSelectedStudentId(data[0].id);
+      }).catch(console.error);
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -196,7 +208,7 @@ export default function AcademicHistoryPage() {
                       {records.map((rec) => (
                         <TableRow key={rec.id} hover>
                           <TableCell>{rec.group.subject.name}</TableCell>
-                          <TableCell>{rec.group.code}</TableCell>
+                          <TableCell>{rec.group.groupCode}</TableCell>
                           <TableCell>{rec.academicPeriod.name}</TableCell>
                           <TableCell align="center">
                             <Typography
@@ -262,7 +274,7 @@ export default function AcademicHistoryPage() {
                           {rec.group.subject.name}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" display="block">
-                          {rec.group.code} · {rec.academicPeriod.name}
+                          {rec.group.groupCode} · {rec.academicPeriod.name}
                         </Typography>
                         <Box className="flex items-center justify-between mt-2">
                           <Typography variant="h6" color="success.main" fontWeight={700}>
@@ -435,34 +447,39 @@ export default function AcademicHistoryPage() {
               <Grid container spacing={3}>
                 {/* Status card */}
                 <Grid item xs={12} md={5}>
-                  <Card sx={{ border: '2px solid', borderColor: 'success.main' }}>
-                    <CardContent>
-                      <Box className="flex items-center gap-2 mb-3">
-                        <SchoolIcon color="success" sx={{ fontSize: 32 }} />
-                        <Box>
-                          <Typography variant="h6" fontWeight={700}>
-                            {selectedStudent
-                              ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
-                              : '—'}
+                  {(() => {
+                    const st = statusConfig[selectedStudent?.academicStatus ?? 'ACTIVE'] ?? statusConfig.ACTIVE;
+                    return (
+                      <Card sx={{ border: '2px solid', borderColor: `${st.color}.main` }}>
+                        <CardContent>
+                          <Box className="flex items-center gap-2 mb-3">
+                            <SchoolIcon color={st.color} sx={{ fontSize: 32 }} />
+                            <Box>
+                              <Typography variant="h6" fontWeight={700}>
+                                {selectedStudent
+                                  ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
+                                  : '—'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {selectedStudent?.studentCode ?? '—'}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            {selectedStudent?.career?.name ?? '—'}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {selectedStudent?.studentCode ?? '—'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        {selectedStudent?.career?.name ?? '—'}
-                      </Typography>
-                      <Box className="mt-3">
-                        <Chip
-                          label={selectedStudent?.academicStatus ?? 'ACTIVO'}
-                          color="success"
-                          icon={<CheckCircleIcon />}
-                          sx={{ fontWeight: 700 }}
-                        />
-                      </Box>
-                    </CardContent>
-                  </Card>
+                          <Box className="mt-3">
+                            <Chip
+                              label={st.label}
+                              color={st.color}
+                              icon={st.icon as React.ReactElement}
+                              sx={{ fontWeight: 700 }}
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
                 </Grid>
 
                 {/* Criteria checklist */}
@@ -506,10 +523,15 @@ export default function AcademicHistoryPage() {
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                     <Box className="flex flex-wrap gap-2">
-                      <Chip icon={<CheckCircleIcon />} label="ACTIVO" color="success" />
-                      <Chip icon={<WarningIcon />} label="EN_RIESGO" variant="outlined" color="warning" />
-                      <Chip icon={<EmojiEventsIcon />} label="ELEGIBLE_GRADUACIÓN" variant="outlined" color="info" />
-                      <Chip icon={<BlockIcon />} label="SUSPENDIDO" variant="outlined" color="error" />
+                      {Object.entries(statusConfig).map(([key, cfg]) => (
+                        <Chip
+                          key={key}
+                          icon={cfg.icon as React.ReactElement}
+                          label={cfg.label}
+                          color={cfg.color}
+                          variant={selectedStudent?.academicStatus === key ? 'filled' : 'outlined'}
+                        />
+                      ))}
                     </Box>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                       Solo está activo el indicador correspondiente al estado del estudiante seleccionado.

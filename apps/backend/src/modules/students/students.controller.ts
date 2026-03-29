@@ -21,6 +21,15 @@ class StudentsController {
     }
   };
 
+  findByUserId = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const student = await studentsService.findByUserId(req.params.userId);
+      res.status(200).json(student);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = CreateStudentDto.parse(req.body);

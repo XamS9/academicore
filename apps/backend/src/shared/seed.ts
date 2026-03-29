@@ -459,6 +459,79 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     await prisma.auditLog.create({ data: entry }).catch(() => { /* skip duplicates */ });
   }
 
+  // ── 20. TOPICS & CONTENT ITEMS ───────────────────────────────────────────
+  // PRG201 — Programación Orientada a Objetos (2025-1)
+  const topicPrg1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 1 } },
+    update: {},
+    create: { groupId: grpPrg201.id, title: 'Introducción a POO', description: 'Conceptos fundamentales de la programación orientada a objetos', sortOrder: 1 },
+  });
+  const topicPrg2 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 2 } },
+    update: {},
+    create: { groupId: grpPrg201.id, title: 'Clases y Objetos', description: 'Definición de clases, atributos, métodos y constructores', sortOrder: 2 },
+  });
+  const topicPrg3 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 3 } },
+    update: {},
+    create: { groupId: grpPrg201.id, title: 'Herencia y Polimorfismo', description: 'Herencia, clases abstractas, interfaces y polimorfismo', sortOrder: 3 },
+  });
+
+  // BD101 — Base de Datos (2025-1)
+  const topicBd1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpBd101.id, sortOrder: 1 } },
+    update: {},
+    create: { groupId: grpBd101.id, title: 'Modelo Relacional', description: 'Fundamentos del modelo relacional: tablas, columnas, claves primarias y foráneas', sortOrder: 1 },
+  });
+  const topicBd2 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpBd101.id, sortOrder: 2 } },
+    update: {},
+    create: { groupId: grpBd101.id, title: 'SQL Básico', description: 'SELECT, INSERT, UPDATE, DELETE y filtrado con WHERE', sortOrder: 2 },
+  });
+
+  // Content items — PRG201
+  for (const item of [
+    { topicId: topicPrg1.id, title: 'Notas de clase', type: 'TEXT' as const, content: 'La POO es un paradigma de programación basado en el concepto de objetos, que contienen datos y código.', sortOrder: 1 },
+    { topicId: topicPrg1.id, title: 'Tutorial oficial de Java', type: 'LINK' as const, content: 'https://docs.oracle.com/javase/tutorial/java/concepts/', sortOrder: 2 },
+    { topicId: topicPrg2.id, title: 'Guía de clases en Java', type: 'LINK' as const, content: 'https://www.w3schools.com/java/java_classes.asp', sortOrder: 1 },
+    { topicId: topicPrg2.id, title: 'Ejemplo práctico', type: 'TEXT' as const, content: 'Crear una clase Vehiculo con atributos marca, modelo y año. Implementar constructor y métodos getter/setter.', sortOrder: 2 },
+    { topicId: topicPrg3.id, title: 'Resumen de herencia', type: 'TEXT' as const, content: 'La herencia permite crear nuevas clases a partir de clases existentes, heredando sus atributos y métodos.', sortOrder: 1 },
+  ]) {
+    await prisma.contentItem.upsert({
+      where: { topicId_sortOrder: { topicId: item.topicId, sortOrder: item.sortOrder } },
+      update: {},
+      create: item,
+    });
+  }
+
+  // Content items — BD101
+  for (const item of [
+    { topicId: topicBd1.id, title: 'Notas de clase', type: 'TEXT' as const, content: 'El modelo relacional organiza datos en tablas (relaciones), donde cada tabla tiene filas (tuplas) y columnas (atributos).', sortOrder: 1 },
+    { topicId: topicBd1.id, title: 'Tutorial de PostgreSQL', type: 'LINK' as const, content: 'https://www.postgresql.org/docs/current/tutorial.html', sortOrder: 2 },
+    { topicId: topicBd2.id, title: 'Referencia SQL', type: 'LINK' as const, content: 'https://www.w3schools.com/sql/', sortOrder: 1 },
+    { topicId: topicBd2.id, title: 'Ejercicios SQL (PDF)', type: 'FILE_REF' as const, content: 'https://drive.google.com/ejemplo-ejercicios-sql.pdf', sortOrder: 2 },
+  ]) {
+    await prisma.contentItem.upsert({
+      where: { topicId_sortOrder: { topicId: item.topicId, sortOrder: item.sortOrder } },
+      update: {},
+      create: item,
+    });
+  }
+
+  // ── 21. SYSTEM SETTINGS ───────────────────────────────────────────────────
+  const existingSettings = await prisma.systemSettings.findFirst();
+  if (!existingSettings) {
+    await prisma.systemSettings.create({
+      data: {
+        passingGrade: 6.0,
+        maxSubjectsPerEnrollment: 7,
+        maxEvaluationWeight: 100,
+        atRiskThreshold: 3,
+        updatedBy: adminUser.id,
+      },
+    });
+  }
+
   console.log('');
   console.log('✅  Seed complete');
   console.log('');

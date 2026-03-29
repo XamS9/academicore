@@ -68,6 +68,12 @@ enum AuditAction {
   STATUS_CHANGE
 }
 
+enum ContentItemType {
+  LINK
+  TEXT
+  FILE_REF
+}
+
 // ─────────────────────────────────────────────
 // 1. USERS — Supertype
 // ─────────────────────────────────────────────
@@ -87,9 +93,10 @@ model User {
   student       Student?
   teacher       Teacher?
   userRoles     UserRole[]
-  gradesGiven   Grade[]        @relation("GradedBy")
-  certIssued    Certification[] @relation("IssuedBy")
-  auditLogs     AuditLog[]
+  gradesGiven      Grade[]          @relation("GradedBy")
+  certIssued       Certification[]  @relation("IssuedBy")
+  auditLogs        AuditLog[]
+  settingsUpdates  SystemSettings[] @relation("SettingsUpdatedBy")
 
   @@map("users")
 }
@@ -311,6 +318,7 @@ model Group {
   enrollmentSubjects EnrollmentSubject[]
   evaluations       Evaluation[]
   academicRecords   AcademicRecord[]
+  topics            Topic[]
 
   @@unique([subjectId, academicPeriodId, groupCode])
   @@map("groups")
@@ -524,4 +532,62 @@ model AuditLog {
   @@index([entityType, entityId], name: "idx_audit_entity")
   @@index([createdAt], name: "idx_audit_created_at")
   @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// 23. TOPICS — Course content sections per group
+// ─────────────────────────────────────────────
+
+model Topic {
+  id          String   @id @default(uuid()) @db.Uuid
+  groupId     String   @map("group_id") @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?  @db.VarChar(500)
+  sortOrder   Int      @map("sort_order") @db.SmallInt
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group        Group         @relation(fields: [groupId], references: [id])
+  contentItems ContentItem[]
+
+  @@unique([groupId, sortOrder])
+  @@map("topics")
+}
+
+// ─────────────────────────────────────────────
+// 24. CONTENT_ITEMS — Materials within a topic
+// ─────────────────────────────────────────────
+
+model ContentItem {
+  id        String          @id @default(uuid()) @db.Uuid
+  topicId   String          @map("topic_id") @db.Uuid
+  title     String          @db.VarChar(200)
+  type      ContentItemType
+  content   String          @db.Text
+  sortOrder Int             @map("sort_order") @db.SmallInt
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, sortOrder])
+  @@map("content_items")
+}
+
+// ─────────────────────────────────────────────
+// 25. SYSTEM_SETTINGS — Single-row config
+// ─────────────────────────────────────────────
+
+model SystemSettings {
+  id                       String   @id @default(uuid()) @db.Uuid
+  passingGrade             Decimal  @default(6.0)  @map("passing_grade") @db.Decimal(5, 2)
+  maxSubjectsPerEnrollment Int      @default(7)    @map("max_subjects_per_enrollment") @db.SmallInt
+  maxEvaluationWeight      Decimal  @default(100)  @map("max_evaluation_weight") @db.Decimal(5, 2)
+  atRiskThreshold          Int      @default(3)    @map("at_risk_threshold") @db.SmallInt
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy                String?  @map("updated_by") @db.Uuid
+
+  updater User? @relation("SettingsUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("system_settings")
 }

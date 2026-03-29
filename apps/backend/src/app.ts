@@ -20,6 +20,9 @@ import { academicRecordsRouter } from './modules/academic-records/academic-recor
 import { certificationsRouter } from './modules/certifications/certifications.router';
 import { auditLogsRouter } from './modules/audit-logs/audit-logs.router';
 import { evaluationTypesRouter } from './modules/evaluation-types/evaluation-types.router';
+import { topicsRouter } from './modules/topics/topics.router';
+import { contentItemsRouter } from './modules/content-items/content-items.router';
+import { systemSettingsRouter } from './modules/system-settings/system-settings.router';
 
 const app = express();
 
@@ -49,6 +52,9 @@ api.use('/academic-records', academicRecordsRouter);
 api.use('/certifications', certificationsRouter);
 api.use('/audit-logs', auditLogsRouter);
 api.use('/evaluation-types', evaluationTypesRouter);
+api.use('/topics', topicsRouter);
+api.use('/content-items', contentItemsRouter);
+api.use('/configuracion', systemSettingsRouter);
 
 app.use('/api', api);
 

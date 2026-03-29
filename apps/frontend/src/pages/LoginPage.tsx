@@ -13,7 +13,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
 import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth.context';
 
 type RoleOption = 'ADMIN' | 'TEACHER' | 'STUDENT';
@@ -31,7 +31,7 @@ const demoCredentials: Record<RoleOption, { email: string; password: string }> =
 };
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -39,6 +39,10 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<RoleOption>('STUDENT');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleRoleSelect = (role: RoleOption) => {
     setSelectedRole(role);

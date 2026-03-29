@@ -94,6 +94,11 @@ Copy `.env.example` → `.env` at monorepo root. Key vars:
 - `JWT_SECRET` / `JWT_REFRESH_SECRET` — min 32 chars each
 - `VITE_API_URL` — frontend API base (default `http://localhost:3000/api`)
 
+## Documentation
+
+- **`docs/processes.md`** — Documents every business process the app handles (enrollment, grading, certification, etc.) including validation steps, actor roles, and automated triggers. **This file must be kept up to date whenever a business process is added, modified, or removed.**
+- **`docs/schema.dbml`** — DBML representation of the full database schema (all tables, enums, relationships, indexes, and constraints). **This file must be kept in sync whenever the Prisma schema changes.**
+
 ## Docker
 
 `docker-compose.yml` runs PostgreSQL 16 (`academicore_db`) and backend (`academicore_api`). Backend uses multi-stage Dockerfile at `apps/backend/Dockerfile`. DB healthcheck with `pg_isready`.

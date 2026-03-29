@@ -3,6 +3,11 @@ import { HttpError } from '../../shared/http-error';
 import { CreateEvaluationDto, UpdateEvaluationDto } from './evaluations.dto';
 
 export class EvaluationsService {
+  private async getMaxWeight(): Promise<number> {
+    const settings = await prisma.systemSettings.findFirst();
+    return settings ? Number(settings.maxEvaluationWeight) : 100;
+  }
+
   async findByGroup(groupId: string) {
     return prisma.evaluation.findMany({
       where: { groupId },
@@ -33,10 +38,11 @@ export class EvaluationsService {
 
   async create(dto: CreateEvaluationDto) {
     const currentSum = await this.validateWeightSum(dto.groupId);
-    if (currentSum + dto.weight > 100) {
+    const maxWeight = await this.getMaxWeight();
+    if (currentSum + dto.weight > maxWeight) {
       throw new HttpError(
         400,
-        `Total weight would exceed 100. Current sum: ${currentSum}, attempted addition: ${dto.weight}`,
+        `Total weight would exceed ${maxWeight}. Current sum: ${currentSum}, attempted addition: ${dto.weight}`,
       );
     }
     return prisma.evaluation.create({
@@ -58,10 +64,11 @@ export class EvaluationsService {
 
     if (dto.weight !== undefined) {
       const currentSum = await this.validateWeightSum(existing.groupId, id);
-      if (currentSum + dto.weight > 100) {
+      const maxWeight = await this.getMaxWeight();
+      if (currentSum + dto.weight > maxWeight) {
         throw new HttpError(
           400,
-          `Total weight would exceed 100. Current sum (excluding this): ${currentSum}, attempted weight: ${dto.weight}`,
+          `Total weight would exceed ${maxWeight}. Current sum (excluding this): ${currentSum}, attempted weight: ${dto.weight}`,
         );
       }
     }

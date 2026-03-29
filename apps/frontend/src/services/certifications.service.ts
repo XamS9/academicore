@@ -13,4 +13,6 @@ export const certificationsService = {
   getCriteria: () => api.get('/certifications/criteria').then(r => r.data),
   getByStudent: (studentId: string) =>
     api.get(`/certifications/student/${studentId}`).then(r => r.data),
+  downloadPdf: (id: string) =>
+    api.get(`/certifications/${id}/pdf`, { responseType: 'blob' }).then(r => r.data),
 };

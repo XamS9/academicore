@@ -44,6 +44,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import LinkIcon from '@mui/icons-material/Link';
 
+import { useAuth } from '../../store/auth.context';
 import { certificationsService } from '../../services/certifications.service';
 import { studentsService } from '../../services/students.service';
 import { api } from '../../services/api';
@@ -122,7 +123,7 @@ function formatDate(iso: string | null) {
 
 // ─── Tab 1 — Criteria ─────────────────────────────────────────────────────────
 
-function CriteriasTab() {
+function CriteriasTab({ canEdit }: { canEdit: boolean }) {
   const [criteria, setCriteria] = useState<CriteriaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -163,9 +164,11 @@ function CriteriasTab() {
     <Box>
       <Box className="flex items-center justify-between mb-3">
         <Typography variant="h6" fontWeight={600}>Criterios de Certificación</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={() => setDialogOpen(true)}>
-          Agregar Criterio
-        </Button>
+        {canEdit && (
+          <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={() => setDialogOpen(true)}>
+            Agregar Criterio
+          </Button>
+        )}
       </Box>
 
       <TableContainer>
@@ -206,49 +209,51 @@ function CriteriasTab() {
         </Table>
       </TableContainer>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Agregar Criterio de Certificación</DialogTitle>
-        <DialogContent className="flex flex-col gap-4 pt-2">
-          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-            <InputLabel>Tipo de Certificado</InputLabel>
-            <Select
-              value={form.certificationType}
-              label="Tipo de Certificado"
-              onChange={(e) => setForm((f) => ({ ...f, certificationType: e.target.value as CertificationType }))}
-            >
-              {Object.entries(certTypeLabels).map(([k, v]) => (
-                <MenuItem key={k} value={k}>{v}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label="Calificación Mínima"
-            type="number"
-            value={form.minGrade}
-            onChange={(e) => setForm((f) => ({ ...f, minGrade: parseFloat(e.target.value) }))}
-            fullWidth size="small"
-            inputProps={{ min: 0, max: 10, step: 0.5 }}
-          />
-          <TextField
-            label="Vigencia (meses)"
-            type="number"
-            value={form.validityMonths}
-            onChange={(e) => setForm((f) => ({ ...f, validityMonths: parseInt(e.target.value) }))}
-            fullWidth size="small"
-            inputProps={{ min: 1, max: 60 }}
-          />
-          <TextField
-            label="Descripción"
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            fullWidth size="small" multiline rows={2}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleAdd} disabled={saving}>Agregar</Button>
-        </DialogActions>
-      </Dialog>
+      {canEdit && (
+        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Agregar Criterio de Certificación</DialogTitle>
+          <DialogContent className="flex flex-col gap-4 pt-2">
+            <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+              <InputLabel>Tipo de Certificado</InputLabel>
+              <Select
+                value={form.certificationType}
+                label="Tipo de Certificado"
+                onChange={(e) => setForm((f) => ({ ...f, certificationType: e.target.value as CertificationType }))}
+              >
+                {Object.entries(certTypeLabels).map(([k, v]) => (
+                  <MenuItem key={k} value={k}>{v}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Calificación Mínima"
+              type="number"
+              value={form.minGrade}
+              onChange={(e) => setForm((f) => ({ ...f, minGrade: parseFloat(e.target.value) }))}
+              fullWidth size="small"
+              inputProps={{ min: 0, max: 10, step: 0.5 }}
+            />
+            <TextField
+              label="Vigencia (meses)"
+              type="number"
+              value={form.validityMonths}
+              onChange={(e) => setForm((f) => ({ ...f, validityMonths: parseInt(e.target.value) }))}
+              fullWidth size="small"
+              inputProps={{ min: 1, max: 60 }}
+            />
+            <TextField
+              label="Descripción"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              fullWidth size="small" multiline rows={2}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button variant="contained" onClick={handleAdd} disabled={saving}>Agregar</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 }
@@ -723,13 +728,25 @@ function DigitalCertTab() {
 
           {/* Actions */}
           <Box className="flex gap-2 mt-3">
-            <Tooltip title="Próximamente disponible">
-              <span>
-                <Button variant="outlined" startIcon={<DownloadIcon />} disabled>
-                  Descargar PDF (próximamente)
-                </Button>
-              </span>
-            </Tooltip>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={async () => {
+                try {
+                  const blob = await certificationsService.downloadPdf(cert.id);
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `certificado-${cert.verificationCode.slice(0, 8)}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  alert('Error al descargar el certificado');
+                }
+              }}
+            >
+              Descargar PDF
+            </Button>
           </Box>
 
           {/* Audit info */}
@@ -854,18 +871,142 @@ function ThirdPartyValidationTab() {
   );
 }
 
+// ─── Student certs tab ───────────────────────────────────────────────────────
+
+function StudentCertsTab({ userId }: { userId: string }) {
+  const [certs, setCerts] = useState<CertItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const student = await api.get(`/students/by-user/${userId}`).then((r) => r.data);
+        const data = await certificationsService.getByStudent(student.id);
+        setCerts(data);
+      } catch {
+        // no certs or error
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
+
+  if (loading) {
+    return <Box className="flex justify-center py-8"><CircularProgress /></Box>;
+  }
+
+  return (
+    <Box>
+      <Typography variant="h6" fontWeight={600} gutterBottom>Mis Certificados</Typography>
+
+      <TableContainer>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ backgroundColor: 'grey.100' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Código Verificación</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">Estado</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Fecha Emisión</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Vence</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {certs.map((cert) => (
+              <TableRow key={cert.id} hover>
+                <TableCell>
+                  <Chip label={certTypeLabels[cert.certificationType] ?? cert.certificationType} size="small" variant="outlined" />
+                </TableCell>
+                <TableCell>
+                  <Typography variant="caption" fontFamily="monospace">{cert.verificationCode}</Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <CertStatusChip status={cert.status} />
+                </TableCell>
+                <TableCell>{formatDate(cert.issuedAt)}</TableCell>
+                <TableCell>{formatDate(cert.expiresAt)}</TableCell>
+                <TableCell align="center">
+                  <Tooltip title="Ver verificación">
+                    <IconButton
+                      size="small"
+                      color="primary"
+                      onClick={() => window.open(`/verify/${cert.verificationCode}`, '_blank')}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Descargar PDF">
+                    <IconButton
+                      size="small"
+                      color="secondary"
+                      onClick={async () => {
+                        try {
+                          const blob = await certificationsService.downloadPdf(cert.id);
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `certificado-${cert.verificationCode.slice(0, 8)}.pdf`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        } catch {
+                          alert('Error al descargar el certificado');
+                        }
+                      }}
+                    >
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+            {certs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                    No tienes certificaciones emitidas
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CertificationsPage() {
+  const { currentUser } = useAuth();
   const [tab, setTab] = useState(0);
+  const isAdmin = currentUser?.role === 'ADMIN';
+
+  const adminTabs = [
+    { label: 'Criterios', component: <CriteriasTab canEdit /> },
+    { label: 'Generar', component: <GenerateCertTab /> },
+    { label: 'Emitidas', component: <IssuedCertsTab /> },
+    { label: 'Certificado Digital', component: <DigitalCertTab /> },
+    { label: 'Validación', component: <ThirdPartyValidationTab /> },
+  ];
+
+  const studentTabs = [
+    { label: 'Mis Certificados', component: <StudentCertsTab userId={currentUser!.id} /> },
+    { label: 'Criterios', component: <CriteriasTab canEdit={false} /> },
+    { label: 'Validación', component: <ThirdPartyValidationTab /> },
+  ];
+
+  const tabs = isAdmin ? adminTabs : studentTabs;
 
   return (
     <Box>
       <Typography variant="h4" fontWeight={700} gutterBottom>
-        Gestión de Certificaciones
+        {isAdmin ? 'Gestión de Certificaciones' : 'Mis Certificados'}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Proceso adicional: Administración de certificaciones académicas digitales
+        {isAdmin
+          ? 'Administración de certificaciones académicas digitales'
+          : 'Consulta y validación de tus certificaciones académicas'}
       </Typography>
 
       <Paper elevation={2} sx={{ borderRadius: 2 }}>
@@ -876,19 +1017,17 @@ export default function CertificationsPage() {
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
-          <Tab label="1.1 Criterios" />
-          <Tab label="1.2 Generar" />
-          <Tab label="1.3 Emitidas" />
-          <Tab label="1.4 Certificado Digital" />
-          <Tab label="1.5 Validación" />
+          {tabs.map((t, i) => (
+            <Tab key={i} label={t.label} />
+          ))}
         </Tabs>
 
         <Box sx={{ px: 3 }}>
-          <TabPanel value={tab} index={0}><CriteriasTab /></TabPanel>
-          <TabPanel value={tab} index={1}><GenerateCertTab /></TabPanel>
-          <TabPanel value={tab} index={2}><IssuedCertsTab /></TabPanel>
-          <TabPanel value={tab} index={3}><DigitalCertTab /></TabPanel>
-          <TabPanel value={tab} index={4}><ThirdPartyValidationTab /></TabPanel>
+          {tabs.map((t, i) => (
+            <TabPanel key={i} value={tab} index={i}>
+              {t.component}
+            </TabPanel>
+          ))}
         </Box>
       </Paper>
     </Box>

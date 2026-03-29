@@ -5,6 +5,7 @@ import { teachersController } from './teachers.controller';
 export const teachersRouter = Router();
 
 teachersRouter.get('/', authenticate, authorize('ADMIN'), teachersController.findAll);
+teachersRouter.get('/by-user/:userId', authenticate, teachersController.findByUserId);
 teachersRouter.get('/:id', authenticate, teachersController.findById);
 teachersRouter.post('/', authenticate, authorize('ADMIN'), teachersController.create);
 teachersRouter.patch('/:id', authenticate, authorize('ADMIN'), teachersController.update);

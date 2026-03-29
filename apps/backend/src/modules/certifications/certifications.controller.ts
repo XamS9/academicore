@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { certificationsService } from './certifications.service';
+import { generateCertificatePdf } from './certificate-pdf';
 
 const IssueCertDto = z.object({
   studentId: z.string().uuid(),
@@ -57,6 +58,16 @@ class CertificationsController {
     try {
       const dto = CreateCriteriaDto.parse(req.body);
       res.status(201).json(await certificationsService.createCriteria(dto));
+    } catch (err) { next(err); }
+  };
+
+  downloadPdf = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const pdf = await generateCertificatePdf(req.params.id, frontendUrl);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="certificado-${req.params.id.slice(0, 8)}.pdf"`);
+      res.send(pdf);
     } catch (err) { next(err); }
   };
 }

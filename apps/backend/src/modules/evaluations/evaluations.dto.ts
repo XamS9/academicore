@@ -4,7 +4,7 @@ export const CreateEvaluationDto = z.object({
   groupId: z.string().uuid(),
   evaluationTypeId: z.string().uuid(),
   name: z.string().min(1).max(200),
-  weight: z.number().positive().max(100),
+  weight: z.number().positive(),
   maxScore: z.number().positive().default(100),
   dueDate: z.string().optional(),
 });

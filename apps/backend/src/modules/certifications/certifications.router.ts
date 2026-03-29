@@ -14,3 +14,4 @@ certificationsRouter.post('/issue', authenticate, authorize('ADMIN'), certificat
 certificationsRouter.post('/:id/revoke', authenticate, authorize('ADMIN'), certificationsController.revoke);
 certificationsRouter.get('/criteria', authenticate, certificationsController.findCriteria);
 certificationsRouter.post('/criteria', authenticate, authorize('ADMIN'), certificationsController.createCriteria);
+certificationsRouter.get('/:id/pdf', authenticate, certificationsController.downloadPdf);

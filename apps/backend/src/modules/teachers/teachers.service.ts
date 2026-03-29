@@ -24,6 +24,15 @@ class TeachersService {
     return teacher;
   }
 
+  async findByUserId(userId: string) {
+    const teacher = await prisma.teacher.findFirst({
+      where: { userId, deletedAt: null },
+      include: { user: true },
+    });
+    if (!teacher) throw new HttpError(404, 'Teacher not found');
+    return teacher;
+  }
+
   async create(dto: CreateTeacherDto) {
     return prisma.teacher.create({
       data: {

@@ -12,6 +12,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
+import CircularProgress from '@mui/material/CircularProgress';
 
 // Icons
 import PeopleIcon from '@mui/icons-material/People';
@@ -22,7 +23,6 @@ import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import StarIcon from '@mui/icons-material/Star';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import GroupsIcon from '@mui/icons-material/Groups';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import HistoryIcon from '@mui/icons-material/History';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
@@ -32,6 +32,12 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/auth.context';
 import { api } from '../services/api';
+import { studentsService } from '../services/students.service';
+import { teachersService } from '../services/teachers.service';
+import { academicPeriodsService } from '../services/academic-periods.service';
+import { groupsService } from '../services/groups.service';
+import { enrollmentsService } from '../services/enrollments.service';
+import { academicRecordsService } from '../services/academic-records.service';
 
 interface AuditLog {
   id: string;
@@ -50,26 +56,6 @@ interface StatCard {
   color: string;
 }
 
-const adminStats: StatCard[] = [
-  { label: 'Total Estudiantes', value: 247, icon: <SchoolIcon sx={{ fontSize: 36 }} />, color: '#1976d2' },
-  { label: 'Profesores', value: 34, icon: <PersonIcon sx={{ fontSize: 36 }} />, color: '#9c27b0' },
-  { label: 'Períodos Activos', value: 1, icon: <EventIcon sx={{ fontSize: 36 }} />, color: '#2e7d32' },
-  { label: 'Inscripciones Activas', value: 189, icon: <AssignmentTurnedInIcon sx={{ fontSize: 36 }} />, color: '#ed6c02' },
-];
-
-const studentStats: StatCard[] = [
-  { label: 'Materias Inscritas', value: 3, icon: <AssignmentTurnedInIcon sx={{ fontSize: 36 }} />, color: '#1976d2' },
-  { label: 'Promedio General', value: 8.1, icon: <StarIcon sx={{ fontSize: 36 }} />, color: '#ed6c02' },
-  { label: 'Materias Aprobadas', value: 4, icon: <CheckCircleIcon sx={{ fontSize: 36 }} />, color: '#2e7d32' },
-  { label: 'Estado Académico', value: 'ACTIVO', icon: <SchoolIcon sx={{ fontSize: 36 }} />, color: '#2e7d32' },
-];
-
-const teacherStats: StatCard[] = [
-  { label: 'Grupos Asignados', value: 2, icon: <GroupsIcon sx={{ fontSize: 36 }} />, color: '#1976d2' },
-  { label: 'Estudiantes Totales', value: 45, icon: <PeopleIcon sx={{ fontSize: 36 }} />, color: '#9c27b0' },
-  { label: 'Evaluaciones Pendientes', value: 3, icon: <AssignmentIcon sx={{ fontSize: 36 }} />, color: '#ed6c02' },
-];
-
 interface QuickAction {
   label: string;
   path: string;
@@ -82,9 +68,7 @@ const quickActions: QuickAction[] = [
   { label: 'Certificaciones', path: '/certifications', icon: <VerifiedIcon />, roles: ['STUDENT', 'ADMIN'] },
   { label: 'Auditoría', path: '/auditoria', icon: <HistoryIcon />, roles: ['ADMIN'] },
   { label: 'Calificaciones', path: '/calificaciones', icon: <StarIcon />, roles: ['TEACHER', 'ADMIN'] },
-  { label: 'Estándar UI', path: '/ui-standards', icon: <PaletteIcon />, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
-
-
+  { label: 'Estándar UI', path: '/ui-standards', icon: <PaletteIcon />, roles: ['ADMIN'] },
 ];
 
 const actionColors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info'> = {
@@ -93,7 +77,26 @@ const actionColors: Record<string, 'primary' | 'secondary' | 'success' | 'warnin
   '/auditoria': 'error',
   '/calificaciones': 'warning',
   '/ui-standards': 'secondary',
+};
 
+const auditActionLabels: Record<string, string> = {
+  CREATED: 'Creado',
+  UPDATED: 'Actualizado',
+  DELETED: 'Eliminado',
+  REVOKED: 'Revocado',
+  ISSUED: 'Emitido',
+  ENROLLED: 'Inscrito',
+  DROPPED: 'Baja',
+  STATUS_CHANGE: 'Cambio de estado',
+};
+
+const academicStatusLabels: Record<string, string> = {
+  ACTIVE: 'Activo',
+  AT_RISK: 'En riesgo',
+  ELIGIBLE_FOR_GRADUATION: 'Apto para graduación',
+  SUSPENDED: 'Suspendido',
+  GRADUATED: 'Graduado',
+  WITHDRAWN: 'Retirado',
 };
 
 function formatDate(isoDate: string) {
@@ -102,21 +105,94 @@ function formatDate(isoDate: string) {
   });
 }
 
+async function loadAdminStats(): Promise<StatCard[]> {
+  const [students, teachers, periods] = await Promise.all([
+    studentsService.getAll(),
+    teachersService.getAll(),
+    academicPeriodsService.getAll(),
+  ]);
+
+  const activePeriods = (periods as { isActive: boolean }[]).filter((p) => p.isActive);
+
+  return [
+    { label: 'Total Estudiantes', value: students.length, icon: <SchoolIcon sx={{ fontSize: 36 }} />, color: '#1976d2' },
+    { label: 'Profesores', value: teachers.length, icon: <PersonIcon sx={{ fontSize: 36 }} />, color: '#9c27b0' },
+    { label: 'Períodos Activos', value: activePeriods.length, icon: <EventIcon sx={{ fontSize: 36 }} />, color: '#2e7d32' },
+  ];
+}
+
+async function loadTeacherStats(userId: string): Promise<StatCard[]> {
+  const teacher = await api.get(`/teachers/by-user/${userId}`).then((r) => r.data);
+  const groups = await groupsService.getByTeacher(teacher.id);
+
+  const totalStudents = (groups as { currentStudents: number }[]).reduce(
+    (sum, g) => sum + g.currentStudents, 0,
+  );
+
+  return [
+    { label: 'Grupos Asignados', value: groups.length, icon: <GroupsIcon sx={{ fontSize: 36 }} />, color: '#1976d2' },
+    { label: 'Estudiantes Totales', value: totalStudents, icon: <PeopleIcon sx={{ fontSize: 36 }} />, color: '#9c27b0' },
+  ];
+}
+
+async function loadStudentStats(userId: string): Promise<StatCard[]> {
+  const student = await api.get(`/students/by-user/${userId}`).then((r) => r.data);
+  const [enrollments, passed, averages] = await Promise.all([
+    enrollmentsService.getByStudent(student.id),
+    academicRecordsService.getPassed(student.id),
+    academicRecordsService.getAveragesByPeriod(student.id),
+  ]);
+
+  const currentSubjects = (enrollments as { enrollmentSubjects: { status: string }[] }[])
+    .flatMap((e) => e.enrollmentSubjects)
+    .filter((es) => es.status === 'ENROLLED').length;
+
+  const overallAvg = averages.length > 0
+    ? (averages as { average: number; totalCredits: number }[]).reduce(
+        (sum, a) => sum + a.average * a.totalCredits, 0,
+      ) / (averages as { totalCredits: number }[]).reduce((sum, a) => sum + a.totalCredits, 0)
+    : 0;
+
+  return [
+    { label: 'Materias Inscritas', value: currentSubjects, icon: <AssignmentTurnedInIcon sx={{ fontSize: 36 }} />, color: '#1976d2' },
+    { label: 'Promedio General', value: overallAvg > 0 ? overallAvg.toFixed(1) : '—', icon: <StarIcon sx={{ fontSize: 36 }} />, color: '#ed6c02' },
+    { label: 'Materias Aprobadas', value: passed.length, icon: <CheckCircleIcon sx={{ fontSize: 36 }} />, color: '#2e7d32' },
+    { label: 'Estado Académico', value: academicStatusLabels[student.academicStatus] ?? student.academicStatus, icon: <SchoolIcon sx={{ fontSize: 36 }} />, color: '#2e7d32' },
+  ];
+}
+
 export default function DashboardPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState<StatCard[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-
-  useEffect(() => {
-    api.get('/audit-logs?limit=5').then((r) => setAuditLogs(r.data)).catch(() => {});
-  }, []);
+  const [loadingStats, setLoadingStats] = useState(true);
 
   const role = currentUser?.role ?? 'STUDENT';
 
-  const stats =
-    role === 'ADMIN' ? adminStats :
-    role === 'TEACHER' ? teacherStats :
-    studentStats;
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoadingStats(true);
+        if (role === 'ADMIN') {
+          setStats(await loadAdminStats());
+        } else if (role === 'TEACHER') {
+          setStats(await loadTeacherStats(currentUser!.id));
+        } else {
+          setStats(await loadStudentStats(currentUser!.id));
+        }
+      } catch {
+        setStats([]);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+    load();
+
+    if (role === 'ADMIN') {
+      api.get('/audit-logs?limit=5').then((r) => setAuditLogs(r.data)).catch(() => {});
+    }
+  }, [role]);
 
   const filteredActions = quickActions.filter((a) => a.roles.includes(role));
 
@@ -137,27 +213,33 @@ export default function DashboardPage() {
       </Box>
 
       {/* Stats cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat) => (
-          <Grid item xs={12} sm={6} lg={3} key={stat.label}>
-            <Card elevation={2} sx={{ borderLeft: `4px solid ${stat.color}` }}>
-              <CardContent>
-                <Box className="flex items-center justify-between">
-                  <Box>
-                    <Typography variant="h4" fontWeight={700} color={stat.color}>
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {stat.label}
-                    </Typography>
+      {loadingStats ? (
+        <Box className="flex justify-center py-8">
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {stats.map((stat) => (
+            <Grid item xs={12} sm={6} lg={3} key={stat.label}>
+              <Card elevation={2} sx={{ borderLeft: `4px solid ${stat.color}` }}>
+                <CardContent>
+                  <Box className="flex items-center justify-between">
+                    <Box>
+                      <Typography variant="h4" fontWeight={700} color={stat.color}>
+                        {stat.value}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {stat.label}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ color: stat.color, opacity: 0.8 }}>{stat.icon}</Box>
                   </Box>
-                  <Box sx={{ color: stat.color, opacity: 0.8 }}>{stat.icon}</Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       <Grid container spacing={3}>
         {/* Quick actions */}
@@ -184,39 +266,46 @@ export default function DashboardPage() {
           </Paper>
         </Grid>
 
-        {/* Recent activity */}
-        <Grid item xs={12} md={7}>
-          <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              Actividad Reciente
-            </Typography>
-            <Divider sx={{ mb: 1 }} />
-            <List dense disablePadding>
-              {auditLogs.length === 0 && (
-                <ListItem disablePadding sx={{ py: 1 }}>
-                  <ListItemText
-                    primary="Sin actividad reciente"
-                    primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
-                  />
-                </ListItem>
-              )}
-              {auditLogs.map((log) => (
-                <ListItem key={log.id} disablePadding sx={{ py: 0.5 }}>
-                  <ListItemIcon sx={{ minWidth: 24 }}>
-                    <FiberManualRecordIcon sx={{ fontSize: 8, color: 'primary.main' }} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={`${log.action} — ${log.entityType}`}
-                    secondary={`${log.user ? `${log.user.firstName} ${log.user.lastName}` : log.performedBy} · ${formatDate(log.createdAt)}`}
-                    primaryTypographyProps={{ variant: 'body2' }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
-                  />
-                  <Chip label={log.action} size="small" variant="outlined" sx={{ ml: 1, fontSize: '0.65rem' }} />
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
+        {/* Recent activity — admin only */}
+        {role === 'ADMIN' && (
+          <Grid item xs={12} md={7}>
+            <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                Actividad Reciente
+              </Typography>
+              <Divider sx={{ mb: 1 }} />
+              <List dense disablePadding>
+                {auditLogs.length === 0 && (
+                  <ListItem disablePadding sx={{ py: 1 }}>
+                    <ListItemText
+                      primary="Sin actividad reciente"
+                      primaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                    />
+                  </ListItem>
+                )}
+                {auditLogs.map((log) => (
+                  <ListItem key={log.id} disablePadding sx={{ py: 0.5 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <FiberManualRecordIcon sx={{ fontSize: 8, color: 'primary.main' }} />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`${auditActionLabels[log.action] ?? log.action} — ${log.entityType}`}
+                      secondary={`${log.user ? `${log.user.firstName} ${log.user.lastName}` : '—'} · ${formatDate(log.createdAt)}`}
+                      primaryTypographyProps={{ variant: 'body2' }}
+                      secondaryTypographyProps={{ variant: 'caption' }}
+                    />
+                    <Chip
+                      label={auditActionLabels[log.action] ?? log.action}
+                      size="small"
+                      variant="outlined"
+                      sx={{ ml: 1, fontSize: '0.65rem' }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+          </Grid>
+        )}
 
         {/* System description */}
         <Grid item xs={12}>

@@ -25,6 +25,18 @@ class StudentsService {
     return student;
   }
 
+  async findByUserId(userId: string) {
+    const student = await prisma.student.findFirst({
+      where: { userId, deletedAt: null },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true } },
+        career: { select: { name: true } },
+      },
+    });
+    if (!student) throw new HttpError(404, 'Student not found');
+    return student;
+  }
+
   async create(dto: CreateStudentDto) {
     return prisma.student.create({
       data: {

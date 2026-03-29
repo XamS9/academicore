@@ -28,6 +28,8 @@ import HistoryIcon from '@mui/icons-material/History';
 import PaletteIcon from '@mui/icons-material/Palette';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import ListAltIcon from '@mui/icons-material/ListAlt';
+import ArticleIcon from '@mui/icons-material/Article';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/auth.context';
@@ -56,22 +58,26 @@ const navItems: NavItem[] = [
   { label: 'Inscripciones', path: '/inscripciones', icon: <AssignmentTurnedInIcon />, roles: ['ADMIN'] },
   { label: 'Evaluaciones', path: '/evaluaciones', icon: <AssignmentIcon />, roles: ['ADMIN'] },
   { label: 'Calificaciones', path: '/calificaciones', icon: <GradingIcon />, roles: ['ADMIN'] },
+  { label: 'Contenido', path: '/contenido', icon: <ArticleIcon />, roles: ['ADMIN'] },
   { label: 'Certificaciones', path: '/certifications', icon: <VerifiedIcon />, roles: ['ADMIN'] },
   { label: 'Auditoría', path: '/auditoria', icon: <HistoryIcon />, roles: ['ADMIN'] },
+  { label: 'Configuración', path: '/configuracion', icon: <SettingsIcon />, roles: ['ADMIN'] },
 
   // TEACHER
   { label: 'Mis Grupos', path: '/mis-grupos', icon: <GroupsIcon />, roles: ['TEACHER'] },
+  { label: 'Contenido', path: '/contenido', icon: <ArticleIcon />, roles: ['TEACHER'] },
   { label: 'Evaluaciones', path: '/evaluaciones', icon: <AssignmentIcon />, roles: ['TEACHER'] },
   { label: 'Calificaciones', path: '/calificaciones', icon: <GradingIcon />, roles: ['TEACHER'] },
 
   // STUDENT
   { label: 'Mi Inscripción', path: '/mi-inscripcion', icon: <AssignmentTurnedInIcon />, roles: ['STUDENT'] },
+  { label: 'Mi Contenido', path: '/mi-contenido', icon: <ArticleIcon />, roles: ['STUDENT'] },
   { label: 'Mis Calificaciones', path: '/mis-calificaciones', icon: <StarIcon />, roles: ['STUDENT'] },
   { label: 'Historial Académico', path: '/academic-history', icon: <ListAltIcon />, roles: ['STUDENT'] },
   { label: 'Mis Certificados', path: '/certifications', icon: <VerifiedIcon />, roles: ['STUDENT'] },
 
   // ALL
-  { label: 'Estándar UI', path: '/ui-standards', icon: <PaletteIcon />, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
+  { label: 'Estándar UI', path: '/ui-standards', icon: <PaletteIcon />, roles: ['ADMIN'] },
 ];
 
 interface SidebarProps {
@@ -139,11 +145,9 @@ export default function Sidebar({ open, onClose, variant = 'temporary' }: Sideba
   if (variant === 'permanent') {
     return (
       <Drawer
-        variant="permanent"
-        open
+        variant="persistent"
+        open={open}
         sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
           '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
         }}
       >
