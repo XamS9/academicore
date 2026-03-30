@@ -433,7 +433,7 @@ export default function UIStandardsPage() {
         <Grid container spacing={3}>
           {/* Stats card */}
           <Grid item xs={12} sm={6} md={3}>
-            <Card elevation={2} sx={{ borderLeft: '4px solid #1976d2' }}>
+            <Card sx={{ borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
               <CardContent>
                 <Box className="flex items-center justify-between">
                   <Box>

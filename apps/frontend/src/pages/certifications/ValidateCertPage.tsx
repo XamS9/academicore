@@ -70,7 +70,7 @@ export default function ValidateCertPage() {
   return (
     <Box
       className="min-h-screen flex flex-col items-center justify-start pt-12 pb-12"
-      sx={{ backgroundColor: 'grey.50', px: 2 }}
+      sx={{ backgroundColor: 'background.default', px: 2 }}
     >
       {/* Branding header */}
       <Box className="flex flex-col items-center mb-8">

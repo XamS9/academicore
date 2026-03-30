@@ -706,7 +706,7 @@ function DigitalCertTab() {
                 p: 2,
                 backgroundColor: 'grey.50',
                 border: '1px dashed',
-                borderColor: 'grey.400',
+                borderColor: 'grey.300',
                 textAlign: 'center',
               }}
             >
@@ -802,7 +802,7 @@ function ThirdPartyValidationTab() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         Ingrese el código de verificación del certificado para consultar su autenticidad.
         Esta funcionalidad está disponible en la ruta pública{' '}
-        <code style={{ backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: 4 }}>/verify/:code</code>.
+        <code style={{ backgroundColor: '#f1f5f9', padding: '2px 4px', borderRadius: 4 }}>/verify/:code</code>.
       </Typography>
 
       <Box className="flex gap-2 mb-3" sx={{ maxWidth: 500 }}>

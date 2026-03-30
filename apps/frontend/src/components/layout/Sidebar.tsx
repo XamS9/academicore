@@ -6,9 +6,9 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Collapse from '@mui/material/Collapse';
-import Toolbar from '@mui/material/Toolbar';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
+import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 
 // Icons
@@ -141,6 +141,14 @@ const navByRole: Record<Role, NavEntry[]> = {
   ],
 };
 
+const SIDEBAR_BG = '#0f172a';       // Slate-900
+const SIDEBAR_HOVER = 'rgba(255,255,255,0.06)';
+const SIDEBAR_ACTIVE = 'rgba(99,102,241,0.2)';
+const SIDEBAR_ACTIVE_BAR = '#818cf8'; // Indigo-400
+const SIDEBAR_TEXT = 'rgba(255,255,255,0.65)';
+const SIDEBAR_TEXT_ACTIVE = '#ffffff';
+const SIDEBAR_SECTION = 'rgba(255,255,255,0.4)';
+
 function NavItemLink({
   item,
   isActive,
@@ -162,22 +170,36 @@ function NavItemLink({
         <ListItemButton
           selected={isActive}
           sx={{
-            borderRadius: 1,
-            mx: 0.5,
+            borderRadius: '10px',
+            mx: 1,
             my: 0.25,
-            ...(nested && { pl: 4 }),
+            py: 0.75,
+            position: 'relative',
+            color: isActive ? SIDEBAR_TEXT_ACTIVE : SIDEBAR_TEXT,
+            ...(nested && { pl: 4.5 }),
+            '&:hover': { backgroundColor: SIDEBAR_HOVER },
             '&.Mui-selected': {
-              backgroundColor: 'primary.main',
-              color: 'white',
-              '& .MuiListItemIcon-root': { color: 'white' },
-              '&:hover': { backgroundColor: 'primary.dark' },
+              backgroundColor: SIDEBAR_ACTIVE,
+              color: SIDEBAR_TEXT_ACTIVE,
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: '20%',
+                height: '60%',
+                width: 3,
+                borderRadius: 4,
+                backgroundColor: SIDEBAR_ACTIVE_BAR,
+              },
+              '& .MuiListItemIcon-root': { color: SIDEBAR_ACTIVE_BAR },
+              '&:hover': { backgroundColor: SIDEBAR_ACTIVE },
             },
           }}
         >
-          <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+          <ListItemIcon sx={{ minWidth: 34, color: isActive ? SIDEBAR_ACTIVE_BAR : SIDEBAR_TEXT }}>{item.icon}</ListItemIcon>
           <ListItemText
             primary={item.label}
-            primaryTypographyProps={{ variant: 'body2', fontWeight: isActive ? 600 : 400 }}
+            primaryTypographyProps={{ variant: 'body2', fontWeight: isActive ? 600 : 400, fontSize: '0.8125rem' }}
           />
         </ListItemButton>
       </NavLink>
@@ -222,16 +244,24 @@ export default function Sidebar({ open, onClose, variant = 'temporary' }: Sideba
 
   const handleNavClick = variant === 'temporary' ? onClose : undefined;
 
+  const roleLabels: Record<string, string> = { ADMIN: 'Administrador', TEACHER: 'Profesor', STUDENT: 'Estudiante' };
+
   const drawerContent = (
-    <Box sx={{ overflow: 'auto' }}>
-      <Toolbar>
-        <SchoolIcon sx={{ mr: 1, color: 'primary.main' }} />
-        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'primary.main' }}>
+    <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: SIDEBAR_BG }}>
+      {/* Logo */}
+      <Box sx={{ px: 2.5, py: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ width: 36, height: 36, borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <SchoolIcon sx={{ color: 'white', fontSize: 20 }} />
+        </Box>
+        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
           Academicore
         </Typography>
-      </Toolbar>
-      <Divider />
-      <List dense>
+      </Box>
+
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 2 }} />
+
+      {/* Nav */}
+      <List dense sx={{ flex: 1, pt: 1.5, px: 0.5 }}>
         {entries.map((entry) => {
           if (isSection(entry)) {
             const sectionOpen = openSections[entry.key] ?? false;
@@ -242,20 +272,22 @@ export default function Sidebar({ open, onClose, variant = 'temporary' }: Sideba
                 <ListItem disablePadding>
                   <ListItemButton
                     onClick={() => toggleSection(entry.key)}
-                    sx={{ borderRadius: 1, mx: 0.5, my: 0.25 }}
+                    sx={{ borderRadius: '10px', mx: 1, my: 0.25, py: 0.75, color: sectionHasActive ? SIDEBAR_TEXT_ACTIVE : SIDEBAR_SECTION, '&:hover': { backgroundColor: SIDEBAR_HOVER } }}
                   >
-                    <ListItemIcon sx={{ minWidth: 36, color: sectionHasActive ? 'primary.main' : undefined }}>
+                    <ListItemIcon sx={{ minWidth: 34, color: sectionHasActive ? SIDEBAR_ACTIVE_BAR : SIDEBAR_SECTION }}>
                       {entry.icon}
                     </ListItemIcon>
                     <ListItemText
                       primary={entry.label}
                       primaryTypographyProps={{
                         variant: 'body2',
-                        fontWeight: sectionHasActive ? 600 : 400,
-                        color: sectionHasActive ? 'primary.main' : undefined,
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
                       }}
                     />
-                    {sectionOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                    {sectionOpen ? <ExpandLess fontSize="small" sx={{ opacity: 0.5 }} /> : <ExpandMore fontSize="small" sx={{ opacity: 0.5 }} />}
                   </ListItemButton>
                 </ListItem>
                 <Collapse in={sectionOpen} timeout="auto" unmountOnExit>
@@ -285,17 +317,42 @@ export default function Sidebar({ open, onClose, variant = 'temporary' }: Sideba
           );
         })}
       </List>
+
+      {/* User footer */}
+      {currentUser && (
+        <>
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mx: 2 }} />
+          <Box sx={{ px: 2.5, py: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ width: 34, height: 34, fontSize: '0.8rem', fontWeight: 700, bgcolor: '#6366f1' }}>
+              {currentUser.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentUser.name}
+              </Typography>
+              <Typography variant="caption" sx={{ color: SIDEBAR_TEXT, fontSize: '0.7rem' }}>
+                {roleLabels[role] ?? role}
+              </Typography>
+            </Box>
+          </Box>
+        </>
+      )}
     </Box>
   );
+
+  const drawerPaperSx = {
+    width: DRAWER_WIDTH,
+    boxSizing: 'border-box' as const,
+    backgroundColor: SIDEBAR_BG,
+    borderRight: 'none',
+  };
 
   if (variant === 'permanent') {
     return (
       <Drawer
         variant="persistent"
         open={open}
-        sx={{
-          '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
-        }}
+        sx={{ '& .MuiDrawer-paper': drawerPaperSx }}
       >
         {drawerContent}
       </Drawer>
@@ -310,7 +367,7 @@ export default function Sidebar({ open, onClose, variant = 'temporary' }: Sideba
       ModalProps={{ keepMounted: true }}
       sx={{
         display: { xs: 'block', lg: 'none' },
-        '& .MuiDrawer-paper': { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+        '& .MuiDrawer-paper': drawerPaperSx,
       }}
     >
       {drawerContent}

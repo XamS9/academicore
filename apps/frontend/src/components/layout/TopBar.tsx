@@ -3,16 +3,14 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
-import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
-import SchoolIcon from '@mui/icons-material/School';
 import { useAuth } from '../../store/auth.context';
 import NotificationBell from './NotificationBell';
 
 const roleLabels: Record<string, string> = {
-  ADMIN: 'Administrador',
+  ADMIN: 'Admin',
   TEACHER: 'Profesor',
   STUDENT: 'Estudiante',
 };
@@ -33,48 +31,47 @@ export default function TopBar({ onToggleSidebar }: TopBarProps) {
   return (
     <AppBar
       position="fixed"
-      sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      elevation={2}
+      elevation={0}
+      sx={{
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        color: 'text.primary',
+      }}
     >
       <Toolbar>
         <IconButton
-          color="inherit"
           edge="start"
           onClick={onToggleSidebar}
-          sx={{ mr: 2 }}
-          aria-label="abrir menú lateral"
+          sx={{ mr: 2, color: 'text.secondary' }}
+          aria-label="abrir menu lateral"
         >
           <MenuIcon />
         </IconButton>
 
-        <SchoolIcon sx={{ mr: 1 }} />
-        <Typography variant="h6" component="div" sx={{ fontWeight: 700, letterSpacing: 1 }}>
-          Academicore
-        </Typography>
-
         <Box sx={{ flexGrow: 1 }} />
 
         {currentUser && (
-          <Box className="flex items-center gap-3">
+          <Box className="flex items-center gap-2">
             <NotificationBell />
-            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 500, color: 'text.secondary' }}>
               {currentUser.name}
             </Typography>
             <Chip
               label={roleLabels[currentUser.role] ?? currentUser.role}
               color={roleColors[currentUser.role] ?? 'default'}
               size="small"
-              sx={{ fontWeight: 600 }}
+              variant="outlined"
+              sx={{ fontWeight: 600, fontSize: '0.7rem' }}
             />
-            <Button
-              color="inherit"
-              startIcon={<LogoutIcon />}
+            <IconButton
               onClick={logout}
               size="small"
-              sx={{ ml: 1 }}
+              sx={{ ml: 0.5, color: 'text.secondary' }}
+              aria-label="cerrar sesion"
             >
-              Salir
-            </Button>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
           </Box>
         )}
       </Toolbar>

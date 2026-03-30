@@ -57,7 +57,7 @@ export default function AppLayout() {
               : theme.transitions.duration.leavingScreen,
           }),
           minHeight: '100vh',
-          backgroundColor: 'grey.50',
+          backgroundColor: 'background.default',
         }}
       >
         <Toolbar />

@@ -12,7 +12,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
-import CircularProgress from '@mui/material/CircularProgress';
+import Skeleton from '@mui/material/Skeleton';
 
 // Icons
 import PeopleIcon from '@mui/icons-material/People';
@@ -214,25 +214,36 @@ export default function DashboardPage() {
 
       {/* Stats cards */}
       {loadingStats ? (
-        <Box className="flex justify-center py-8">
-          <CircularProgress />
-        </Box>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          {[1, 2, 3].map((i) => (
+            <Grid item xs={12} sm={6} lg={3} key={i}>
+              <Skeleton variant="rounded" height={120} sx={{ borderRadius: 3 }} />
+            </Grid>
+          ))}
+        </Grid>
       ) : (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {stats.map((stat) => (
             <Grid item xs={12} sm={6} lg={3} key={stat.label}>
-              <Card elevation={2} sx={{ borderLeft: `4px solid ${stat.color}` }}>
-                <CardContent>
+              <Card sx={{ position: 'relative', overflow: 'hidden' }}>
+                <CardContent sx={{ py: 2.5 }}>
                   <Box className="flex items-center justify-between">
                     <Box>
-                      <Typography variant="h4" fontWeight={700} color={stat.color}>
-                        {stat.value}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontWeight: 500 }}>
                         {stat.label}
                       </Typography>
+                      <Typography variant="h4" fontWeight={800} sx={{ color: stat.color }}>
+                        {stat.value}
+                      </Typography>
                     </Box>
-                    <Box sx={{ color: stat.color, opacity: 0.8 }}>{stat.icon}</Box>
+                    <Box sx={{
+                      width: 48, height: 48, borderRadius: '14px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `${stat.color}14`,
+                      color: stat.color,
+                    }}>
+                      {stat.icon}
+                    </Box>
                   </Box>
                 </CardContent>
               </Card>
@@ -244,9 +255,9 @@ export default function DashboardPage() {
       <Grid container spacing={3}>
         {/* Quick actions */}
         <Grid item xs={12} md={5}>
-          <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+          <Paper sx={{ p: 3, border: '1px solid', borderColor: 'divider' }}>
             <Typography variant="h6" fontWeight={700} gutterBottom>
-              Acciones Rápidas
+              Acciones Rapidas
             </Typography>
             <Divider sx={{ mb: 2 }} />
             <Box className="flex flex-wrap gap-2">
@@ -269,7 +280,7 @@ export default function DashboardPage() {
         {/* Recent activity — admin only */}
         {role === 'ADMIN' && (
           <Grid item xs={12} md={7}>
-            <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+            <Paper sx={{ p: 3, border: '1px solid', borderColor: 'divider' }}>
               <Typography variant="h6" fontWeight={700} gutterBottom>
                 Actividad Reciente
               </Typography>
@@ -309,9 +320,11 @@ export default function DashboardPage() {
 
         {/* System description */}
         <Grid item xs={12}>
-          <Paper elevation={1} sx={{ p: 3, borderRadius: 2, backgroundColor: 'primary.50', border: '1px solid', borderColor: 'primary.100' }}>
+          <Paper sx={{ p: 3, border: '1px solid', borderColor: 'divider', background: 'linear-gradient(135deg, rgba(99,102,241,0.04) 0%, rgba(139,92,246,0.04) 100%)' }}>
             <Box className="flex items-start gap-3">
-              <SchoolIcon sx={{ color: 'primary.main', mt: 0.5 }} />
+              <Box sx={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, mt: 0.25 }}>
+                <SchoolIcon sx={{ color: '#fff', fontSize: 20 }} />
+              </Box>
               <Box>
                 <Typography variant="subtitle1" fontWeight={700} color="primary.main" gutterBottom>
                   Sistema de Gestión Académica Institucional — Academicore
@@ -324,8 +337,8 @@ export default function DashboardPage() {
                   completa, y generación automática de registros académicos vía triggers de base de datos.
                 </Typography>
                 <Box className="flex flex-wrap gap-2 mt-2">
-                  {['22 tablas', 'BCNF', 'JWT + RBAC', 'Trigger automático', 'SP con validación'].map((tag) => (
-                    <Chip key={tag} label={tag} size="small" color="primary" variant="outlined" />
+                  {['31 tablas', 'BCNF', 'JWT + RBAC', 'Trigger automatico', 'SP con validacion'].map((tag) => (
+                    <Chip key={tag} label={tag} size="small" color="primary" variant="outlined" sx={{ borderColor: 'rgba(99,102,241,0.3)' }} />
                   ))}
                 </Box>
               </Box>

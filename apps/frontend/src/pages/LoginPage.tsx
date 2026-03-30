@@ -75,27 +75,28 @@ export default function LoginPage() {
   return (
     <Box
       className="min-h-screen flex items-center justify-center"
-      sx={{ backgroundColor: 'grey.100' }}
+      sx={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}
     >
-      <Card sx={{ width: '100%', maxWidth: 440, mx: 2 }} elevation={4}>
+      <Card sx={{ width: '100%', maxWidth: 440, mx: 2, border: '1px solid rgba(0,0,0,0.06)' }}>
         <CardContent sx={{ p: 4 }}>
           {/* Header */}
           <Box className="flex flex-col items-center mb-6">
             <Box
               sx={{
-                width: 72,
-                height: 72,
-                borderRadius: '50%',
-                backgroundColor: 'primary.main',
+                width: 64,
+                height: 64,
+                borderRadius: '18px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 mb: 2,
+                boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
               }}
             >
-              <SchoolIcon sx={{ fontSize: 40, color: 'white' }} />
+              <SchoolIcon sx={{ fontSize: 32, color: 'white' }} />
             </Box>
-            <Typography variant="h5" fontWeight={700} color="primary">
+            <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: '-0.02em' }}>
               Academicore
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
