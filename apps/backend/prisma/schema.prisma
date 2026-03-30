@@ -5,11 +5,11 @@
 
 generator client {
   provider = "prisma-client-js"
+  
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ─────────────────────────────────────────────
@@ -115,26 +115,26 @@ enum CalendarEventType {
 // ─────────────────────────────────────────────
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  userType     UserType @map("user_type")
-  firstName    String   @map("first_name") @db.VarChar(100)
-  lastName     String   @map("last_name") @db.VarChar(100)
-  email        String   @unique @db.VarChar(255)
-  passwordHash String   @map("password_hash") @db.VarChar(255)
-  isActive     Boolean  @default(true) @map("is_active")
+  id           String    @id @default(uuid()) @db.Uuid
+  userType     UserType  @map("user_type")
+  firstName    String    @map("first_name") @db.VarChar(100)
+  lastName     String    @map("last_name") @db.VarChar(100)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  isActive     Boolean   @default(true) @map("is_active")
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  student       Student?
-  teacher       Teacher?
-  userRoles     UserRole[]
-  gradesGiven      Grade[]          @relation("GradedBy")
-  certIssued       Certification[]  @relation("IssuedBy")
-  auditLogs        AuditLog[]
-  settingsUpdates  SystemSettings[] @relation("SettingsUpdatedBy")
-  notifications    Notification[]
-  announcements    Announcement[]
+  student         Student?
+  teacher         Teacher?
+  userRoles       UserRole[]
+  gradesGiven     Grade[]          @relation("GradedBy")
+  certIssued      Certification[]  @relation("IssuedBy")
+  auditLogs       AuditLog[]
+  settingsUpdates SystemSettings[] @relation("SettingsUpdatedBy")
+  notifications   Notification[]
+  announcements   Announcement[]
 
   @@map("users")
 }
@@ -189,10 +189,10 @@ model Teacher {
 // ─────────────────────────────────────────────
 
 model Role {
-  id          String    @id @default(uuid()) @db.Uuid
-  name        String    @unique @db.VarChar(50)
-  description String?   @db.VarChar(255)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   userRoles UserRole[]
 
@@ -230,10 +230,10 @@ model Career {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  students               Student[]
-  careerSubjects         CareerSubject[]
-  certifications         Certification[]
-  certificationCriteria  CertificationCriteria[]
+  students              Student[]
+  careerSubjects        CareerSubject[]
+  certifications        Certification[]
+  certificationCriteria CertificationCriteria[]
 
   @@map("careers")
 }
@@ -252,10 +252,10 @@ model Subject {
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  careerSubjects  CareerSubject[]
-  groups          Group[]
-  prerequisites   SubjectPrerequisite[] @relation("SubjectPrereqs")
-  isPrereqOf      SubjectPrerequisite[] @relation("PrereqOf")
+  careerSubjects CareerSubject[]
+  groups         Group[]
+  prerequisites  SubjectPrerequisite[] @relation("SubjectPrereqs")
+  isPrereqOf     SubjectPrerequisite[] @relation("PrereqOf")
 
   @@map("subjects")
 }
@@ -322,10 +322,10 @@ model AcademicPeriod {
 // ─────────────────────────────────────────────
 
 model Classroom {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String   @db.VarChar(50)
-  building  String?  @db.VarChar(100)
-  capacity  Int      @db.SmallInt
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @db.VarChar(50)
+  building  String?   @db.VarChar(100)
+  capacity  Int       @db.SmallInt
   isActive  Boolean   @default(true) @map("is_active")
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -352,14 +352,14 @@ model Group {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  subject           Subject          @relation(fields: [subjectId], references: [id])
-  academicPeriod    AcademicPeriod   @relation(fields: [academicPeriodId], references: [id])
-  teacher           Teacher          @relation(fields: [teacherId], references: [id])
-  groupClassrooms   GroupClassroom[]
+  subject            Subject             @relation(fields: [subjectId], references: [id])
+  academicPeriod     AcademicPeriod      @relation(fields: [academicPeriodId], references: [id])
+  teacher            Teacher             @relation(fields: [teacherId], references: [id])
+  groupClassrooms    GroupClassroom[]
   enrollmentSubjects EnrollmentSubject[]
-  evaluations       Evaluation[]
-  academicRecords   AcademicRecord[]
-  topics            Topic[]
+  evaluations        Evaluation[]
+  academicRecords    AcademicRecord[]
+  topics             Topic[]
 
   @@unique([subjectId, academicPeriodId, groupCode])
   @@map("groups")
@@ -397,8 +397,8 @@ model Enrollment {
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  student           Student            @relation(fields: [studentId], references: [id])
-  academicPeriod    AcademicPeriod     @relation(fields: [academicPeriodId], references: [id])
+  student            Student             @relation(fields: [studentId], references: [id])
+  academicPeriod     AcademicPeriod      @relation(fields: [academicPeriodId], references: [id])
   enrollmentSubjects EnrollmentSubject[]
 
   @@unique([studentId, academicPeriodId])
@@ -444,15 +444,15 @@ model EvaluationType {
 // ─────────────────────────────────────────────
 
 model Evaluation {
-  id               String   @id @default(uuid()) @db.Uuid
-  groupId          String   @map("group_id") @db.Uuid
-  evaluationTypeId String   @map("evaluation_type_id") @db.Uuid
-  name             String   @db.VarChar(200)
-  weight           Decimal  @db.Decimal(5, 2)
-  maxScore         Decimal  @default(100) @map("max_score") @db.Decimal(5, 2)
+  id               String    @id @default(uuid()) @db.Uuid
+  groupId          String    @map("group_id") @db.Uuid
+  evaluationTypeId String    @map("evaluation_type_id") @db.Uuid
+  name             String    @db.VarChar(200)
+  weight           Decimal   @db.Decimal(5, 2)
+  maxScore         Decimal   @default(100) @map("max_score") @db.Decimal(5, 2)
   dueDate          DateTime? @map("due_date") @db.Date
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   group          Group          @relation(fields: [groupId], references: [id])
   evaluationType EvaluationType @relation(fields: [evaluationTypeId], references: [id])
@@ -510,16 +510,16 @@ model AcademicRecord {
 // ─────────────────────────────────────────────
 
 model CertificationCriteria {
-  id                String            @id @default(uuid()) @db.Uuid
-  certificationType CertificationType @map("certification_type")
-  careerId          String?           @map("career_id") @db.Uuid
-  minGrade          Decimal           @default(60.00) @map("min_grade") @db.Decimal(5, 2)
+  id                  String            @id @default(uuid()) @db.Uuid
+  certificationType   CertificationType @map("certification_type")
+  careerId            String?           @map("career_id") @db.Uuid
+  minGrade            Decimal           @default(60.00) @map("min_grade") @db.Decimal(5, 2)
   validityMonths      Int               @map("validity_months") @db.SmallInt
   minCredits          Int?              @map("min_credits") @db.SmallInt
   requireAllMandatory Boolean           @default(false) @map("require_all_mandatory")
   description         String?           @db.VarChar(255)
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   career Career? @relation(fields: [careerId], references: [id])
 
@@ -621,10 +621,10 @@ model ContentItem {
 
 model SystemSettings {
   id                       String   @id @default(uuid()) @db.Uuid
-  passingGrade             Decimal  @default(60)   @map("passing_grade") @db.Decimal(5, 2)
-  maxSubjectsPerEnrollment Int      @default(7)    @map("max_subjects_per_enrollment") @db.SmallInt
-  maxEvaluationWeight      Decimal  @default(100)  @map("max_evaluation_weight") @db.Decimal(5, 2)
-  atRiskThreshold          Int      @default(3)    @map("at_risk_threshold") @db.SmallInt
+  passingGrade             Decimal  @default(60) @map("passing_grade") @db.Decimal(5, 2)
+  maxSubjectsPerEnrollment Int      @default(7) @map("max_subjects_per_enrollment") @db.SmallInt
+  maxEvaluationWeight      Decimal  @default(100) @map("max_evaluation_weight") @db.Decimal(5, 2)
+  atRiskThreshold          Int      @default(3) @map("at_risk_threshold") @db.SmallInt
   updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   updatedBy                String?  @map("updated_by") @db.Uuid
 

@@ -13,13 +13,14 @@
     "db:setup": "npm run prisma:migrate && ts-node prisma/seed.ts && node -e \"require('fs').readFileSync('src/migrations/001_trigger_and_sp.sql','utf8').split(';').filter(Boolean).forEach(async s=>{ if(s.trim()) console.log('Run SQL manually for trigger/SP') })\""
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/adapter-pg": "^7.6.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^4.21.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "pg": "^8.20.0",
     "puppeteer": "^24.40.0",
     "qrcode": "^1.5.4",
     "zod": "^3.23.8"
@@ -28,13 +29,14 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "devDependencies": {
+    "@prisma/client": "^7.6.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.9.0",
     "@types/qrcode": "^1.5.6",
-    "prisma": "^5.22.0",
+    "prisma": "^7.6.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.3"
   }
