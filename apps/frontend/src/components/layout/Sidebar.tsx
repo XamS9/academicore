@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import Collapse from '@mui/material/Collapse';
 import Toolbar from '@mui/material/Toolbar';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
@@ -30,6 +31,17 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import ArticleIcon from '@mui/icons-material/Article';
 import SettingsIcon from '@mui/icons-material/Settings';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import BadgeIcon from '@mui/icons-material/Badge';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import CampaignIcon from '@mui/icons-material/Campaign';
+import PaymentIcon from '@mui/icons-material/Payment';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import EventIcon from '@mui/icons-material/Event';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/auth.context';
@@ -40,45 +52,138 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
-  roles: Array<'ADMIN' | 'TEACHER' | 'STUDENT'>;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, roles: ['ADMIN', 'TEACHER', 'STUDENT'] },
+interface NavSection {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  items: NavItem[];
+}
 
-  // ADMIN
-  { label: 'Usuarios', path: '/usuarios', icon: <PeopleIcon />, roles: ['ADMIN'] },
-  { label: 'Estudiantes', path: '/estudiantes', icon: <SchoolIcon />, roles: ['ADMIN'] },
-  { label: 'Profesores', path: '/profesores', icon: <PersonIcon />, roles: ['ADMIN'] },
-  { label: 'Carreras', path: '/carreras', icon: <MenuBookIcon />, roles: ['ADMIN'] },
-  { label: 'Materias', path: '/materias', icon: <SubjectIcon />, roles: ['ADMIN'] },
-  { label: 'Períodos Académicos', path: '/periodos', icon: <CalendarMonthIcon />, roles: ['ADMIN'] },
-  { label: 'Aulas', path: '/aulas', icon: <MeetingRoomIcon />, roles: ['ADMIN'] },
-  { label: 'Grupos', path: '/grupos', icon: <GroupsIcon />, roles: ['ADMIN'] },
-  { label: 'Inscripciones', path: '/inscripciones', icon: <AssignmentTurnedInIcon />, roles: ['ADMIN'] },
-  { label: 'Evaluaciones', path: '/evaluaciones', icon: <AssignmentIcon />, roles: ['ADMIN'] },
-  { label: 'Calificaciones', path: '/calificaciones', icon: <GradingIcon />, roles: ['ADMIN'] },
-  { label: 'Contenido', path: '/contenido', icon: <ArticleIcon />, roles: ['ADMIN'] },
-  { label: 'Certificaciones', path: '/certifications', icon: <VerifiedIcon />, roles: ['ADMIN'] },
-  { label: 'Auditoría', path: '/auditoria', icon: <HistoryIcon />, roles: ['ADMIN'] },
-  { label: 'Configuración', path: '/configuracion', icon: <SettingsIcon />, roles: ['ADMIN'] },
+type NavEntry = NavItem | NavSection;
 
-  // TEACHER
-  { label: 'Mis Grupos', path: '/mis-grupos', icon: <GroupsIcon />, roles: ['TEACHER'] },
-  { label: 'Contenido', path: '/contenido', icon: <ArticleIcon />, roles: ['TEACHER'] },
-  { label: 'Evaluaciones', path: '/evaluaciones', icon: <AssignmentIcon />, roles: ['TEACHER'] },
-  { label: 'Calificaciones', path: '/calificaciones', icon: <GradingIcon />, roles: ['TEACHER'] },
+function isSection(entry: NavEntry): entry is NavSection {
+  return 'items' in entry;
+}
 
-  // STUDENT
-  { label: 'Mi Inscripción', path: '/mi-inscripcion', icon: <AssignmentTurnedInIcon />, roles: ['STUDENT'] },
-  { label: 'Mi Contenido', path: '/mi-contenido', icon: <ArticleIcon />, roles: ['STUDENT'] },
-  { label: 'Mis Calificaciones', path: '/mis-calificaciones', icon: <StarIcon />, roles: ['STUDENT'] },
-  { label: 'Historial Académico', path: '/academic-history', icon: <ListAltIcon />, roles: ['STUDENT'] },
-  { label: 'Mis Certificados', path: '/certifications', icon: <VerifiedIcon />, roles: ['STUDENT'] },
+type Role = 'ADMIN' | 'TEACHER' | 'STUDENT';
 
-  // ALL
-  { label: 'Estándar UI', path: '/ui-standards', icon: <PaletteIcon />, roles: ['ADMIN'] },
-];
+const navByRole: Record<Role, NavEntry[]> = {
+  ADMIN: [
+    { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+    {
+      key: 'users',
+      label: 'Usuarios',
+      icon: <BadgeIcon />,
+      items: [
+        { label: 'Todos los Usuarios', path: '/usuarios', icon: <PeopleIcon /> },
+        { label: 'Estudiantes', path: '/estudiantes', icon: <SchoolIcon /> },
+        { label: 'Profesores', path: '/profesores', icon: <PersonIcon /> },
+      ],
+    },
+    {
+      key: 'academic',
+      label: 'Gestión Académica',
+      icon: <AccountBalanceIcon />,
+      items: [
+        { label: 'Carreras', path: '/carreras', icon: <MenuBookIcon /> },
+        { label: 'Materias', path: '/materias', icon: <SubjectIcon /> },
+        { label: 'Períodos', path: '/periodos', icon: <CalendarMonthIcon /> },
+        { label: 'Aulas', path: '/aulas', icon: <MeetingRoomIcon /> },
+        { label: 'Grupos', path: '/grupos', icon: <GroupsIcon /> },
+      ],
+    },
+    {
+      key: 'teaching',
+      label: 'Enseñanza',
+      icon: <EditNoteIcon />,
+      items: [
+        { label: 'Inscripciones', path: '/inscripciones', icon: <AssignmentTurnedInIcon /> },
+        { label: 'Contenido', path: '/contenido', icon: <ArticleIcon /> },
+        { label: 'Evaluaciones', path: '/evaluaciones', icon: <AssignmentIcon /> },
+        { label: 'Calificaciones', path: '/calificaciones', icon: <GradingIcon /> },
+        { label: 'Anuncios', path: '/anuncios', icon: <CampaignIcon /> },
+      ],
+    },
+    {
+      key: 'system',
+      label: 'Sistema',
+      icon: <AdminPanelSettingsIcon />,
+      items: [
+        { label: 'Certificaciones', path: '/certifications', icon: <VerifiedIcon /> },
+        { label: 'Auditoría', path: '/auditoria', icon: <HistoryIcon /> },
+        { label: 'Configuración', path: '/configuracion', icon: <SettingsIcon /> },
+        { label: 'Calendario', path: '/calendario', icon: <EventIcon /> },
+        { label: 'Pagos', path: '/pagos', icon: <PaymentIcon /> },
+        { label: 'Reportes', path: '/reportes', icon: <BarChartIcon /> },
+        { label: 'Estándar UI', path: '/ui-standards', icon: <PaletteIcon /> },
+      ],
+    },
+  ],
+  TEACHER: [
+    { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+    { label: 'Mis Grupos', path: '/mis-grupos', icon: <GroupsIcon /> },
+    { label: 'Contenido', path: '/contenido', icon: <ArticleIcon /> },
+    { label: 'Evaluaciones', path: '/evaluaciones', icon: <AssignmentIcon /> },
+    { label: 'Calificaciones', path: '/calificaciones', icon: <GradingIcon /> },
+    { label: 'Anuncios', path: '/anuncios', icon: <CampaignIcon /> },
+  ],
+  STUDENT: [
+    { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+    { label: 'Mi Inscripción', path: '/mi-inscripcion', icon: <AssignmentTurnedInIcon /> },
+    { label: 'Inscribir Materias', path: '/inscribir-materias', icon: <AddCircleIcon /> },
+    { label: 'Mi Contenido', path: '/mi-contenido', icon: <ArticleIcon /> },
+    { label: 'Mis Calificaciones', path: '/mis-calificaciones', icon: <StarIcon /> },
+    { label: 'Mis Pagos', path: '/mis-pagos', icon: <PaymentIcon /> },
+    { label: 'Historial Académico', path: '/academic-history', icon: <ListAltIcon /> },
+    { label: 'Mis Certificados', path: '/certifications', icon: <VerifiedIcon /> },
+  ],
+};
+
+function NavItemLink({
+  item,
+  isActive,
+  onClick,
+  nested,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  onClick?: () => void;
+  nested?: boolean;
+}) {
+  return (
+    <ListItem disablePadding>
+      <NavLink
+        to={item.path}
+        style={{ textDecoration: 'none', width: '100%', color: 'inherit' }}
+        onClick={onClick}
+      >
+        <ListItemButton
+          selected={isActive}
+          sx={{
+            borderRadius: 1,
+            mx: 0.5,
+            my: 0.25,
+            ...(nested && { pl: 4 }),
+            '&.Mui-selected': {
+              backgroundColor: 'primary.main',
+              color: 'white',
+              '& .MuiListItemIcon-root': { color: 'white' },
+              '&:hover': { backgroundColor: 'primary.dark' },
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
+          <ListItemText
+            primary={item.label}
+            primaryTypographyProps={{ variant: 'body2', fontWeight: isActive ? 600 : 400 }}
+          />
+        </ListItemButton>
+      </NavLink>
+    </ListItem>
+  );
+}
 
 interface SidebarProps {
   open: boolean;
@@ -89,10 +194,33 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose, variant = 'temporary' }: SidebarProps) {
   const { currentUser } = useAuth();
   const location = useLocation();
+  const role = (currentUser?.role ?? 'STUDENT') as Role;
 
-  const role = currentUser?.role ?? 'STUDENT';
+  const entries = navByRole[role];
 
-  const filtered = navItems.filter((item) => item.roles.includes(role));
+  // Auto-open the section that contains the current route
+  const initialOpen = entries.reduce<Record<string, boolean>>((acc, entry) => {
+    if (isSection(entry)) {
+      acc[entry.key] = entry.items.some(
+        (item) =>
+          location.pathname === item.path ||
+          (item.path !== '/dashboard' && location.pathname.startsWith(item.path)),
+      );
+    }
+    return acc;
+  }, {});
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(initialOpen);
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isPathActive = (path: string) =>
+    location.pathname === path ||
+    (path !== '/dashboard' && location.pathname.startsWith(path));
+
+  const handleNavClick = variant === 'temporary' ? onClose : undefined;
 
   const drawerContent = (
     <Box sx={{ overflow: 'auto' }}>
@@ -104,38 +232,56 @@ export default function Sidebar({ open, onClose, variant = 'temporary' }: Sideba
       </Toolbar>
       <Divider />
       <List dense>
-        {filtered.map((item) => {
-          const isActive = location.pathname === item.path ||
-            (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+        {entries.map((entry) => {
+          if (isSection(entry)) {
+            const sectionOpen = openSections[entry.key] ?? false;
+            const sectionHasActive = entry.items.some((item) => isPathActive(item.path));
+
+            return (
+              <React.Fragment key={entry.key}>
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => toggleSection(entry.key)}
+                    sx={{ borderRadius: 1, mx: 0.5, my: 0.25 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 36, color: sectionHasActive ? 'primary.main' : undefined }}>
+                      {entry.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={entry.label}
+                      primaryTypographyProps={{
+                        variant: 'body2',
+                        fontWeight: sectionHasActive ? 600 : 400,
+                        color: sectionHasActive ? 'primary.main' : undefined,
+                      }}
+                    />
+                    {sectionOpen ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                  </ListItemButton>
+                </ListItem>
+                <Collapse in={sectionOpen} timeout="auto" unmountOnExit>
+                  <List dense disablePadding>
+                    {entry.items.map((item) => (
+                      <NavItemLink
+                        key={item.path}
+                        item={item}
+                        isActive={isPathActive(item.path)}
+                        onClick={handleNavClick}
+                        nested
+                      />
+                    ))}
+                  </List>
+                </Collapse>
+              </React.Fragment>
+            );
+          }
+
           return (
-            <ListItem key={`${item.path}-${item.label}`} disablePadding>
-              <NavLink
-                to={item.path}
-                style={{ textDecoration: 'none', width: '100%', color: 'inherit' }}
-                onClick={variant === 'temporary' ? onClose : undefined}
-              >
-                <ListItemButton
-                  selected={isActive}
-                  sx={{
-                    borderRadius: 1,
-                    mx: 0.5,
-                    my: 0.25,
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      '& .MuiListItemIcon-root': { color: 'white' },
-                      '&:hover': { backgroundColor: 'primary.dark' },
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>{item.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: isActive ? 600 : 400 }}
-                  />
-                </ListItemButton>
-              </NavLink>
-            </ListItem>
+            <NavItemLink
+              key={entry.path}
+              item={entry}
+              isActive={isPathActive(entry.path)}
+              onClick={handleNavClick}
+            />
           );
         })}
       </List>

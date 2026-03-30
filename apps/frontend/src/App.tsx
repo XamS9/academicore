@@ -28,6 +28,12 @@ import StudentGradesPage from './pages/student/StudentGradesPage';
 import ContentPage from './pages/admin/ContentPage';
 import StudentContentPage from './pages/student/StudentContentPage';
 import SystemSettingsPage from './pages/admin/SystemSettingsPage';
+import CalendarEventsPage from './pages/admin/CalendarEventsPage';
+import AnnouncementsPage from './pages/admin/AnnouncementsPage';
+import PaymentsPage from './pages/admin/PaymentsPage';
+import ReportsPage from './pages/admin/ReportsPage';
+import StudentPaymentsPage from './pages/student/StudentPaymentsPage';
+import StudentSelfEnrollPage from './pages/student/StudentSelfEnrollPage';
 
 export default function App() {
   return (
@@ -60,14 +66,20 @@ export default function App() {
           <Route path="calificaciones" element={<GradesPage />} />
           <Route path="auditoria" element={<AuditLogsPage />} />
           <Route path="configuracion" element={<SystemSettingsPage />} />
+          <Route path="calendario" element={<CalendarEventsPage />} />
+          <Route path="pagos" element={<PaymentsPage />} />
+          <Route path="reportes" element={<ReportsPage />} />
           {/* Admin + Teacher */}
           <Route path="contenido" element={<ContentPage />} />
+          <Route path="anuncios" element={<AnnouncementsPage />} />
           {/* Teacher */}
           <Route path="mis-grupos" element={<TeacherGroupsPage />} />
           {/* Student */}
           <Route path="mi-inscripcion" element={<StudentEnrollmentPage />} />
+          <Route path="inscribir-materias" element={<StudentSelfEnrollPage />} />
           <Route path="mis-calificaciones" element={<StudentGradesPage />} />
           <Route path="mi-contenido" element={<StudentContentPage />} />
+          <Route path="mis-pagos" element={<StudentPaymentsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
         </Route>

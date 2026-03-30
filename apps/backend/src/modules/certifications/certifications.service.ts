@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '../../shared/prisma.client';
 import { HttpError } from '../../shared/http-error';
+import { notificationsService } from '../notifications/notifications.service';
 
 interface IssueCertificationDto {
   studentId: string;
@@ -166,6 +167,23 @@ export class CertificationsService {
         newValues: { certificationType: dto.certificationType, studentId: dto.studentId },
       },
     });
+
+    // Notify student
+    const student = await prisma.student.findUnique({ where: { id: dto.studentId }, select: { userId: true } });
+    if (student) {
+      const typeLabels: Record<string, string> = {
+        DEGREE: 'Título', TRANSCRIPT: 'Historial académico',
+        ENROLLMENT_PROOF: 'Constancia de inscripción', COMPLETION: 'Certificado de finalización',
+      };
+      await notificationsService.create({
+        userId: student.userId,
+        title: 'Certificación emitida',
+        message: `Tu ${typeLabels[dto.certificationType] ?? 'certificación'} ha sido emitida`,
+        type: 'CERTIFICATION_ISSUED',
+        relatedEntity: 'certification',
+        relatedEntityId: cert.id,
+      });
+    }
 
     return cert;
   }

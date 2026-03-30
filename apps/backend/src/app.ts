@@ -23,6 +23,11 @@ import { evaluationTypesRouter } from './modules/evaluation-types/evaluation-typ
 import { topicsRouter } from './modules/topics/topics.router';
 import { contentItemsRouter } from './modules/content-items/content-items.router';
 import { systemSettingsRouter } from './modules/system-settings/system-settings.router';
+import { notificationsRouter } from './modules/notifications/notifications.router';
+import { calendarEventsRouter } from './modules/calendar-events/calendar-events.router';
+import { announcementsRouter } from './modules/announcements/announcements.router';
+import { paymentsRouter } from './modules/payments/payments.router';
+import { reportsRouter } from './modules/reports/reports.router';
 
 const app = express();
 
@@ -55,6 +60,11 @@ api.use('/evaluation-types', evaluationTypesRouter);
 api.use('/topics', topicsRouter);
 api.use('/content-items', contentItemsRouter);
 api.use('/configuracion', systemSettingsRouter);
+api.use('/notifications', notificationsRouter);
+api.use('/calendar-events', calendarEventsRouter);
+api.use('/announcements', announcementsRouter);
+api.use('/payments', paymentsRouter);
+api.use('/reports', reportsRouter);
 
 app.use('/api', api);
 

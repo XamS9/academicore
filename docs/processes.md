@@ -419,14 +419,185 @@ Single-row configuration table that controls system-wide academic parameters. Pr
 
 ---
 
+## 17. In-App Notifications
+
+**Actors:** All authenticated users (read own), System (creates via services)
+
+Polling-based notification system. Other services create notifications as side effects (enrollment, grading, payments, announcements, certifications).
+
+### Notification Types
+
+`GRADE_POSTED`, `ENROLLMENT_CONFIRMED`, `CERTIFICATION_ISSUED`, `ANNOUNCEMENT`, `PAYMENT_DUE`, `PAYMENT_CONFIRMED`, `GENERAL`
+
+### Operations
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| List own | `GET /api/notifications?unreadOnly&limit&offset` | Authenticated |
+| Unread count | `GET /api/notifications/unread-count` | Authenticated |
+| Mark read | `PATCH /api/notifications/:id/read` | Authenticated (own only) |
+| Mark all read | `PATCH /api/notifications/read-all` | Authenticated |
+
+### Integration Points
+
+| Trigger | Source service | Type |
+|---------|---------------|------|
+| Grade posted | `grades.service` → `bulkUpsert()` | `GRADE_POSTED` |
+| Enrollment confirmed | `enrollments.service` → `enrollStudent()` | `ENROLLMENT_CONFIRMED` |
+| Certification issued | `certifications.service` → `issue()` | `CERTIFICATION_ISSUED` |
+| Announcement published | `announcements.service` → `create()` | `ANNOUNCEMENT` |
+| Fee assigned | `payments.service` → `assignFee()` | `PAYMENT_DUE` |
+| Payment confirmed | `payments.service` → `pay()` | `PAYMENT_CONFIRMED` |
+
+**Frontend:** Bell icon with badge in TopBar, polls unread count every 30 seconds.
+
+---
+
+## 18. Payments (Simulated)
+
+**Actors:** ADMIN (manage fee concepts + assign fees), STUDENT (view own fees + pay)
+
+Mock payment flow — no real payment gateway. Generates reference codes and records transactions.
+
+### Fee Concepts (catalog)
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| List | `GET /api/payments/fee-concepts` | ADMIN |
+| Create | `POST /api/payments/fee-concepts` | ADMIN |
+| Update | `PATCH /api/payments/fee-concepts/:id` | ADMIN |
+
+### Student Fees
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| List (student's own) | `GET /api/payments/student-fees` | Authenticated |
+| Assign fee | `POST /api/payments/student-fees` | ADMIN |
+| Assign bulk | `POST /api/payments/student-fees/bulk` | ADMIN |
+
+### Payment Flow
+
+**Endpoint:** `POST /api/payments/pay/:studentFeeId`
+
+| Step | Description |
+|------|-------------|
+| 1 | Validate fee exists, status=PENDING, student owns it |
+| 2 | Accept payment method (CARD, TRANSFER, CASH) |
+| 3 | Generate reference code: `PAY-{uuid.slice(0,8).toUpperCase()}` |
+| 4 | Transaction: create Payment record + update StudentFee.status=PAID |
+| 5 | Create notification (PAYMENT_CONFIRMED) |
+| 6 | Create audit log entry |
+
+**Fee statuses:** PENDING, PAID, OVERDUE, CANCELLED.
+
+---
+
+## 19. Student Self-Enrollment
+
+**Actors:** STUDENT (enroll self), ADMIN (enroll any student)
+
+Extended from Process 10. Students can now enroll themselves into available groups for their career.
+
+### New Endpoints
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| Available groups | `GET /api/enrollments/available-groups` | STUDENT |
+| Enroll (self) | `POST /api/enrollments/enroll` | ADMIN, STUDENT |
+
+### Self-Enrollment Flow
+
+| Step | Description |
+|------|-------------|
+| 1 | Student browses available groups (filtered by career, active period, excluding already-enrolled) |
+| 2 | Student selects a group and submits enrollment |
+| 3 | System verifies `req.user.sub === student.userId` (can only enroll themselves) |
+| 4 | Stored procedure `sp_enroll_student` validates prerequisites, capacity, etc. (same as admin flow) |
+| 5 | On success: creates enrollment + notification (ENROLLMENT_CONFIRMED) |
+
+**Rules:** Same validation chain as admin enrollment (Process 10). Student ownership enforced at the controller level.
+
+---
+
+## 20. Announcements
+
+**Actors:** ADMIN (full CRUD), TEACHER (CRUD own), all authenticated (read relevant)
+
+Targeted communication system with audience-based delivery.
+
+### Operations
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| List all | `GET /api/announcements` | ADMIN, TEACHER |
+| My announcements | `GET /api/announcements/my` | Authenticated |
+| Get | `GET /api/announcements/:id` | Authenticated |
+| Create | `POST /api/announcements` | ADMIN, TEACHER |
+| Update | `PATCH /api/announcements/:id` | ADMIN, TEACHER |
+| Delete | `DELETE /api/announcements/:id` | ADMIN |
+
+### Audience Types
+
+| Audience | Target resolution |
+|----------|------------------|
+| `ALL` | All students |
+| `CAREER` | Students in the specified career (`targetId` = careerId) |
+| `GROUP` | Students enrolled in the specified group (`targetId` = groupId) |
+
+### On Create
+
+1. Resolve targeted user IDs based on audience type
+2. Create announcement record
+3. Fan-out notifications to all resolved users via `notificationsService.createBulk()`
+
+---
+
+## 21. Calendar Events
+
+**Actors:** ADMIN (full CRUD), all authenticated (read)
+
+Academic calendar management for holidays, exam weeks, deadlines, and other events.
+
+### Operations
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| List | `GET /api/calendar-events?periodId&upcoming` | Authenticated |
+| Get | `GET /api/calendar-events/:id` | Authenticated |
+| Create | `POST /api/calendar-events` | ADMIN |
+| Update | `PATCH /api/calendar-events/:id` | ADMIN |
+| Delete | `DELETE /api/calendar-events/:id` | ADMIN |
+
+### Event Types
+
+`HOLIDAY`, `EXAM_WEEK`, `DEADLINE`, `OTHER`
+
+Events optionally link to an academic period. The `upcoming` filter returns events with `startDate >= today`.
+
+---
+
+## 22. Reports & Analytics
+
+**Actors:** ADMIN (read-only)
+
+Aggregation queries on existing data — no new tables required.
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /api/reports/enrollment-stats` | Enrollment count per period, grouped by career |
+| `GET /api/reports/pass-fail` | Pass/fail counts from academic records per period |
+| `GET /api/reports/gpa-trends` | Average GPA per period from academic records |
+| `GET /api/reports/at-risk` | At-risk student count + list |
+| `GET /api/reports/summary` | Combined dashboard stats (students, teachers, periods, enrollments, at-risk, pending fees) |
+
+**Frontend:** Admin reports page with 4 chart cards (recharts): enrollment bar chart, pass/fail pie chart, GPA trend line chart, at-risk student count.
+
+---
+
 ## Not Implemented
 
 The following academic processes are **not** currently handled:
 - **Attendance tracking** — no attendance records
-- **Student self-enrollment** — enrollment is admin-only; no student-facing enrollment flow
-- **Notifications / messaging** — no email, in-app notifications, or announcements
-- **Tuition / payments** — no financial management
 - **Faculty workload / contracts** — no HR-related processes
 - **Library / resources** — no resource management
 - **Transfer credits** — no mechanism for external credit recognition
-- **Academic calendar events** — periods exist but no event/holiday management

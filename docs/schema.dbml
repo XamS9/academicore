@@ -64,6 +64,42 @@ Enum ContentItemType {
   FILE_REF
 }
 
+Enum NotificationType {
+  GRADE_POSTED
+  ENROLLMENT_CONFIRMED
+  CERTIFICATION_ISSUED
+  ANNOUNCEMENT
+  PAYMENT_DUE
+  PAYMENT_CONFIRMED
+  GENERAL
+}
+
+Enum FeeStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+Enum PaymentMethod {
+  CARD
+  TRANSFER
+  CASH
+}
+
+Enum AnnouncementAudience {
+  ALL
+  CAREER
+  GROUP
+}
+
+Enum CalendarEventType {
+  HOLIDAY
+  EXAM_WEEK
+  DEADLINE
+  OTHER
+}
+
 // ─── TABLES ─────────────────────────────────────────────────
 
 Table users {
@@ -384,4 +420,81 @@ Table system_settings {
   at_risk_threshold         smallint     [not null, default: 3, note: 'Failed subjects for AT_RISK status']
   updated_at                timestamptz  [not null]
   updated_by                uuid         [ref: > users.id]
+}
+
+Table notifications {
+  id                uuid             [pk, default: `gen_random_uuid()`]
+  user_id           uuid             [not null, ref: > users.id]
+  title             varchar(200)     [not null]
+  message           varchar(500)     [not null]
+  type              NotificationType [not null]
+  is_read           boolean          [not null, default: false]
+  related_entity    varchar(50)
+  related_entity_id uuid
+  created_at        timestamptz      [not null, default: `now()`]
+
+  indexes {
+    (user_id, is_read) [name: 'idx_notification_user_read']
+    created_at [name: 'idx_notification_created_at']
+  }
+}
+
+Table fee_concepts {
+  id          uuid         [pk, default: `gen_random_uuid()`]
+  name        varchar(200) [not null]
+  amount      decimal(10,2) [not null]
+  description varchar(500)
+  is_active   boolean      [not null, default: true]
+  created_at  timestamptz  [not null, default: `now()`]
+  updated_at  timestamptz  [not null]
+}
+
+Table student_fees {
+  id             uuid      [pk, default: `gen_random_uuid()`]
+  student_id     uuid      [not null, ref: > students.id]
+  fee_concept_id uuid      [not null, ref: > fee_concepts.id]
+  period_id      uuid      [not null, ref: > academic_periods.id]
+  amount         decimal(10,2) [not null]
+  due_date       date      [not null]
+  status         FeeStatus [not null, default: 'PENDING']
+  created_at     timestamptz [not null, default: `now()`]
+  updated_at     timestamptz [not null]
+}
+
+Table payments {
+  id             uuid          [pk, default: `gen_random_uuid()`]
+  student_fee_id uuid          [not null, ref: > student_fees.id]
+  amount         decimal(10,2) [not null]
+  method         PaymentMethod [not null]
+  reference_code varchar(50)   [not null, unique]
+  paid_at        timestamptz   [not null, default: `now()`]
+  created_at     timestamptz   [not null, default: `now()`]
+}
+
+Table announcements {
+  id           uuid                 [pk, default: `gen_random_uuid()`]
+  author_id    uuid                 [not null, ref: > users.id]
+  title        varchar(200)         [not null]
+  body         text                 [not null]
+  audience     AnnouncementAudience [not null]
+  target_id    uuid                 [note: 'careerId or groupId depending on audience']
+  published_at timestamptz          [not null, default: `now()`]
+  created_at   timestamptz          [not null, default: `now()`]
+  updated_at   timestamptz          [not null]
+
+  indexes {
+    (audience, target_id) [name: 'idx_announcement_audience']
+  }
+}
+
+Table calendar_events {
+  id          uuid              [pk, default: `gen_random_uuid()`]
+  title       varchar(200)      [not null]
+  description varchar(500)
+  event_type  CalendarEventType [not null]
+  start_date  date              [not null]
+  end_date    date              [not null]
+  period_id   uuid              [ref: > academic_periods.id]
+  created_at  timestamptz       [not null, default: `now()`]
+  updated_at  timestamptz       [not null]
 }

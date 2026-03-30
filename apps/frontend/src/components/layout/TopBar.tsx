@@ -9,6 +9,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SchoolIcon from '@mui/icons-material/School';
 import { useAuth } from '../../store/auth.context';
+import NotificationBell from './NotificationBell';
 
 const roleLabels: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -55,6 +56,7 @@ export default function TopBar({ onToggleSidebar }: TopBarProps) {
 
         {currentUser && (
           <Box className="flex items-center gap-3">
+            <NotificationBell />
             <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
               {currentUser.name}
             </Typography>

@@ -155,17 +155,44 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     });
   }
 
-  // ── 8. CLASSROOM ─────────────────────────────────────────────────────────────
-  await prisma.classroom.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000010' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000010',
-      name: 'Aula A-101',
-      building: 'Edificio A',
-      capacity: 35,
-    },
-  });
+  // ── 7b. SUBJECT PREREQUISITES ─────────────────────────────────────────────────
+  // PRG201 (POO) requires PRG101 (Fundamentos de Programación)
+  // BD101 (Base de Datos) requires MAT101 (Cálculo Diferencial)
+  for (const prereq of [
+    { subjectId: prg201.id, prerequisiteId: prg101.id },
+    { subjectId: bd101.id,  prerequisiteId: mat101.id },
+  ]) {
+    const exists = await prisma.subjectPrerequisite.findFirst({
+      where: { subjectId: prereq.subjectId, prerequisiteId: prereq.prerequisiteId },
+    });
+    if (!exists) {
+      await prisma.subjectPrerequisite.create({ data: prereq });
+    }
+  }
+
+  // ── 8. CLASSROOMS ───────────────────────────────────────────────────────────
+  const [classroomA101, classroomB201] = await Promise.all([
+    prisma.classroom.upsert({
+      where: { id: '00000000-0000-0000-0000-000000000010' },
+      update: {},
+      create: {
+        id: '00000000-0000-0000-0000-000000000010',
+        name: 'Aula A-101',
+        building: 'Edificio A',
+        capacity: 35,
+      },
+    }),
+    prisma.classroom.upsert({
+      where: { id: '00000000-0000-0000-0000-000000000011' },
+      update: {},
+      create: {
+        id: '00000000-0000-0000-0000-000000000011',
+        name: 'Lab B-201',
+        building: 'Edificio B',
+        capacity: 25,
+      },
+    }),
+  ]);
 
   // ── 9. ACADEMIC PERIODS ──────────────────────────────────────────────────────
   const period2024 = await prisma.academicPeriod.upsert({
@@ -239,6 +266,30 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       create: { subjectId: red101.id, academicPeriodId: period2025.id, teacherId: teacher.id, groupCode: 'RED101-A', maxStudents: 30, currentStudents: 1 },
     }),
   ]);
+
+  // ── 11b. GROUP_CLASSROOMS (schedules) ─────────────────────────────────────────
+  // Helper to build a time-only Date (Prisma @db.Time)
+  const time = (h: number, m: number) => new Date(`1970-01-01T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`);
+
+  const schedules = [
+    // 2024-2 groups
+    { groupId: grpMat101.id, classroomId: classroomA101.id, dayOfWeek: 1, startTime: time(8, 0),  endTime: time(10, 0) },
+    { groupId: grpMat102.id, classroomId: classroomA101.id, dayOfWeek: 2, startTime: time(8, 0),  endTime: time(10, 0) },
+    { groupId: grpPrg101.id, classroomId: classroomB201.id, dayOfWeek: 3, startTime: time(10, 0), endTime: time(12, 0) },
+    // 2025-1 groups
+    { groupId: grpPrg201.id, classroomId: classroomB201.id, dayOfWeek: 1, startTime: time(10, 0), endTime: time(12, 0) },
+    { groupId: grpBd101.id,  classroomId: classroomB201.id, dayOfWeek: 2, startTime: time(14, 0), endTime: time(16, 0) },
+    { groupId: grpRed101.id, classroomId: classroomA101.id, dayOfWeek: 4, startTime: time(8, 0),  endTime: time(10, 0) },
+  ];
+
+  for (const s of schedules) {
+    const exists = await prisma.groupClassroom.findFirst({
+      where: { classroomId: s.classroomId, dayOfWeek: s.dayOfWeek, startTime: s.startTime, endTime: s.endTime },
+    });
+    if (!exists) {
+      await prisma.groupClassroom.create({ data: s });
+    }
+  }
 
   // ── 12. ENROLLMENTS ──────────────────────────────────────────────────────────
   const enrollment2024 = await prisma.enrollment.upsert({
@@ -530,6 +581,107 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         updatedBy: adminUser.id,
       },
     });
+  }
+
+  // ── 22. FEE CONCEPTS ───────────────────────────────────────────────────
+  const [feeInscripcion, feeCredencial, feeLaboratorio] = await Promise.all([
+    prisma.feeConcept.upsert({
+      where: { id: '00000000-0000-0000-0000-fee000000001' },
+      update: {},
+      create: { id: '00000000-0000-0000-0000-fee000000001', name: 'Inscripción semestral', amount: 5000, description: 'Cuota de inscripción por semestre' },
+    }),
+    prisma.feeConcept.upsert({
+      where: { id: '00000000-0000-0000-0000-fee000000002' },
+      update: {},
+      create: { id: '00000000-0000-0000-0000-fee000000002', name: 'Credencial', amount: 150, description: 'Expedición o reposición de credencial' },
+    }),
+    prisma.feeConcept.upsert({
+      where: { id: '00000000-0000-0000-0000-fee000000003' },
+      update: {},
+      create: { id: '00000000-0000-0000-0000-fee000000003', name: 'Laboratorio', amount: 800, description: 'Cuota de uso de laboratorio' },
+    }),
+  ]);
+
+  // ── 23. STUDENT FEES ─────────────────────────────────────────────────────
+  const studentFeeInscripcion = await prisma.studentFee.upsert({
+    where: { id: '00000000-0000-0000-0000-stf000000001' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-stf000000001',
+      studentId: student.id,
+      feeConceptId: feeInscripcion.id,
+      periodId: period2025.id,
+      amount: 5000,
+      dueDate: new Date('2025-02-15'),
+      status: 'PAID',
+    },
+  });
+
+  const studentFeeLab = await prisma.studentFee.upsert({
+    where: { id: '00000000-0000-0000-0000-stf000000002' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-stf000000002',
+      studentId: student.id,
+      feeConceptId: feeLaboratorio.id,
+      periodId: period2025.id,
+      amount: 800,
+      dueDate: new Date('2025-03-01'),
+      status: 'PENDING',
+    },
+  });
+
+  // ── 24. SAMPLE PAYMENT ───────────────────────────────────────────────────
+  await prisma.payment.upsert({
+    where: { referenceCode: 'PAY-SEED0001' },
+    update: {},
+    create: {
+      studentFeeId: studentFeeInscripcion.id,
+      amount: 5000,
+      method: 'CARD',
+      referenceCode: 'PAY-SEED0001',
+      paidAt: new Date('2025-01-22'),
+    },
+  });
+
+  // ── 25. CALENDAR EVENTS ──────────────────────────────────────────────────
+  for (const evt of [
+    { id: '00000000-0000-0000-0000-evt000000001', title: 'Inicio de clases', description: 'Inicio del período 2025-1', eventType: 'OTHER' as const, startDate: new Date('2025-01-20'), endDate: new Date('2025-01-20'), periodId: period2025.id },
+    { id: '00000000-0000-0000-0000-evt000000002', title: 'Semana de exámenes parciales', description: 'Primera evaluación parcial', eventType: 'EXAM_WEEK' as const, startDate: new Date('2025-03-17'), endDate: new Date('2025-03-21'), periodId: period2025.id },
+    { id: '00000000-0000-0000-0000-evt000000003', title: 'Día festivo — Batalla de Puebla', eventType: 'HOLIDAY' as const, startDate: new Date('2025-05-05'), endDate: new Date('2025-05-05') },
+    { id: '00000000-0000-0000-0000-evt000000004', title: 'Entrega de proyectos finales', description: 'Fecha límite para proyectos finales', eventType: 'DEADLINE' as const, startDate: new Date('2025-06-06'), endDate: new Date('2025-06-06'), periodId: period2025.id },
+  ]) {
+    await prisma.calendarEvent.upsert({
+      where: { id: evt.id },
+      update: {},
+      create: evt,
+    });
+  }
+
+  // ── 26. ANNOUNCEMENTS ────────────────────────────────────────────────────
+  for (const ann of [
+    { id: '00000000-0000-0000-0000-ann000000001', authorId: adminUser.id, title: 'Bienvenida al semestre 2025-1', body: 'Damos la bienvenida a todos los estudiantes al nuevo semestre. Les recordamos revisar sus horarios y cumplir con los pagos pendientes.', audience: 'ALL' as const },
+    { id: '00000000-0000-0000-0000-ann000000002', authorId: teacherUser.id, title: 'Material disponible — POO', body: 'Se han publicado los materiales del tema 1 de Programación Orientada a Objetos. Favor de revisarlos antes de la próxima clase.', audience: 'GROUP' as const, targetId: grpPrg201.id },
+  ]) {
+    await prisma.announcement.upsert({
+      where: { id: ann.id },
+      update: {},
+      create: ann,
+    });
+  }
+
+  // ── 27. NOTIFICATIONS (sample for student) ───────────────────────────────
+  for (const notif of [
+    { userId: studentUser.id, title: 'Inscripción confirmada', message: 'Tu inscripción al período 2025-1 ha sido registrada exitosamente.', type: 'ENROLLMENT_CONFIRMED' as const, relatedEntity: 'enrollment', relatedEntityId: enrollment2025.id },
+    { userId: studentUser.id, title: 'Pago confirmado', message: 'Tu pago de Inscripción semestral por $5,000.00 ha sido procesado. Referencia: PAY-SEED0001', type: 'PAYMENT_CONFIRMED' as const },
+    { userId: studentUser.id, title: 'Nuevo anuncio', message: 'Bienvenida al semestre 2025-1', type: 'ANNOUNCEMENT' as const },
+  ]) {
+    const exists = await prisma.notification.findFirst({
+      where: { userId: notif.userId, title: notif.title, type: notif.type },
+    });
+    if (!exists) {
+      await prisma.notification.create({ data: notif });
+    }
   }
 
   console.log('');

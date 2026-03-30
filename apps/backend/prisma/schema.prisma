@@ -74,6 +74,42 @@ enum ContentItemType {
   FILE_REF
 }
 
+enum NotificationType {
+  GRADE_POSTED
+  ENROLLMENT_CONFIRMED
+  CERTIFICATION_ISSUED
+  ANNOUNCEMENT
+  PAYMENT_DUE
+  PAYMENT_CONFIRMED
+  GENERAL
+}
+
+enum FeeStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CARD
+  TRANSFER
+  CASH
+}
+
+enum AnnouncementAudience {
+  ALL
+  CAREER
+  GROUP
+}
+
+enum CalendarEventType {
+  HOLIDAY
+  EXAM_WEEK
+  DEADLINE
+  OTHER
+}
+
 // ─────────────────────────────────────────────
 // 1. USERS — Supertype
 // ─────────────────────────────────────────────
@@ -97,6 +133,8 @@ model User {
   certIssued       Certification[]  @relation("IssuedBy")
   auditLogs        AuditLog[]
   settingsUpdates  SystemSettings[] @relation("SettingsUpdatedBy")
+  notifications    Notification[]
+  announcements    Announcement[]
 
   @@map("users")
 }
@@ -122,6 +160,7 @@ model Student {
   grades          Grade[]
   academicRecords AcademicRecord[]
   certifications  Certification[]
+  studentFees     StudentFee[]
 
   @@map("students")
 }
@@ -272,6 +311,8 @@ model AcademicPeriod {
   groups          Group[]
   enrollments     Enrollment[]
   academicRecords AcademicRecord[]
+  studentFees     StudentFee[]
+  calendarEvents  CalendarEvent[]
 
   @@map("academic_periods")
 }
@@ -590,4 +631,126 @@ model SystemSettings {
   updater User? @relation("SettingsUpdatedBy", fields: [updatedBy], references: [id])
 
   @@map("system_settings")
+}
+
+// ─────────────────────────────────────────────
+// 26. NOTIFICATIONS — In-app notifications
+// ─────────────────────────────────────────────
+
+model Notification {
+  id              String           @id @default(uuid()) @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  title           String           @db.VarChar(200)
+  message         String           @db.VarChar(500)
+  type            NotificationType
+  isRead          Boolean          @default(false) @map("is_read")
+  relatedEntity   String?          @map("related_entity") @db.VarChar(50)
+  relatedEntityId String?          @map("related_entity_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead], name: "idx_notification_user_read")
+  @@index([createdAt], name: "idx_notification_created_at")
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────
+// 27. FEE_CONCEPTS — Catalog of fee types
+// ─────────────────────────────────────────────
+
+model FeeConcept {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(200)
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?  @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  studentFees StudentFee[]
+
+  @@map("fee_concepts")
+}
+
+// ─────────────────────────────────────────────
+// 28. STUDENT_FEES — Fees assigned to students
+// ─────────────────────────────────────────────
+
+model StudentFee {
+  id           String    @id @default(uuid()) @db.Uuid
+  studentId    String    @map("student_id") @db.Uuid
+  feeConceptId String    @map("fee_concept_id") @db.Uuid
+  periodId     String    @map("period_id") @db.Uuid
+  amount       Decimal   @db.Decimal(10, 2)
+  dueDate      DateTime  @map("due_date") @db.Date
+  status       FeeStatus @default(PENDING)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student    Student        @relation(fields: [studentId], references: [id])
+  feeConcept FeeConcept     @relation(fields: [feeConceptId], references: [id])
+  period     AcademicPeriod @relation(fields: [periodId], references: [id])
+  payments   Payment[]
+
+  @@map("student_fees")
+}
+
+// ─────────────────────────────────────────────
+// 29. PAYMENTS — Payment records
+// ─────────────────────────────────────────────
+
+model Payment {
+  id            String        @id @default(uuid()) @db.Uuid
+  studentFeeId  String        @map("student_fee_id") @db.Uuid
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod
+  referenceCode String        @unique @map("reference_code") @db.VarChar(50)
+  paidAt        DateTime      @default(now()) @map("paid_at") @db.Timestamptz(6)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  studentFee StudentFee @relation(fields: [studentFeeId], references: [id])
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// 30. ANNOUNCEMENTS
+// ─────────────────────────────────────────────
+
+model Announcement {
+  id          String               @id @default(uuid()) @db.Uuid
+  authorId    String               @map("author_id") @db.Uuid
+  title       String               @db.VarChar(200)
+  body        String               @db.Text
+  audience    AnnouncementAudience
+  targetId    String?              @map("target_id") @db.Uuid
+  publishedAt DateTime             @default(now()) @map("published_at") @db.Timestamptz(6)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([audience, targetId], name: "idx_announcement_audience")
+  @@map("announcements")
+}
+
+// ─────────────────────────────────────────────
+// 31. CALENDAR_EVENTS
+// ─────────────────────────────────────────────
+
+model CalendarEvent {
+  id          String            @id @default(uuid()) @db.Uuid
+  title       String            @db.VarChar(200)
+  description String?           @db.VarChar(500)
+  eventType   CalendarEventType @map("event_type")
+  startDate   DateTime          @map("start_date") @db.Date
+  endDate     DateTime          @map("end_date") @db.Date
+  periodId    String?           @map("period_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  period AcademicPeriod? @relation(fields: [periodId], references: [id])
+
+  @@map("calendar_events")
 }
