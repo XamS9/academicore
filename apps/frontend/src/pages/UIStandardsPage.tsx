@@ -83,12 +83,12 @@ function Section({ title, number, children }: SectionProps) {
 const colors = [
   {
     name: "Primary",
-    hex: "#1976d2",
+    hex: "#4f46e5",
     usage: "Acciones principales, botones primarios, enlaces",
   },
   {
     name: "Secondary",
-    hex: "#9c27b0",
+    hex: "#7c3aed",
     usage: "Acciones secundarias, roles de profesores",
   },
   {
@@ -278,6 +278,7 @@ export default function UIStandardsPage() {
             </Box>
           ))}
         </Box>
+        <Typography variant="h6">Fuente principal: Inter</Typography>
       </Section>
 
       {/* Section 3 — Buttons */}
