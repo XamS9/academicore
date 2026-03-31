@@ -1,31 +1,34 @@
-import puppeteer from 'puppeteer';
-import QRCode from 'qrcode';
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
+import puppeteer from "puppeteer";
+import QRCode from "qrcode";
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
 
 const certTypeLabels: Record<string, string> = {
-  TRANSCRIPT: 'Historial Académico',
-  ENROLLMENT_PROOF: 'Comprobante de Inscripción',
-  DEGREE: 'Título Profesional',
-  COMPLETION: 'Certificado de Terminación',
+  TRANSCRIPT: "Historial Académico",
+  ENROLLMENT_PROOF: "Comprobante de Inscripción",
+  DEGREE: "Título Profesional",
+  COMPLETION: "Certificado de Terminación",
 };
 
 const statusLabels: Record<string, string> = {
-  ACTIVE: 'ACTIVO',
-  REVOKED: 'REVOCADO',
-  EXPIRED: 'VENCIDO',
+  ACTIVE: "ACTIVO",
+  REVOKED: "REVOCADO",
+  EXPIRED: "VENCIDO",
 };
 
 function formatDate(date: Date | string | null): string {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
   });
 }
 
-export async function generateCertificatePdf(certId: string, baseUrl: string): Promise<Buffer> {
+export async function generateCertificatePdf(
+  certId: string,
+  baseUrl: string,
+): Promise<Buffer> {
   const cert = await prisma.certification.findUnique({
     where: { id: certId },
     include: {
@@ -40,21 +43,22 @@ export async function generateCertificatePdf(certId: string, baseUrl: string): P
     },
   });
 
-  if (!cert) throw new HttpError(404, 'Certification not found');
+  if (!cert) throw new HttpError(404, "Certification not found");
 
   const verifyUrl = `${baseUrl}/verify/${cert.verificationCode}`;
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
     width: 160,
     margin: 1,
-    color: { dark: '#1a237e', light: '#ffffff' },
+    color: { dark: "#1a237e", light: "#ffffff" },
   });
 
   const studentName = `${cert.student.user.firstName} ${cert.student.user.lastName}`;
-  const careerName = cert.career?.name ?? cert.student.career?.name ?? '—';
+  const careerName = cert.career?.name ?? cert.student.career?.name ?? "—";
   const issuerName = cert.issuer
     ? `${cert.issuer.firstName} ${cert.issuer.lastName}`
-    : '—';
-  const certTypeLabel = certTypeLabels[cert.certificationType] ?? cert.certificationType;
+    : "—";
+  const certTypeLabel =
+    certTypeLabels[cert.certificationType] ?? cert.certificationType;
   const statusLabel = statusLabels[cert.status] ?? cert.status;
 
   const html = `
@@ -383,7 +387,7 @@ export async function generateCertificatePdf(certId: string, baseUrl: string): P
         </div>
         <div>
           <div class="detail-label">Estado</div>
-          <span class="status-badge ${cert.status === 'REVOKED' ? 'revoked' : cert.status === 'EXPIRED' ? 'expired' : ''}">${statusLabel}</span>
+          <span class="status-badge ${cert.status === "REVOKED" ? "revoked" : cert.status === "EXPIRED" ? "expired" : ""}">${statusLabel}</span>
         </div>
       </div>
 
@@ -425,16 +429,16 @@ export async function generateCertificatePdf(certId: string, baseUrl: string): P
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.setContent(html, { waitUntil: "networkidle0" });
     const pdf = await page.pdf({
-      format: 'A4',
+      format: "A4",
       printBackground: true,
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+      margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
     return Buffer.from(pdf);
   } finally {

@@ -1,9 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
-import { usersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './users.dto';
+import { Request, Response, NextFunction } from "express";
+import { usersService } from "./users.service";
+import { CreateUserDto, UpdateUserDto } from "./users.dto";
 
 class UsersController {
-  findAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const users = await usersService.findAll();
       res.status(200).json(users);
@@ -12,7 +16,11 @@ class UsersController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const user = await usersService.findById(req.params.id);
       res.status(200).json(user);
@@ -21,7 +29,11 @@ class UsersController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateUserDto.parse(req.body);
       const user = await usersService.create(dto);
@@ -31,7 +43,11 @@ class UsersController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateUserDto.parse(req.body);
       const user = await usersService.update(req.params.id, dto);
@@ -41,7 +57,11 @@ class UsersController {
     }
   };
 
-  softDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  softDelete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await usersService.softDelete(req.params.id);
       res.status(204).send();
@@ -50,7 +70,11 @@ class UsersController {
     }
   };
 
-  toggleActive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  toggleActive = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const user = await usersService.toggleActive(req.params.id);
       res.status(200).json(user);

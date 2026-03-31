@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const CreateEvaluationDto = z.object({
   groupId: z.string().uuid(),

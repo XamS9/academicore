@@ -1,9 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
-import { evaluationTypesService } from './evaluation-types.service';
-import { CreateEvaluationTypeDto } from './evaluation-types.dto';
+import { Request, Response, NextFunction } from "express";
+import { evaluationTypesService } from "./evaluation-types.service";
+import { CreateEvaluationTypeDto } from "./evaluation-types.dto";
 
 class EvaluationTypesController {
-  findAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const types = await evaluationTypesService.findAll();
       res.status(200).json(types);
@@ -12,7 +16,11 @@ class EvaluationTypesController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateEvaluationTypeDto.parse(req.body);
       const type = await evaluationTypesService.create(dto);

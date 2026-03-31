@@ -1,5 +1,5 @@
-import { prisma } from '../../shared/prisma.client';
-import type { ReportQuery } from './reports.dto';
+import { prisma } from "../../shared/prisma.client";
+import type { ReportQuery } from "./reports.dto";
 
 export class ReportsService {
   async enrollmentStats(query: ReportQuery) {
@@ -13,13 +13,14 @@ export class ReportsService {
           },
         },
       },
-      orderBy: { startDate: 'asc' },
+      orderBy: { startDate: "asc" },
     });
 
     return periods.map((p) => {
       const byCareerId: Record<string, number> = {};
       p.enrollments.forEach((e) => {
-        byCareerId[e.student.careerId] = (byCareerId[e.student.careerId] || 0) + 1;
+        byCareerId[e.student.careerId] =
+          (byCareerId[e.student.careerId] || 0) + 1;
       });
       return {
         periodId: p.id,
@@ -42,22 +43,32 @@ export class ReportsService {
       },
     });
 
-    const byPeriod: Record<string, { periodName: string; passed: number; failed: number }> = {};
+    const byPeriod: Record<
+      string,
+      { periodName: string; passed: number; failed: number }
+    > = {};
     records.forEach((r) => {
       const key = r.academicPeriod.id;
       if (!byPeriod[key]) {
-        byPeriod[key] = { periodName: r.academicPeriod.name, passed: 0, failed: 0 };
+        byPeriod[key] = {
+          periodName: r.academicPeriod.name,
+          passed: 0,
+          failed: 0,
+        };
       }
       if (r.passed) byPeriod[key].passed++;
       else byPeriod[key].failed++;
     });
 
-    return Object.entries(byPeriod).map(([periodId, data]) => ({ periodId, ...data }));
+    return Object.entries(byPeriod).map(([periodId, data]) => ({
+      periodId,
+      ...data,
+    }));
   }
 
   async gpaTrends() {
     const periods = await prisma.academicPeriod.findMany({
-      orderBy: { startDate: 'asc' },
+      orderBy: { startDate: "asc" },
       select: {
         id: true,
         name: true,
@@ -83,7 +94,7 @@ export class ReportsService {
 
   async atRisk() {
     const students = await prisma.student.findMany({
-      where: { academicStatus: 'AT_RISK', deletedAt: null },
+      where: { academicStatus: "AT_RISK", deletedAt: null },
       include: {
         user: { select: { firstName: true, lastName: true, email: true } },
         career: { select: { name: true, code: true } },
@@ -103,17 +114,32 @@ export class ReportsService {
   }
 
   async summary() {
-    const [students, teachers, activePeriods, enrollments, atRisk, pendingFees] =
-      await Promise.all([
-        prisma.student.count({ where: { deletedAt: null } }),
-        prisma.teacher.count({ where: { deletedAt: null } }),
-        prisma.academicPeriod.count({ where: { isActive: true } }),
-        prisma.enrollment.count({ where: { status: 'ACTIVE' } }),
-        prisma.student.count({ where: { academicStatus: 'AT_RISK', deletedAt: null } }),
-        prisma.studentFee.count({ where: { status: 'PENDING' } }),
-      ]);
+    const [
+      students,
+      teachers,
+      activePeriods,
+      enrollments,
+      atRisk,
+      pendingFees,
+    ] = await Promise.all([
+      prisma.student.count({ where: { deletedAt: null } }),
+      prisma.teacher.count({ where: { deletedAt: null } }),
+      prisma.academicPeriod.count({ where: { isActive: true } }),
+      prisma.enrollment.count({ where: { status: "ACTIVE" } }),
+      prisma.student.count({
+        where: { academicStatus: "AT_RISK", deletedAt: null },
+      }),
+      prisma.studentFee.count({ where: { status: "PENDING" } }),
+    ]);
 
-    return { students, teachers, activePeriods, enrollments, atRisk, pendingFees };
+    return {
+      students,
+      teachers,
+      activePeriods,
+      enrollments,
+      atRisk,
+      pendingFees,
+    };
   }
 }
 

@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { ZodError } from 'zod';
-import { HttpError } from '../shared/http-error';
+import { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { HttpError } from "../shared/http-error";
 
 export function errorMiddleware(
   err: unknown,
@@ -10,7 +10,7 @@ export function errorMiddleware(
 ): void {
   if (err instanceof ZodError) {
     res.status(400).json({
-      error: 'Validation error',
+      error: "Validation error",
       details: err.flatten().fieldErrors,
     });
     return;
@@ -22,5 +22,5 @@ export function errorMiddleware(
   }
 
   console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: "Internal server error" });
 }

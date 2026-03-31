@@ -1,2 +1,2 @@
-export * from './notifications.router';
-export * from './notifications.service';
+export * from "./notifications.router";
+export * from "./notifications.service";

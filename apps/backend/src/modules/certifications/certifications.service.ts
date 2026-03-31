@@ -1,12 +1,16 @@
-import crypto from 'node:crypto';
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { notificationsService } from '../notifications/notifications.service';
+import crypto from "node:crypto";
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { notificationsService } from "../notifications/notifications.service";
 
 interface IssueCertificationDto {
   studentId: string;
   careerId?: string;
-  certificationType: 'DEGREE' | 'TRANSCRIPT' | 'ENROLLMENT_PROOF' | 'COMPLETION';
+  certificationType:
+    | "DEGREE"
+    | "TRANSCRIPT"
+    | "ENROLLMENT_PROOF"
+    | "COMPLETION";
 }
 
 interface RevokeCertificationDto {
@@ -14,7 +18,11 @@ interface RevokeCertificationDto {
 }
 
 interface CreateCriteriaDto {
-  certificationType: 'DEGREE' | 'TRANSCRIPT' | 'ENROLLMENT_PROOF' | 'COMPLETION';
+  certificationType:
+    | "DEGREE"
+    | "TRANSCRIPT"
+    | "ENROLLMENT_PROOF"
+    | "COMPLETION";
   careerId?: string;
   minGrade: number;
   validityMonths: number;
@@ -27,11 +35,15 @@ export class CertificationsService {
   async findAll() {
     return prisma.certification.findMany({
       include: {
-        student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
+        student: {
+          include: {
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
+        },
         career: { select: { name: true } },
         issuer: { select: { firstName: true, lastName: true } },
       },
-      orderBy: { issuedAt: 'desc' },
+      orderBy: { issuedAt: "desc" },
     });
   }
 
@@ -42,18 +54,20 @@ export class CertificationsService {
         career: { select: { name: true } },
         issuer: { select: { firstName: true, lastName: true } },
       },
-      orderBy: { issuedAt: 'desc' },
+      orderBy: { issuedAt: "desc" },
     });
   }
 
   async validateByCode(code: string) {
     const cert = await prisma.certification.findFirst({
-      where: { verificationCode: code, status: 'ACTIVE' },
+      where: { verificationCode: code, status: "ACTIVE" },
       include: {
-        student: { include: { user: { select: { firstName: true, lastName: true } } } },
+        student: {
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
       },
     });
-    if (!cert) throw new HttpError(404, 'Certificate not found or inactive');
+    if (!cert) throw new HttpError(404, "Certificate not found or inactive");
     return {
       studentName: `${cert.student.user.firstName} ${cert.student.user.lastName}`,
       certificationType: cert.certificationType,
@@ -75,25 +89,33 @@ export class CertificationsService {
     if (criteria) {
       const passedRecords = await prisma.academicRecord.findMany({
         where: { studentId: dto.studentId, passed: true },
-        include: { group: { include: { subject: { select: { credits: true, id: true } } } } },
+        include: {
+          group: {
+            include: { subject: { select: { credits: true, id: true } } },
+          },
+        },
       });
 
       // 1. minGrade check: cumulative credit-weighted GPA
       if (Number(criteria.minGrade) > 0) {
         if (passedRecords.length === 0) {
-          throw new HttpError(400, 'El estudiante no tiene materias aprobadas');
+          throw new HttpError(400, "El estudiante no tiene materias aprobadas");
         }
 
         const totalWeighted = passedRecords.reduce(
-          (sum, r) => sum + Number(r.finalGrade) * r.group.subject.credits, 0,
+          (sum, r) => sum + Number(r.finalGrade) * r.group.subject.credits,
+          0,
         );
         const totalCredits = passedRecords.reduce(
-          (sum, r) => sum + r.group.subject.credits, 0,
+          (sum, r) => sum + r.group.subject.credits,
+          0,
         );
-        const cumulativeGPA = totalCredits > 0 ? totalWeighted / totalCredits : 0;
+        const cumulativeGPA =
+          totalCredits > 0 ? totalWeighted / totalCredits : 0;
 
         if (cumulativeGPA < Number(criteria.minGrade)) {
-          throw new HttpError(400,
+          throw new HttpError(
+            400,
             `Promedio acumulado del estudiante (${cumulativeGPA.toFixed(2)}) es menor al mínimo requerido (${criteria.minGrade})`,
           );
         }
@@ -106,14 +128,17 @@ export class CertificationsService {
           select: { subjectId: true },
         });
 
-        const passedSubjectIds = new Set(passedRecords.map((r) => r.group.subject.id));
+        const passedSubjectIds = new Set(
+          passedRecords.map((r) => r.group.subject.id),
+        );
 
         const unpassedMandatory = mandatorySubjects.filter(
           (ms) => !passedSubjectIds.has(ms.subjectId),
         );
 
         if (unpassedMandatory.length > 0) {
-          throw new HttpError(400,
+          throw new HttpError(
+            400,
             `El estudiante no ha aprobado todas las materias obligatorias (${unpassedMandatory.length} pendientes)`,
           );
         }
@@ -122,11 +147,13 @@ export class CertificationsService {
       // 3. minCredits check
       if (criteria.minCredits) {
         const totalCredits = passedRecords.reduce(
-          (sum, r) => sum + r.group.subject.credits, 0,
+          (sum, r) => sum + r.group.subject.credits,
+          0,
         );
 
         if (totalCredits < criteria.minCredits) {
-          throw new HttpError(400,
+          throw new HttpError(
+            400,
             `El estudiante tiene ${totalCredits} créditos pero necesita ${criteria.minCredits}`,
           );
         }
@@ -135,21 +162,25 @@ export class CertificationsService {
 
     const now = new Date();
     const expiresAt = criteria
-      ? new Date(now.getFullYear(), now.getMonth() + criteria.validityMonths, now.getDate())
+      ? new Date(
+          now.getFullYear(),
+          now.getMonth() + criteria.validityMonths,
+          now.getDate(),
+        )
       : null;
 
     const verificationCode = crypto.randomUUID();
     const documentHash = crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(JSON.stringify({ ...dto, issuedAt: now.toISOString(), issuedBy }))
-      .digest('hex');
+      .digest("hex");
 
     const cert = await prisma.certification.create({
       data: {
         studentId: dto.studentId,
         careerId: dto.careerId ?? null,
         certificationType: dto.certificationType,
-        status: 'ACTIVE',
+        status: "ACTIVE",
         verificationCode,
         documentHash,
         issuedBy,
@@ -160,27 +191,35 @@ export class CertificationsService {
 
     await prisma.auditLog.create({
       data: {
-        entityType: 'certification',
+        entityType: "certification",
         entityId: cert.id,
-        action: 'ISSUED',
+        action: "ISSUED",
         performedBy: issuedBy,
-        newValues: { certificationType: dto.certificationType, studentId: dto.studentId },
+        newValues: {
+          certificationType: dto.certificationType,
+          studentId: dto.studentId,
+        },
       },
     });
 
     // Notify student
-    const student = await prisma.student.findUnique({ where: { id: dto.studentId }, select: { userId: true } });
+    const student = await prisma.student.findUnique({
+      where: { id: dto.studentId },
+      select: { userId: true },
+    });
     if (student) {
       const typeLabels: Record<string, string> = {
-        DEGREE: 'Título', TRANSCRIPT: 'Historial académico',
-        ENROLLMENT_PROOF: 'Constancia de inscripción', COMPLETION: 'Certificado de finalización',
+        DEGREE: "Título",
+        TRANSCRIPT: "Historial académico",
+        ENROLLMENT_PROOF: "Constancia de inscripción",
+        COMPLETION: "Certificado de finalización",
       };
       await notificationsService.create({
         userId: student.userId,
-        title: 'Certificación emitida',
-        message: `Tu ${typeLabels[dto.certificationType] ?? 'certificación'} ha sido emitida`,
-        type: 'CERTIFICATION_ISSUED',
-        relatedEntity: 'certification',
+        title: "Certificación emitida",
+        message: `Tu ${typeLabels[dto.certificationType] ?? "certificación"} ha sido emitida`,
+        type: "CERTIFICATION_ISSUED",
+        relatedEntity: "certification",
         relatedEntityId: cert.id,
       });
     }
@@ -190,22 +229,27 @@ export class CertificationsService {
 
   async revoke(id: string, dto: RevokeCertificationDto, performedBy: string) {
     const cert = await prisma.certification.findUnique({ where: { id } });
-    if (!cert) throw new HttpError(404, 'Certification not found');
-    if (cert.status === 'REVOKED') throw new HttpError(400, 'Certificate is already revoked');
+    if (!cert) throw new HttpError(404, "Certification not found");
+    if (cert.status === "REVOKED")
+      throw new HttpError(400, "Certificate is already revoked");
 
     const updated = await prisma.certification.update({
       where: { id },
-      data: { status: 'REVOKED' as const, revokedAt: new Date(), revokedReason: dto.reason },
+      data: {
+        status: "REVOKED" as const,
+        revokedAt: new Date(),
+        revokedReason: dto.reason,
+      },
     });
 
     await prisma.auditLog.create({
       data: {
-        entityType: 'certification',
+        entityType: "certification",
         entityId: id,
-        action: 'REVOKED',
+        action: "REVOKED",
         performedBy,
-        oldValues: { status: 'ACTIVE' },
-        newValues: { status: 'REVOKED', reason: dto.reason },
+        oldValues: { status: "ACTIVE" },
+        newValues: { status: "REVOKED", reason: dto.reason },
       },
     });
 
@@ -215,7 +259,7 @@ export class CertificationsService {
   async findCriteria() {
     return prisma.certificationCriteria.findMany({
       include: { career: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 

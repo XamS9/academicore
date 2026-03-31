@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateEvaluationDto, UpdateEvaluationDto } from './evaluations.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateEvaluationDto, UpdateEvaluationDto } from "./evaluations.dto";
 
 export class EvaluationsService {
   private async getMaxWeight(): Promise<number> {
@@ -12,7 +12,7 @@ export class EvaluationsService {
     return prisma.evaluation.findMany({
       where: { groupId },
       include: { evaluationType: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
@@ -21,11 +21,14 @@ export class EvaluationsService {
       where: { id },
       include: { evaluationType: true },
     });
-    if (!evaluation) throw new HttpError(404, 'Evaluation not found');
+    if (!evaluation) throw new HttpError(404, "Evaluation not found");
     return evaluation;
   }
 
-  async validateWeightSum(groupId: string, excludeId?: string): Promise<number> {
+  async validateWeightSum(
+    groupId: string,
+    excludeId?: string,
+  ): Promise<number> {
     const evaluations = await prisma.evaluation.findMany({
       where: {
         groupId,
@@ -33,7 +36,10 @@ export class EvaluationsService {
       },
       select: { weight: true },
     });
-    return evaluations.reduce((sum: number, e: { weight: unknown }) => sum + Number(e.weight), 0);
+    return evaluations.reduce(
+      (sum: number, e: { weight: unknown }) => sum + Number(e.weight),
+      0,
+    );
   }
 
   async create(dto: CreateEvaluationDto) {
@@ -60,7 +66,7 @@ export class EvaluationsService {
 
   async update(id: string, dto: UpdateEvaluationDto) {
     const existing = await prisma.evaluation.findUnique({ where: { id } });
-    if (!existing) throw new HttpError(404, 'Evaluation not found');
+    if (!existing) throw new HttpError(404, "Evaluation not found");
 
     if (dto.weight !== undefined) {
       const currentSum = await this.validateWeightSum(existing.groupId, id);
@@ -77,11 +83,15 @@ export class EvaluationsService {
       where: { id },
       data: {
         ...(dto.groupId !== undefined && { groupId: dto.groupId }),
-        ...(dto.evaluationTypeId !== undefined && { evaluationTypeId: dto.evaluationTypeId }),
+        ...(dto.evaluationTypeId !== undefined && {
+          evaluationTypeId: dto.evaluationTypeId,
+        }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.weight !== undefined && { weight: dto.weight }),
         ...(dto.maxScore !== undefined && { maxScore: dto.maxScore }),
-        ...(dto.dueDate !== undefined && { dueDate: dto.dueDate ? new Date(dto.dueDate) : null }),
+        ...(dto.dueDate !== undefined && {
+          dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+        }),
       },
       include: { evaluationType: true },
     });
@@ -89,7 +99,7 @@ export class EvaluationsService {
 
   async delete(id: string) {
     const existing = await prisma.evaluation.findUnique({ where: { id } });
-    if (!existing) throw new HttpError(404, 'Evaluation not found');
+    if (!existing) throw new HttpError(404, "Evaluation not found");
     return prisma.evaluation.delete({ where: { id } });
   }
 }

@@ -1,9 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
-import { classroomsService } from './classrooms.service';
-import { CreateClassroomDto, UpdateClassroomDto } from './classrooms.dto';
+import { Request, Response, NextFunction } from "express";
+import { classroomsService } from "./classrooms.service";
+import { CreateClassroomDto, UpdateClassroomDto } from "./classrooms.dto";
 
 class ClassroomsController {
-  findAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const classrooms = await classroomsService.findAll();
       res.status(200).json(classrooms);
@@ -12,7 +16,11 @@ class ClassroomsController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const classroom = await classroomsService.findById(req.params.id);
       res.status(200).json(classroom);
@@ -21,7 +29,11 @@ class ClassroomsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateClassroomDto.parse(req.body);
       const classroom = await classroomsService.create(dto);
@@ -31,7 +43,11 @@ class ClassroomsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateClassroomDto.parse(req.body);
       const classroom = await classroomsService.update(req.params.id, dto);
@@ -41,7 +57,11 @@ class ClassroomsController {
     }
   };
 
-  toggleActive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  toggleActive = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const classroom = await classroomsService.toggleActive(req.params.id);
       res.status(200).json(classroom);
@@ -50,7 +70,11 @@ class ClassroomsController {
     }
   };
 
-  softDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  softDelete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await classroomsService.softDelete(req.params.id);
       res.status(204).send();

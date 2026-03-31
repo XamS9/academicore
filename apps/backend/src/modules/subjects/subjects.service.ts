@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateSubjectDto, UpdateSubjectDto } from './subjects.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateSubjectDto, UpdateSubjectDto } from "./subjects.dto";
 
 class SubjectsService {
   async findAll() {
@@ -26,7 +26,7 @@ class SubjectsService {
         },
       },
     });
-    if (!subject) throw new HttpError(404, 'Subject not found');
+    if (!subject) throw new HttpError(404, "Subject not found");
     return subject;
   }
 
@@ -62,7 +62,8 @@ class SubjectsService {
     const existing = await prisma.subjectPrerequisite.findFirst({
       where: { subjectId, prerequisiteId },
     });
-    if (!existing) throw new HttpError(404, 'Prerequisite relationship not found');
+    if (!existing)
+      throw new HttpError(404, "Prerequisite relationship not found");
     return prisma.subjectPrerequisite.delete({
       where: { id: existing.id },
     });

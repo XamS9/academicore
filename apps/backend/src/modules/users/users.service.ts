@@ -1,7 +1,7 @@
-import bcrypt from 'bcryptjs';
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateUserDto, UpdateUserDto } from './users.dto';
+import bcrypt from "bcryptjs";
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateUserDto, UpdateUserDto } from "./users.dto";
 
 class UsersService {
   async findAll() {
@@ -24,7 +24,7 @@ class UsersService {
         },
       },
     });
-    if (!user) throw new HttpError(404, 'User not found');
+    if (!user) throw new HttpError(404, "User not found");
     return user;
   }
 

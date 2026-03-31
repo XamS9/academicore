@@ -1,4 +1,4 @@
-import { prisma } from '../../shared/prisma.client';
+import { prisma } from "../../shared/prisma.client";
 
 export class AcademicRecordsService {
   async findByStudent(studentId: string) {
@@ -13,7 +13,7 @@ export class AcademicRecordsService {
         },
         academicPeriod: true,
       },
-      orderBy: { generatedAt: 'desc' },
+      orderBy: { generatedAt: "desc" },
     });
   }
 
@@ -29,7 +29,7 @@ export class AcademicRecordsService {
         },
         academicPeriod: true,
       },
-      orderBy: { generatedAt: 'desc' },
+      orderBy: { generatedAt: "desc" },
     });
   }
 
@@ -42,7 +42,10 @@ export class AcademicRecordsService {
       },
     });
 
-    const byPeriod = new Map<string, { periodName: string; entries: Array<{ grade: number; credits: number }> }>();
+    const byPeriod = new Map<
+      string,
+      { periodName: string; entries: Array<{ grade: number; credits: number }> }
+    >();
     for (const r of records) {
       const key = r.academicPeriodId;
       if (!byPeriod.has(key)) {
@@ -54,17 +57,22 @@ export class AcademicRecordsService {
       });
     }
 
-    return Array.from(byPeriod.entries()).map(([periodId, { periodName, entries }]) => {
-      const totalCredits = entries.reduce((sum, e) => sum + e.credits, 0);
-      const weightedSum = entries.reduce((sum, e) => sum + e.grade * e.credits, 0);
-      return {
-        periodId,
-        periodName,
-        average: totalCredits > 0 ? weightedSum / totalCredits : 0,
-        totalCredits,
-        count: entries.length,
-      };
-    });
+    return Array.from(byPeriod.entries()).map(
+      ([periodId, { periodName, entries }]) => {
+        const totalCredits = entries.reduce((sum, e) => sum + e.credits, 0);
+        const weightedSum = entries.reduce(
+          (sum, e) => sum + e.grade * e.credits,
+          0,
+        );
+        return {
+          periodId,
+          periodName,
+          average: totalCredits > 0 ? weightedSum / totalCredits : 0,
+          totalCredits,
+          count: entries.length,
+        };
+      },
+    );
   }
 
   async getPassedSubjects(studentId: string) {
@@ -79,7 +87,7 @@ export class AcademicRecordsService {
         },
         academicPeriod: true,
       },
-      orderBy: { generatedAt: 'desc' },
+      orderBy: { generatedAt: "desc" },
     });
   }
 
@@ -95,7 +103,7 @@ export class AcademicRecordsService {
         },
         academicPeriod: true,
       },
-      orderBy: { generatedAt: 'desc' },
+      orderBy: { generatedAt: "desc" },
     });
   }
 }

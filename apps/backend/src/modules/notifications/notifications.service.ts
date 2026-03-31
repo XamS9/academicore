@@ -1,6 +1,6 @@
-import { NotificationType } from '@prisma/client';
-import { prisma } from '../../shared/prisma.client';
-import type { NotificationQuery } from './notifications.dto';
+import { NotificationType } from "@prisma/client";
+import { prisma } from "../../shared/prisma.client";
+import type { NotificationQuery } from "./notifications.dto";
 
 export class NotificationsService {
   async findByUser(userId: string, query: NotificationQuery = {}) {
@@ -10,7 +10,7 @@ export class NotificationsService {
         userId,
         ...(unreadOnly ? { isRead: false } : {}),
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
     });

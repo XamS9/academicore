@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import { DataTable, Column } from '../../components/ui/DataTable';
-import { useToast } from '../../hooks/useToast';
-import { useAuth } from '../../store/auth.context';
-import { studentsService } from '../../services/students.service';
-import { enrollmentsService } from '../../services/enrollments.service';
+import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import { DataTable, Column } from "../../components/ui/DataTable";
+import { useToast } from "../../hooks/useToast";
+import { useAuth } from "../../store/auth.context";
+import { studentsService } from "../../services/students.service";
+import { enrollmentsService } from "../../services/enrollments.service";
 
 interface EnrollmentSubjectItem {
   id: string;
@@ -28,23 +28,26 @@ interface EnrollmentItem {
 }
 
 const statusLabels: Record<string, string> = {
-  ACTIVE: 'Activa',
-  ENROLLED: 'Inscrito',
-  COMPLETED: 'Completada',
-  DROPPED: 'Baja',
-  FAILED: 'Reprobada',
-  CLOSED: 'Cerrada',
-  CANCELLED: 'Cancelada',
+  ACTIVE: "Activa",
+  ENROLLED: "Inscrito",
+  COMPLETED: "Completada",
+  DROPPED: "Baja",
+  FAILED: "Reprobada",
+  CLOSED: "Cerrada",
+  CANCELLED: "Cancelada",
 };
 
-const statusColors: Record<string, 'success' | 'warning' | 'error' | 'default' | 'info'> = {
-  ACTIVE: 'success',
-  ENROLLED: 'info',
-  COMPLETED: 'success',
-  DROPPED: 'warning',
-  FAILED: 'error',
-  CLOSED: 'default',
-  CANCELLED: 'error',
+const statusColors: Record<
+  string,
+  "success" | "warning" | "error" | "default" | "info"
+> = {
+  ACTIVE: "success",
+  ENROLLED: "info",
+  COMPLETED: "success",
+  DROPPED: "warning",
+  FAILED: "error",
+  CLOSED: "default",
+  CANCELLED: "error",
 };
 
 export default function StudentEnrollmentPage() {
@@ -61,7 +64,7 @@ export default function StudentEnrollmentPage() {
         const data = await enrollmentsService.getByStudent(student.id);
         setEnrollments(data);
       } catch {
-        showToast('Error al cargar inscripciones', 'error');
+        showToast("Error al cargar inscripciones", "error");
       } finally {
         setLoading(false);
       }
@@ -78,30 +81,30 @@ export default function StudentEnrollmentPage() {
   );
 
   const columns: Column<(typeof allSubjects)[0]>[] = [
-    { key: 'periodName', label: 'Período' },
+    { key: "periodName", label: "Período" },
     {
-      key: 'subject',
-      label: 'Materia',
+      key: "subject",
+      label: "Materia",
       render: (row) => `${row.group.subject.name} (${row.group.subject.code})`,
     },
     {
-      key: 'groupCode',
-      label: 'Grupo',
+      key: "groupCode",
+      label: "Grupo",
       render: (row) => row.group.groupCode,
     },
     {
-      key: 'teacher',
-      label: 'Docente',
+      key: "teacher",
+      label: "Docente",
       render: (row) =>
         `${row.group.teacher.user.firstName} ${row.group.teacher.user.lastName}`,
     },
     {
-      key: 'status',
-      label: 'Estado',
+      key: "status",
+      label: "Estado",
       render: (row) => (
         <Chip
           label={statusLabels[row.status] ?? row.status}
-          color={statusColors[row.status] ?? 'default'}
+          color={statusColors[row.status] ?? "default"}
           size="small"
         />
       ),
@@ -115,11 +118,15 @@ export default function StudentEnrollmentPage() {
       </Box>
 
       {loading ? (
-        <DataTable columns={columns} rows={[]} loading getRowKey={() => ''} />
+        <DataTable columns={columns} rows={[]} loading getRowKey={() => ""} />
       ) : allSubjects.length === 0 ? (
         <Alert severity="info">No tienes inscripciones registradas.</Alert>
       ) : (
-        <DataTable columns={columns} rows={allSubjects} getRowKey={(r) => r.id} />
+        <DataTable
+          columns={columns}
+          rows={allSubjects}
+          getRowKey={(r) => r.id}
+        />
       )}
 
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>

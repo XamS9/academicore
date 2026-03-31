@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import { DataTable, Column } from '../../components/ui/DataTable';
-import { useToast } from '../../hooks/useToast';
-import { useAuth } from '../../store/auth.context';
-import { studentsService } from '../../services/students.service';
-import { enrollmentsService } from '../../services/enrollments.service';
-import { gradesService } from '../../services/grades.service';
+import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import { DataTable, Column } from "../../components/ui/DataTable";
+import { useToast } from "../../hooks/useToast";
+import { useAuth } from "../../store/auth.context";
+import { studentsService } from "../../services/students.service";
+import { enrollmentsService } from "../../services/enrollments.service";
+import { gradesService } from "../../services/grades.service";
 
 interface EnrollmentSubjectItem {
   id: string;
@@ -45,9 +45,9 @@ interface GroupOption {
 
 export default function StudentGradesPage() {
   const { currentUser } = useAuth();
-  const [studentId, setStudentId] = useState('');
+  const [studentId, setStudentId] = useState("");
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState("");
   const [grades, setGrades] = useState<GradeItem[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast, showToast, clearToast } = useToast();
@@ -57,7 +57,8 @@ export default function StudentGradesPage() {
       try {
         const student = await studentsService.getByUserId(currentUser!.id);
         setStudentId(student.id);
-        const enrollments: EnrollmentItem[] = await enrollmentsService.getByStudent(student.id);
+        const enrollments: EnrollmentItem[] =
+          await enrollmentsService.getByStudent(student.id);
         const options: GroupOption[] = enrollments.flatMap((e) =>
           e.enrollmentSubjects.map((es) => ({
             groupId: es.groupId,
@@ -66,7 +67,7 @@ export default function StudentGradesPage() {
         );
         setGroupOptions(options);
       } catch {
-        showToast('Error al cargar datos', 'error');
+        showToast("Error al cargar datos", "error");
       }
     };
     load();
@@ -80,10 +81,13 @@ export default function StudentGradesPage() {
     const loadGrades = async () => {
       try {
         setLoading(true);
-        const data = await gradesService.getByStudentAndGroup(studentId, selectedGroup);
+        const data = await gradesService.getByStudentAndGroup(
+          studentId,
+          selectedGroup,
+        );
         setGrades(data);
       } catch {
-        showToast('Error al cargar calificaciones', 'error');
+        showToast("Error al cargar calificaciones", "error");
       } finally {
         setLoading(false);
       }
@@ -93,19 +97,20 @@ export default function StudentGradesPage() {
 
   const columns: Column<GradeItem>[] = [
     {
-      key: 'evaluation',
-      label: 'Evaluación',
+      key: "evaluation",
+      label: "Evaluación",
       render: (row) => row.evaluation.name,
     },
     {
-      key: 'weight',
-      label: 'Peso',
+      key: "weight",
+      label: "Peso",
       render: (row) => `${Number(row.evaluation.weight)}%`,
     },
     {
-      key: 'score',
-      label: 'Calificación',
-      render: (row) => `${Number(row.score)} / ${Number(row.evaluation.maxScore)}`,
+      key: "score",
+      label: "Calificación",
+      render: (row) =>
+        `${Number(row.score)} / ${Number(row.evaluation.maxScore)}`,
     },
   ];
 
@@ -131,7 +136,12 @@ export default function StudentGradesPage() {
         ))}
       </TextField>
 
-      <DataTable columns={columns} rows={grades} loading={loading} getRowKey={(r) => r.id} />
+      <DataTable
+        columns={columns}
+        rows={grades}
+        loading={loading}
+        getRowKey={(r) => r.id}
+      />
 
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>
         <Alert severity={toast?.severity} onClose={clearToast}>

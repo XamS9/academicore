@@ -1,2 +1,2 @@
-export * from './certifications.router';
-export * from './certifications.service';
+export * from "./certifications.router";
+export * from "./certifications.service";

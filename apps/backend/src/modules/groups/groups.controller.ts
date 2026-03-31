@@ -1,9 +1,17 @@
-import { Request, Response, NextFunction } from 'express';
-import { groupsService } from './groups.service';
-import { CreateGroupDto, UpdateGroupDto, AssignClassroomDto } from './groups.dto';
+import { Request, Response, NextFunction } from "express";
+import { groupsService } from "./groups.service";
+import {
+  CreateGroupDto,
+  UpdateGroupDto,
+  AssignClassroomDto,
+} from "./groups.dto";
 
 class GroupsController {
-  findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const periodId = req.query.periodId as string | undefined;
       const groups = await groupsService.findAll(periodId);
@@ -13,7 +21,11 @@ class GroupsController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const group = await groupsService.findById(req.params.id);
       res.status(200).json(group);
@@ -22,7 +34,11 @@ class GroupsController {
     }
   };
 
-  findByTeacher = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByTeacher = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const groups = await groupsService.findByTeacher(req.params.teacherId);
       res.status(200).json(groups);
@@ -31,7 +47,11 @@ class GroupsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateGroupDto.parse(req.body);
       const group = await groupsService.create(dto);
@@ -41,7 +61,11 @@ class GroupsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateGroupDto.parse(req.body);
       const group = await groupsService.update(req.params.id, dto);
@@ -51,7 +75,11 @@ class GroupsController {
     }
   };
 
-  assignClassroom = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  assignClassroom = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = AssignClassroomDto.parse(req.body);
       const result = await groupsService.assignClassroom(req.params.id, dto);

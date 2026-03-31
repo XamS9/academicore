@@ -1,35 +1,47 @@
-import { Prisma } from '@prisma/client';
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { UpdateSystemSettingsDto } from './system-settings.dto';
+import { Prisma } from "@prisma/client";
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { UpdateSystemSettingsDto } from "./system-settings.dto";
 
 export class SystemSettingsService {
   async get() {
     const settings = await prisma.systemSettings.findFirst();
-    if (!settings) throw new HttpError(500, 'System settings not configured');
+    if (!settings) throw new HttpError(500, "System settings not configured");
     return settings;
   }
 
   async update(dto: UpdateSystemSettingsDto, userId: string) {
     const settings = await prisma.systemSettings.findFirst();
-    if (!settings) throw new HttpError(500, 'System settings not configured');
+    if (!settings) throw new HttpError(500, "System settings not configured");
 
     const oldValues: Record<string, unknown> = {};
     const newValues: Record<string, unknown> = {};
 
-    if (dto.passingGrade !== undefined && Number(settings.passingGrade) !== dto.passingGrade) {
+    if (
+      dto.passingGrade !== undefined &&
+      Number(settings.passingGrade) !== dto.passingGrade
+    ) {
       oldValues.passingGrade = Number(settings.passingGrade);
       newValues.passingGrade = dto.passingGrade;
     }
-    if (dto.maxSubjectsPerEnrollment !== undefined && settings.maxSubjectsPerEnrollment !== dto.maxSubjectsPerEnrollment) {
+    if (
+      dto.maxSubjectsPerEnrollment !== undefined &&
+      settings.maxSubjectsPerEnrollment !== dto.maxSubjectsPerEnrollment
+    ) {
       oldValues.maxSubjectsPerEnrollment = settings.maxSubjectsPerEnrollment;
       newValues.maxSubjectsPerEnrollment = dto.maxSubjectsPerEnrollment;
     }
-    if (dto.maxEvaluationWeight !== undefined && Number(settings.maxEvaluationWeight) !== dto.maxEvaluationWeight) {
+    if (
+      dto.maxEvaluationWeight !== undefined &&
+      Number(settings.maxEvaluationWeight) !== dto.maxEvaluationWeight
+    ) {
       oldValues.maxEvaluationWeight = Number(settings.maxEvaluationWeight);
       newValues.maxEvaluationWeight = dto.maxEvaluationWeight;
     }
-    if (dto.atRiskThreshold !== undefined && settings.atRiskThreshold !== dto.atRiskThreshold) {
+    if (
+      dto.atRiskThreshold !== undefined &&
+      settings.atRiskThreshold !== dto.atRiskThreshold
+    ) {
       oldValues.atRiskThreshold = settings.atRiskThreshold;
       newValues.atRiskThreshold = dto.atRiskThreshold;
     }
@@ -37,10 +49,18 @@ export class SystemSettingsService {
     const updated = await prisma.systemSettings.update({
       where: { id: settings.id },
       data: {
-        ...(dto.passingGrade !== undefined && { passingGrade: dto.passingGrade }),
-        ...(dto.maxSubjectsPerEnrollment !== undefined && { maxSubjectsPerEnrollment: dto.maxSubjectsPerEnrollment }),
-        ...(dto.maxEvaluationWeight !== undefined && { maxEvaluationWeight: dto.maxEvaluationWeight }),
-        ...(dto.atRiskThreshold !== undefined && { atRiskThreshold: dto.atRiskThreshold }),
+        ...(dto.passingGrade !== undefined && {
+          passingGrade: dto.passingGrade,
+        }),
+        ...(dto.maxSubjectsPerEnrollment !== undefined && {
+          maxSubjectsPerEnrollment: dto.maxSubjectsPerEnrollment,
+        }),
+        ...(dto.maxEvaluationWeight !== undefined && {
+          maxEvaluationWeight: dto.maxEvaluationWeight,
+        }),
+        ...(dto.atRiskThreshold !== undefined && {
+          atRiskThreshold: dto.atRiskThreshold,
+        }),
         updatedBy: userId,
       },
     });
@@ -48,9 +68,9 @@ export class SystemSettingsService {
     if (Object.keys(newValues).length > 0) {
       await prisma.auditLog.create({
         data: {
-          entityType: 'system_settings',
+          entityType: "system_settings",
           entityId: settings.id,
-          action: 'UPDATED',
+          action: "UPDATED",
           performedBy: userId,
           oldValues: oldValues as Prisma.InputJsonValue,
           newValues: newValues as Prisma.InputJsonValue,

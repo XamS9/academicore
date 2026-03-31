@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const CreateTeacherDto = z.object({
   userId: z.string().uuid(),
@@ -7,5 +7,7 @@ export const CreateTeacherDto = z.object({
 });
 export type CreateTeacherDto = z.infer<typeof CreateTeacherDto>;
 
-export const UpdateTeacherDto = CreateTeacherDto.partial().omit({ userId: true });
+export const UpdateTeacherDto = CreateTeacherDto.partial().omit({
+  userId: true,
+});
 export type UpdateTeacherDto = z.infer<typeof UpdateTeacherDto>;

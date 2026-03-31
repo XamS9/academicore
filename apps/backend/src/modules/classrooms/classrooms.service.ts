@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateClassroomDto, UpdateClassroomDto } from './classrooms.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateClassroomDto, UpdateClassroomDto } from "./classrooms.dto";
 
 class ClassroomsService {
   async findAll() {
@@ -13,7 +13,7 @@ class ClassroomsService {
     const classroom = await prisma.classroom.findFirst({
       where: { id, deletedAt: null },
     });
-    if (!classroom) throw new HttpError(404, 'Classroom not found');
+    if (!classroom) throw new HttpError(404, "Classroom not found");
     return classroom;
   }
 

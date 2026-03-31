@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const UpsertGradeDto = z.object({
   evaluationId: z.string().uuid(),

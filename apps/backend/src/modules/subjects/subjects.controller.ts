@@ -1,9 +1,17 @@
-import { Request, Response, NextFunction } from 'express';
-import { subjectsService } from './subjects.service';
-import { CreateSubjectDto, UpdateSubjectDto, AddPrerequisiteDto } from './subjects.dto';
+import { Request, Response, NextFunction } from "express";
+import { subjectsService } from "./subjects.service";
+import {
+  CreateSubjectDto,
+  UpdateSubjectDto,
+  AddPrerequisiteDto,
+} from "./subjects.dto";
 
 class SubjectsController {
-  findAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const subjects = await subjectsService.findAll();
       res.status(200).json(subjects);
@@ -12,7 +20,11 @@ class SubjectsController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const subject = await subjectsService.findById(req.params.id);
       res.status(200).json(subject);
@@ -21,7 +33,11 @@ class SubjectsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateSubjectDto.parse(req.body);
       const subject = await subjectsService.create(dto);
@@ -31,7 +47,11 @@ class SubjectsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateSubjectDto.parse(req.body);
       const subject = await subjectsService.update(req.params.id, dto);
@@ -41,7 +61,11 @@ class SubjectsController {
     }
   };
 
-  softDelete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  softDelete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await subjectsService.softDelete(req.params.id);
       res.status(204).send();
@@ -50,19 +74,33 @@ class SubjectsController {
     }
   };
 
-  addPrerequisite = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  addPrerequisite = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = AddPrerequisiteDto.parse(req.body);
-      const result = await subjectsService.addPrerequisite(req.params.id, dto.prerequisiteId);
+      const result = await subjectsService.addPrerequisite(
+        req.params.id,
+        dto.prerequisiteId,
+      );
       res.status(201).json(result);
     } catch (err) {
       next(err);
     }
   };
 
-  removePrerequisite = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  removePrerequisite = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
-      await subjectsService.removePrerequisite(req.params.id, req.params.prereqId);
+      await subjectsService.removePrerequisite(
+        req.params.id,
+        req.params.prereqId,
+      );
       res.status(204).send();
     } catch (err) {
       next(err);

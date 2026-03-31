@@ -1,8 +1,12 @@
-import { Request, Response, NextFunction } from 'express';
-import { auditLogsService } from './audit-logs.service';
+import { Request, Response, NextFunction } from "express";
+import { auditLogsService } from "./audit-logs.service";
 
 class AuditLogsController {
-  findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const entityType = req.query.entityType as string | undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
@@ -13,7 +17,11 @@ class AuditLogsController {
     }
   };
 
-  findByEntity = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByEntity = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const logs = await auditLogsService.findByEntity(
         req.params.entityType,

@@ -1,9 +1,9 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const CreateAnnouncementDto = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(1),
-  audience: z.enum(['ALL', 'CAREER', 'GROUP']),
+  audience: z.enum(["ALL", "CAREER", "GROUP"]),
   targetId: z.string().uuid().optional(),
 });
 

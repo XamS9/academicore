@@ -1,2 +1,2 @@
-export * from './subjects.router';
-export * from './subjects.service';
+export * from "./subjects.router";
+export * from "./subjects.service";

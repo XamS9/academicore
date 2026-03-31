@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import Chip from '@mui/material/Chip';
-import { DataTable, Column } from '../../components/ui/DataTable';
-import { useToast } from '../../hooks/useToast';
-import { auditLogsService } from '../../services/audit-logs.service';
+import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import Chip from "@mui/material/Chip";
+import { DataTable, Column } from "../../components/ui/DataTable";
+import { useToast } from "../../hooks/useToast";
+import { auditLogsService } from "../../services/audit-logs.service";
 
 interface AuditLogItem {
   id: string;
@@ -27,37 +27,48 @@ interface AuditLogItem {
 }
 
 const actionLabels: Record<string, string> = {
-  CREATED: 'Creado',
-  UPDATED: 'Actualizado',
-  DELETED: 'Eliminado',
-  REVOKED: 'Revocado',
-  ISSUED: 'Emitido',
-  ENROLLED: 'Inscrito',
-  DROPPED: 'Baja',
-  STATUS_CHANGE: 'Cambio de estado',
+  CREATED: "Creado",
+  UPDATED: "Actualizado",
+  DELETED: "Eliminado",
+  REVOKED: "Revocado",
+  ISSUED: "Emitido",
+  ENROLLED: "Inscrito",
+  DROPPED: "Baja",
+  STATUS_CHANGE: "Cambio de estado",
 };
 
-const actionColors: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
-  CREATED: 'success',
-  UPDATED: 'info',
-  DELETED: 'error',
-  REVOKED: 'warning',
-  ISSUED: 'success',
-  ENROLLED: 'info',
-  DROPPED: 'warning',
-  STATUS_CHANGE: 'default',
+const actionColors: Record<
+  string,
+  "success" | "warning" | "error" | "info" | "default"
+> = {
+  CREATED: "success",
+  UPDATED: "info",
+  DELETED: "error",
+  REVOKED: "warning",
+  ISSUED: "success",
+  ENROLLED: "info",
+  DROPPED: "warning",
+  STATUS_CHANGE: "default",
 };
 
 const ENTITY_TYPES = [
-  'User', 'Student', 'Teacher', 'Career', 'Subject',
-  'Group', 'Enrollment', 'Evaluation', 'Grade',
-  'Certification', 'AcademicRecord',
+  "User",
+  "Student",
+  "Teacher",
+  "Career",
+  "Subject",
+  "Group",
+  "Enrollment",
+  "Evaluation",
+  "Grade",
+  "Certification",
+  "AcademicRecord",
 ];
 
 export default function AuditLogsPage() {
   const [items, setItems] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [entityFilter, setEntityFilter] = useState('');
+  const [entityFilter, setEntityFilter] = useState("");
   const { toast, showToast, clearToast } = useToast();
 
   const load = async (entityType?: string) => {
@@ -69,7 +80,7 @@ export default function AuditLogsPage() {
       });
       setItems(data);
     } catch {
-      showToast('Error al cargar registros de auditoría', 'error');
+      showToast("Error al cargar registros de auditoría", "error");
     } finally {
       setLoading(false);
     }
@@ -85,37 +96,37 @@ export default function AuditLogsPage() {
 
   const columns: Column<AuditLogItem>[] = [
     {
-      key: 'createdAt',
-      label: 'Fecha',
-      render: (row) => new Date(row.createdAt).toLocaleString('es'),
+      key: "createdAt",
+      label: "Fecha",
+      render: (row) => new Date(row.createdAt).toLocaleString("es"),
     },
     {
-      key: 'action',
-      label: 'Acción',
+      key: "action",
+      label: "Acción",
       render: (row) => (
         <Chip
           label={actionLabels[row.action] ?? row.action}
-          color={actionColors[row.action] ?? 'default'}
+          color={actionColors[row.action] ?? "default"}
           size="small"
         />
       ),
     },
-    { key: 'entityType', label: 'Entidad' },
+    { key: "entityType", label: "Entidad" },
     {
-      key: 'entityId',
-      label: 'ID Entidad',
-      render: (row) => row.entityId.slice(0, 8) + '…',
+      key: "entityId",
+      label: "ID Entidad",
+      render: (row) => row.entityId.slice(0, 8) + "…",
     },
     {
-      key: 'user',
-      label: 'Realizado por',
+      key: "user",
+      label: "Realizado por",
       render: (row) =>
-        row.user ? `${row.user.firstName} ${row.user.lastName}` : '—',
+        row.user ? `${row.user.firstName} ${row.user.lastName}` : "—",
     },
     {
-      key: 'ipAddress',
-      label: 'IP',
-      render: (row) => row.ipAddress ?? '—',
+      key: "ipAddress",
+      label: "IP",
+      render: (row) => row.ipAddress ?? "—",
     },
   ];
 
@@ -141,7 +152,12 @@ export default function AuditLogsPage() {
         ))}
       </TextField>
 
-      <DataTable columns={columns} rows={items} loading={loading} getRowKey={(r) => r.id} />
+      <DataTable
+        columns={columns}
+        rows={items}
+        loading={loading}
+        getRowKey={(r) => r.id}
+      />
 
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>
         <Alert severity={toast?.severity} onClose={clearToast}>

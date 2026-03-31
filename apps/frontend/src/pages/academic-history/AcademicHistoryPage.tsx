@@ -1,48 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Table from '@mui/material/Table';
-import TableHead from '@mui/material/TableHead';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import Paper from '@mui/material/Paper';
-import Chip from '@mui/material/Chip';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Grid from '@mui/material/Grid';
-import LinearProgress from '@mui/material/LinearProgress';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
-import Alert from '@mui/material/Alert';
-import CircularProgress from '@mui/material/CircularProgress';
+import React, { useState, useEffect } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import Paper from "@mui/material/Paper";
+import Chip from "@mui/material/Chip";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import LinearProgress from "@mui/material/LinearProgress";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Divider from "@mui/material/Divider";
+import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
 
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import SchoolIcon from '@mui/icons-material/School';
-import WarningIcon from '@mui/icons-material/Warning';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import BlockIcon from '@mui/icons-material/Block';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import SchoolIcon from "@mui/icons-material/School";
+import WarningIcon from "@mui/icons-material/Warning";
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import BlockIcon from "@mui/icons-material/Block";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 
-import { useAuth } from '../../store/auth.context';
+import { useAuth } from "../../store/auth.context";
 
-const statusConfig: Record<string, { color: 'success' | 'warning' | 'info' | 'error'; icon: React.ReactNode; label: string }> = {
-  ACTIVE: { color: 'success', icon: <CheckCircleIcon />, label: 'ACTIVO' },
-  AT_RISK: { color: 'warning', icon: <WarningIcon />, label: 'EN RIESGO' },
-  ELIGIBLE_FOR_GRADUATION: { color: 'info', icon: <EmojiEventsIcon />, label: 'ELEGIBLE PARA GRADUACIÓN' },
-  SUSPENDED: { color: 'error', icon: <BlockIcon />, label: 'SUSPENDIDO' },
-  GRADUATED: { color: 'success', icon: <SchoolIcon />, label: 'GRADUADO' },
-  WITHDRAWN: { color: 'warning', icon: <ExitToAppIcon />, label: 'BAJA' },
+const statusConfig: Record<
+  string,
+  {
+    color: "success" | "warning" | "info" | "error";
+    icon: React.ReactNode;
+    label: string;
+  }
+> = {
+  ACTIVE: { color: "success", icon: <CheckCircleIcon />, label: "ACTIVO" },
+  AT_RISK: { color: "warning", icon: <WarningIcon />, label: "EN RIESGO" },
+  ELIGIBLE_FOR_GRADUATION: {
+    color: "info",
+    icon: <EmojiEventsIcon />,
+    label: "ELEGIBLE PARA GRADUACIÓN",
+  },
+  SUSPENDED: { color: "error", icon: <BlockIcon />, label: "SUSPENDIDO" },
+  GRADUATED: { color: "success", icon: <SchoolIcon />, label: "GRADUADO" },
+  WITHDRAWN: { color: "warning", icon: <ExitToAppIcon />, label: "BAJA" },
 };
-import { academicRecordsService } from '../../services/academic-records.service';
-import { studentsService } from '../../services/students.service';
+import { academicRecordsService } from "../../services/academic-records.service";
+import { studentsService } from "../../services/students.service";
 
 interface AcademicRecord {
   id: string;
@@ -88,31 +99,39 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 function StatusChip({ passed }: { passed: boolean }) {
-  return passed
-    ? <Chip label="APROBADO" color="success" size="small" />
-    : <Chip label="REPROBADO" color="error" size="small" />;
+  return passed ? (
+    <Chip label="APROBADO" color="success" size="small" />
+  ) : (
+    <Chip label="REPROBADO" color="error" size="small" />
+  );
 }
 
 export default function AcademicHistoryPage() {
   const { currentUser } = useAuth();
   const [tab, setTab] = useState(0);
   const [students, setStudents] = useState<StudentItem[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [selectedStudentId, setSelectedStudentId] = useState("");
   const [records, setRecords] = useState<AcademicRecord[]>([]);
   const [periodAverages, setPeriodAverages] = useState<PeriodAvg[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.role === 'STUDENT') {
-      studentsService.getByUserId(currentUser.id).then((data: StudentItem) => {
-        setStudents([data]);
-        setSelectedStudentId(data.id);
-      }).catch(console.error);
+    if (currentUser?.role === "STUDENT") {
+      studentsService
+        .getByUserId(currentUser.id)
+        .then((data: StudentItem) => {
+          setStudents([data]);
+          setSelectedStudentId(data.id);
+        })
+        .catch(console.error);
     } else {
-      studentsService.getAll().then((data: StudentItem[]) => {
-        setStudents(data);
-        if (data.length > 0) setSelectedStudentId(data[0].id);
-      }).catch(console.error);
+      studentsService
+        .getAll()
+        .then((data: StudentItem[]) => {
+          setStudents(data);
+          if (data.length > 0) setSelectedStudentId(data[0].id);
+        })
+        .catch(console.error);
     }
   }, [currentUser]);
 
@@ -122,10 +141,12 @@ export default function AcademicHistoryPage() {
     Promise.all([
       academicRecordsService.getByStudent(selectedStudentId),
       academicRecordsService.getAveragesByPeriod(selectedStudentId),
-    ]).then(([recs, avgs]) => {
-      setRecords(recs as AcademicRecord[]);
-      setPeriodAverages(avgs as PeriodAvg[]);
-    }).catch(console.error)
+    ])
+      .then(([recs, avgs]) => {
+        setRecords(recs as AcademicRecord[]);
+        setPeriodAverages(avgs as PeriodAvg[]);
+      })
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedStudentId]);
 
@@ -134,7 +155,12 @@ export default function AcademicHistoryPage() {
 
   const overallAvg =
     records.length > 0
-      ? parseFloat((records.reduce((s, r) => s + Number(r.finalGrade), 0) / records.length).toFixed(2))
+      ? parseFloat(
+          (
+            records.reduce((s, r) => s + Number(r.finalGrade), 0) /
+            records.length
+          ).toFixed(2),
+        )
       : 0;
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
@@ -145,7 +171,8 @@ export default function AcademicHistoryPage() {
         Historial Académico
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Proceso extendido: Consulta y seguimiento del historial académico del estudiante
+        Proceso extendido: Consulta y seguimiento del historial académico del
+        estudiante
       </Typography>
 
       <Paper elevation={2} sx={{ borderRadius: 2 }}>
@@ -154,7 +181,7 @@ export default function AcademicHistoryPage() {
           onChange={(_e, v: number) => setTab(v)}
           variant="scrollable"
           scrollButtons="auto"
-          sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
+          sx={{ borderBottom: 1, borderColor: "divider", px: 2 }}
         >
           <Tab label="1.1 Historial Académico" />
           <Tab label="1.2 Materias Cursadas" />
@@ -170,7 +197,7 @@ export default function AcademicHistoryPage() {
               Historial completo del estudiante
             </Typography>
 
-            {currentUser?.role !== 'STUDENT' && (
+            {currentUser?.role !== "STUDENT" && (
               <FormControl size="small" sx={{ minWidth: 280, mb: 3 }}>
                 <InputLabel>Estudiante</InputLabel>
                 <Select
@@ -196,12 +223,16 @@ export default function AcademicHistoryPage() {
                 <TableContainer>
                   <Table size="small">
                     <TableHead>
-                      <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                      <TableRow sx={{ backgroundColor: "grey.100" }}>
                         <TableCell sx={{ fontWeight: 700 }}>Materia</TableCell>
                         <TableCell sx={{ fontWeight: 700 }}>Grupo</TableCell>
                         <TableCell sx={{ fontWeight: 700 }}>Período</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="center">Calificación Final</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="center">Estado</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="center">
+                          Calificación Final
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="center">
+                          Estado
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -214,7 +245,11 @@ export default function AcademicHistoryPage() {
                             <Typography
                               variant="body2"
                               fontWeight={700}
-                              color={Number(rec.finalGrade) >= 6 ? 'success.main' : 'error.main'}
+                              color={
+                                Number(rec.finalGrade) >= 6
+                                  ? "success.main"
+                                  : "error.main"
+                              }
                             >
                               {Number(rec.finalGrade).toFixed(1)}
                             </Typography>
@@ -227,7 +262,11 @@ export default function AcademicHistoryPage() {
                       {records.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={5} align="center">
-                            <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ py: 2 }}
+                            >
                               Sin registros académicos
                             </Typography>
                           </TableCell>
@@ -238,8 +277,16 @@ export default function AcademicHistoryPage() {
                 </TableContainer>
 
                 <Box className="flex items-center gap-2 mt-3">
-                  <Chip label={`${records.length} registros en total`} variant="outlined" size="small" />
-                  <Chip label={`Promedio general: ${overallAvg}`} color="primary" size="small" />
+                  <Chip
+                    label={`${records.length} registros en total`}
+                    variant="outlined"
+                    size="small"
+                  />
+                  <Chip
+                    label={`Promedio general: ${overallAvg}`}
+                    color="primary"
+                    size="small"
+                  />
                 </Box>
               </>
             )}
@@ -259,25 +306,43 @@ export default function AcademicHistoryPage() {
             </Box>
 
             <Alert severity="info" sx={{ mb: 3 }}>
-              Mostrando únicamente materias con estado APROBADO (calificación ≥ 6.0)
+              Mostrando únicamente materias con estado APROBADO (calificación ≥
+              6.0)
             </Alert>
 
             {loading ? (
-              <Box className="flex justify-center py-8"><CircularProgress /></Box>
+              <Box className="flex justify-center py-8">
+                <CircularProgress />
+              </Box>
             ) : (
               <Grid container spacing={2}>
                 {passed.map((rec) => (
                   <Grid item xs={12} sm={6} md={4} key={rec.id}>
-                    <Card variant="outlined" sx={{ borderColor: 'success.light' }}>
-                      <CardContent sx={{ pb: '12px !important' }}>
-                        <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                    <Card
+                      variant="outlined"
+                      sx={{ borderColor: "success.light" }}
+                    >
+                      <CardContent sx={{ pb: "12px !important" }}>
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={700}
+                          gutterBottom
+                        >
                           {rec.group.subject.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
                           {rec.group.groupCode} · {rec.academicPeriod.name}
                         </Typography>
                         <Box className="flex items-center justify-between mt-2">
-                          <Typography variant="h6" color="success.main" fontWeight={700}>
+                          <Typography
+                            variant="h6"
+                            color="success.main"
+                            fontWeight={700}
+                          >
                             {Number(rec.finalGrade).toFixed(1)}
                           </Typography>
                           <StatusChip passed={rec.passed} />
@@ -288,7 +353,9 @@ export default function AcademicHistoryPage() {
                 ))}
                 {passed.length === 0 && (
                   <Grid item xs={12}>
-                    <Typography variant="body2" color="text.secondary">Sin materias aprobadas</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Sin materias aprobadas
+                    </Typography>
                   </Grid>
                 )}
               </Grid>
@@ -298,31 +365,65 @@ export default function AcademicHistoryPage() {
           {/* Tab 3 — Passed / Failed */}
           <TabPanel value={tab} index={2}>
             <Box className="flex gap-2 mb-3">
-              <Chip icon={<CheckCircleIcon />} label={`${passed.length} Aprobadas`} color="success" />
-              <Chip icon={<CancelIcon />} label={`${failed.length} Reprobadas`} color="error" />
+              <Chip
+                icon={<CheckCircleIcon />}
+                label={`${passed.length} Aprobadas`}
+                color="success"
+              />
+              <Chip
+                icon={<CancelIcon />}
+                label={`${failed.length} Reprobadas`}
+                color="error"
+              />
             </Box>
 
             {loading ? (
-              <Box className="flex justify-center py-8"><CircularProgress /></Box>
+              <Box className="flex justify-center py-8">
+                <CircularProgress />
+              </Box>
             ) : (
               <Grid container spacing={3}>
                 {/* Passed */}
                 <Grid item xs={12} md={6}>
-                  <Paper variant="outlined" sx={{ p: 2, borderColor: 'success.main' }}>
-                    <Typography variant="subtitle1" fontWeight={700} color="success.main" gutterBottom>
+                  <Paper
+                    variant="outlined"
+                    sx={{ p: 2, borderColor: "success.main" }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      color="success.main"
+                      gutterBottom
+                    >
                       Materias Aprobadas
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                     {passed.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">Sin materias aprobadas</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Sin materias aprobadas
+                      </Typography>
                     ) : (
                       passed.map((rec) => (
-                        <Box key={rec.id} className="flex items-center justify-between py-1">
+                        <Box
+                          key={rec.id}
+                          className="flex items-center justify-between py-1"
+                        >
                           <Box>
-                            <Typography variant="body2" fontWeight={600}>{rec.group.subject.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">{rec.academicPeriod.name}</Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {rec.group.subject.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {rec.academicPeriod.name}
+                            </Typography>
                           </Box>
-                          <Typography variant="h6" color="success.main" fontWeight={700}>
+                          <Typography
+                            variant="h6"
+                            color="success.main"
+                            fontWeight={700}
+                          >
                             {Number(rec.finalGrade).toFixed(1)}
                           </Typography>
                         </Box>
@@ -333,30 +434,54 @@ export default function AcademicHistoryPage() {
 
                 {/* Failed */}
                 <Grid item xs={12} md={6}>
-                  <Paper variant="outlined" sx={{ p: 2, borderColor: 'error.main' }}>
-                    <Typography variant="subtitle1" fontWeight={700} color="error.main" gutterBottom>
+                  <Paper
+                    variant="outlined"
+                    sx={{ p: 2, borderColor: "error.main" }}
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      color="error.main"
+                      gutterBottom
+                    >
                       Materias Reprobadas
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                     {failed.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">Sin materias reprobadas</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Sin materias reprobadas
+                      </Typography>
                     ) : (
                       failed.map((rec) => (
-                        <Box key={rec.id} className="flex items-center justify-between py-1">
+                        <Box
+                          key={rec.id}
+                          className="flex items-center justify-between py-1"
+                        >
                           <Box>
-                            <Typography variant="body2" fontWeight={600}>{rec.group.subject.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">{rec.academicPeriod.name}</Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {rec.group.subject.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {rec.academicPeriod.name}
+                            </Typography>
                             <Box sx={{ mt: 0.5 }}>
                               <Chip
                                 label="Elegible para reinscripción"
                                 size="small"
                                 color="warning"
                                 variant="outlined"
-                                sx={{ fontSize: '0.65rem' }}
+                                sx={{ fontSize: "0.65rem" }}
                               />
                             </Box>
                           </Box>
-                          <Typography variant="h6" color="error.main" fontWeight={700}>
+                          <Typography
+                            variant="h6"
+                            color="error.main"
+                            fontWeight={700}
+                          >
                             {Number(rec.finalGrade).toFixed(1)}
                           </Typography>
                         </Box>
@@ -375,22 +500,30 @@ export default function AcademicHistoryPage() {
             </Typography>
 
             {loading ? (
-              <Box className="flex justify-center py-8"><CircularProgress /></Box>
+              <Box className="flex justify-center py-8">
+                <CircularProgress />
+              </Box>
             ) : (
               <>
                 <TableContainer sx={{ mb: 4 }}>
                   <Table size="small">
                     <TableHead>
-                      <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                      <TableRow sx={{ backgroundColor: "grey.100" }}>
                         <TableCell sx={{ fontWeight: 700 }}>Período</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="center"># Materias</TableCell>
-                        <TableCell sx={{ fontWeight: 700 }} align="center">Promedio</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="center">
+                          # Materias
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="center">
+                          Promedio
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {periodAverages.map((p) => (
                         <TableRow key={p.periodId} hover>
-                          <TableCell sx={{ fontWeight: 600 }}>{p.periodName}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            {p.periodName}
+                          </TableCell>
                           <TableCell align="center">{p.count}</TableCell>
                           <TableCell align="center">
                             <Typography fontWeight={700} color="primary.main">
@@ -402,7 +535,11 @@ export default function AcademicHistoryPage() {
                       {periodAverages.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={3} align="center">
-                            <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ py: 2 }}
+                            >
                               Sin promedios calculados
                             </Typography>
                           </TableCell>
@@ -422,7 +559,11 @@ export default function AcademicHistoryPage() {
                         <Typography variant="body2" fontWeight={600}>
                           {p.periodName}
                         </Typography>
-                        <Typography variant="body2" color="primary.main" fontWeight={700}>
+                        <Typography
+                          variant="body2"
+                          color="primary.main"
+                          fontWeight={700}
+                        >
                           {p.average.toFixed(2)} / 10
                         </Typography>
                       </Box>
@@ -430,7 +571,13 @@ export default function AcademicHistoryPage() {
                         variant="determinate"
                         value={Math.min(p.average * 10, 100)}
                         sx={{ height: 12, borderRadius: 6 }}
-                        color={p.average >= 7 ? 'success' : p.average >= 6 ? 'warning' : 'error'}
+                        color={
+                          p.average >= 7
+                            ? "success"
+                            : p.average >= 6
+                              ? "warning"
+                              : "error"
+                        }
                       />
                     </Box>
                   ))}
@@ -442,31 +589,51 @@ export default function AcademicHistoryPage() {
           {/* Tab 5 — Academic status */}
           <TabPanel value={tab} index={4}>
             {loading ? (
-              <Box className="flex justify-center py-8"><CircularProgress /></Box>
+              <Box className="flex justify-center py-8">
+                <CircularProgress />
+              </Box>
             ) : (
               <Grid container spacing={3}>
                 {/* Status card */}
                 <Grid item xs={12} md={5}>
                   {(() => {
-                    const st = statusConfig[selectedStudent?.academicStatus ?? 'ACTIVE'] ?? statusConfig.ACTIVE;
+                    const st =
+                      statusConfig[
+                        selectedStudent?.academicStatus ?? "ACTIVE"
+                      ] ?? statusConfig.ACTIVE;
                     return (
-                      <Card sx={{ border: '2px solid', borderColor: `${st.color}.main` }}>
+                      <Card
+                        sx={{
+                          border: "2px solid",
+                          borderColor: `${st.color}.main`,
+                        }}
+                      >
                         <CardContent>
                           <Box className="flex items-center gap-2 mb-3">
-                            <SchoolIcon color={st.color} sx={{ fontSize: 32 }} />
+                            <SchoolIcon
+                              color={st.color}
+                              sx={{ fontSize: 32 }}
+                            />
                             <Box>
                               <Typography variant="h6" fontWeight={700}>
                                 {selectedStudent
                                   ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
-                                  : '—'}
+                                  : "—"}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {selectedStudent?.studentCode ?? '—'}
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {selectedStudent?.studentCode ?? "—"}
                               </Typography>
                             </Box>
                           </Box>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            {selectedStudent?.career?.name ?? '—'}
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            gutterBottom
+                          >
+                            {selectedStudent?.career?.name ?? "—"}
                           </Typography>
                           <Box className="mt-3">
                             <Chip
@@ -485,32 +652,47 @@ export default function AcademicHistoryPage() {
                 {/* Criteria checklist */}
                 <Grid item xs={12} md={7}>
                   <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      gutterBottom
+                    >
                       Criterios de Estado
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
                     {[
                       {
-                        label: 'Tiene registros académicos',
+                        label: "Tiene registros académicos",
                         detail: `${records.length} registros encontrados`,
                         ok: records.length > 0,
                       },
                       {
-                        label: 'Promedio mínimo cumplido (≥ 6.0)',
+                        label: "Promedio mínimo cumplido (≥ 6.0)",
                         detail: `Promedio actual: ${overallAvg}`,
                         ok: overallAvg >= 6.0,
                       },
                       {
-                        label: 'Estado académico activo',
-                        detail: selectedStudent?.academicStatus ?? 'Sin datos',
-                        ok: selectedStudent?.academicStatus === 'ACTIVE',
+                        label: "Estado académico activo",
+                        detail: selectedStudent?.academicStatus ?? "Sin datos",
+                        ok: selectedStudent?.academicStatus === "ACTIVE",
                       },
                     ].map((c) => (
-                      <Box key={c.label} className="flex items-center gap-3 py-2">
-                        {c.ok ? <CheckCircleIcon color="success" /> : <CancelIcon color="error" />}
+                      <Box
+                        key={c.label}
+                        className="flex items-center gap-3 py-2"
+                      >
+                        {c.ok ? (
+                          <CheckCircleIcon color="success" />
+                        ) : (
+                          <CancelIcon color="error" />
+                        )}
                         <Box>
-                          <Typography variant="body2" fontWeight={600}>{c.label}</Typography>
-                          <Typography variant="caption" color="text.secondary">{c.detail}</Typography>
+                          <Typography variant="body2" fontWeight={600}>
+                            {c.label}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {c.detail}
+                          </Typography>
                         </Box>
                       </Box>
                     ))}
@@ -518,7 +700,11 @@ export default function AcademicHistoryPage() {
 
                   {/* Status flags */}
                   <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                    <Typography variant="subtitle1" fontWeight={700} gutterBottom>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      gutterBottom
+                    >
                       Indicadores de Estado
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
@@ -529,12 +715,21 @@ export default function AcademicHistoryPage() {
                           icon={cfg.icon as React.ReactElement}
                           label={cfg.label}
                           color={cfg.color}
-                          variant={selectedStudent?.academicStatus === key ? 'filled' : 'outlined'}
+                          variant={
+                            selectedStudent?.academicStatus === key
+                              ? "filled"
+                              : "outlined"
+                          }
                         />
                       ))}
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Solo está activo el indicador correspondiente al estado del estudiante seleccionado.
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 1, display: "block" }}
+                    >
+                      Solo está activo el indicador correspondiente al estado
+                      del estudiante seleccionado.
                     </Typography>
                   </Paper>
                 </Grid>
@@ -542,9 +737,11 @@ export default function AcademicHistoryPage() {
                 {/* Info note */}
                 <Grid item xs={12}>
                   <Alert severity="info">
-                    <strong>Nota:</strong> Este estado determina la elegibilidad del estudiante para inscripción,
-                    emisión de certificaciones y posible suspensión del sistema. Es calculado automáticamente
-                    en función de créditos, promedio y materias obligatorias pendientes.
+                    <strong>Nota:</strong> Este estado determina la elegibilidad
+                    del estudiante para inscripción, emisión de certificaciones
+                    y posible suspensión del sistema. Es calculado
+                    automáticamente en función de créditos, promedio y materias
+                    obligatorias pendientes.
                   </Alert>
                 </Grid>
               </Grid>

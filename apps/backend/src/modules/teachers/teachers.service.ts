@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateTeacherDto, UpdateTeacherDto } from './teachers.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateTeacherDto, UpdateTeacherDto } from "./teachers.dto";
 
 class TeachersService {
   async findAll() {
@@ -20,7 +20,7 @@ class TeachersService {
         groups: true,
       },
     });
-    if (!teacher) throw new HttpError(404, 'Teacher not found');
+    if (!teacher) throw new HttpError(404, "Teacher not found");
     return teacher;
   }
 
@@ -29,7 +29,7 @@ class TeachersService {
       where: { userId, deletedAt: null },
       include: { user: true },
     });
-    if (!teacher) throw new HttpError(404, 'Teacher not found');
+    if (!teacher) throw new HttpError(404, "Teacher not found");
     return teacher;
   }
 

@@ -1,20 +1,30 @@
-import { Request, Response, NextFunction } from 'express';
-import { GradesService } from './grades.service';
-import { UpsertGradeDto, BulkUpsertGradesDto } from './grades.dto';
+import { Request, Response, NextFunction } from "express";
+import { GradesService } from "./grades.service";
+import { UpsertGradeDto, BulkUpsertGradesDto } from "./grades.dto";
 
 export class GradesController {
   constructor(private service: GradesService) {}
 
-  findByEvaluation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByEvaluation = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
-      const result = await this.service.findByEvaluation(req.params.evaluationId);
+      const result = await this.service.findByEvaluation(
+        req.params.evaluationId,
+      );
       res.json(result);
     } catch (err) {
       next(err);
     }
   };
 
-  findByStudentAndGroup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByStudentAndGroup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findByStudentAndGroup(
         req.params.studentId,
@@ -26,7 +36,11 @@ export class GradesController {
     }
   };
 
-  upsert = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  upsert = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpsertGradeDto.parse(req.body);
       const gradedBy = req.user!.sub;
@@ -37,7 +51,11 @@ export class GradesController {
     }
   };
 
-  bulkUpsert = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  bulkUpsert = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const { grades } = BulkUpsertGradesDto.parse(req.body);
       const gradedBy = req.user!.sub;

@@ -1,11 +1,13 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { notificationsService } from '../notifications/notifications.service';
-import { EnrollStudentDto } from './enrollments.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { notificationsService } from "../notifications/notifications.service";
+import { EnrollStudentDto } from "./enrollments.dto";
 
 export class EnrollmentsService {
   async enrollStudent(dto: EnrollStudentDto) {
-    const result = await prisma.$queryRaw<Array<{ p_result_code: number; p_result_message: string }>>`
+    const result = await prisma.$queryRaw<
+      Array<{ p_result_code: number; p_result_message: string }>
+    >`
       SELECT p_result_code, p_result_message FROM sp_enroll_student(
         ${dto.studentId}::uuid,
         ${dto.groupId}::uuid,
@@ -18,15 +20,21 @@ export class EnrollmentsService {
     }
 
     // Notify student
-    const student = await prisma.student.findUnique({ where: { id: dto.studentId }, select: { userId: true } });
-    const group = await prisma.group.findUnique({ where: { id: dto.groupId }, include: { subject: true } });
+    const student = await prisma.student.findUnique({
+      where: { id: dto.studentId },
+      select: { userId: true },
+    });
+    const group = await prisma.group.findUnique({
+      where: { id: dto.groupId },
+      include: { subject: true },
+    });
     if (student && group) {
       await notificationsService.create({
         userId: student.userId,
-        title: 'Inscripción confirmada',
+        title: "Inscripción confirmada",
         message: `Te has inscrito exitosamente a ${group.subject.name} (${group.groupCode})`,
-        type: 'ENROLLMENT_CONFIRMED',
-        relatedEntity: 'group',
+        type: "ENROLLMENT_CONFIRMED",
+        relatedEntity: "group",
         relatedEntityId: dto.groupId,
       });
     }
@@ -51,7 +59,7 @@ export class EnrollmentsService {
       where: { userId, deletedAt: null },
       select: { id: true, careerId: true },
     });
-    if (!student) throw new HttpError(404, 'Estudiante no encontrado');
+    if (!student) throw new HttpError(404, "Estudiante no encontrado");
 
     const activePeriod = await prisma.academicPeriod.findFirst({
       where: { isActive: true, enrollmentOpen: true },
@@ -70,12 +78,13 @@ export class EnrollmentsService {
       where: { studentId: student.id, academicPeriodId: activePeriod.id },
       select: {
         enrollmentSubjects: {
-          where: { status: 'ENROLLED' },
+          where: { status: "ENROLLED" },
           select: { groupId: true },
         },
       },
     });
-    const enrolledGroupIds = existingEnrollment?.enrollmentSubjects.map((es) => es.groupId) ?? [];
+    const enrolledGroupIds =
+      existingEnrollment?.enrollmentSubjects.map((es) => es.groupId) ?? [];
 
     return prisma.group.findMany({
       where: {
@@ -85,8 +94,12 @@ export class EnrollmentsService {
         id: { notIn: enrolledGroupIds },
       },
       include: {
-        subject: { select: { id: true, name: true, code: true, credits: true } },
-        teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+        subject: {
+          select: { id: true, name: true, code: true, credits: true },
+        },
+        teacher: {
+          include: { user: { select: { firstName: true, lastName: true } } },
+        },
       },
     });
   }
@@ -104,19 +117,24 @@ export class EnrollmentsService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
   async findByPeriod(periodId: string) {
     return prisma.enrollment.findMany({
       where: { academicPeriodId: periodId },
-      include: { student: { include: { user: true } }, enrollmentSubjects: true },
+      include: {
+        student: { include: { user: true } },
+        enrollmentSubjects: true,
+      },
     });
   }
 
   async dropSubject(enrollmentSubjectId: string) {
-    const result = await prisma.$queryRaw<Array<{ p_result_code: number; p_result_message: string }>>`
+    const result = await prisma.$queryRaw<
+      Array<{ p_result_code: number; p_result_message: string }>
+    >`
       SELECT p_result_code, p_result_message FROM sp_drop_enrollment_subject(
         ${enrollmentSubjectId}::uuid
       )

@@ -1,20 +1,34 @@
-import { Request, Response, NextFunction } from 'express';
-import { calendarEventsService } from './calendar-events.service';
-import { CreateCalendarEventDto, UpdateCalendarEventDto } from './calendar-events.dto';
+import { Request, Response, NextFunction } from "express";
+import { calendarEventsService } from "./calendar-events.service";
+import {
+  CreateCalendarEventDto,
+  UpdateCalendarEventDto,
+} from "./calendar-events.dto";
 
 class CalendarEventsController {
-  findAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findAll = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const periodId = req.query.periodId as string | undefined;
-      const upcoming = req.query.upcoming === 'true';
-      const events = await calendarEventsService.findAll({ periodId, upcoming });
+      const upcoming = req.query.upcoming === "true";
+      const events = await calendarEventsService.findAll({
+        periodId,
+        upcoming,
+      });
       res.json(events);
     } catch (err) {
       next(err);
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const event = await calendarEventsService.findById(req.params.id);
       res.json(event);
@@ -23,7 +37,11 @@ class CalendarEventsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const data = CreateCalendarEventDto.parse(req.body);
       const event = await calendarEventsService.create(data);
@@ -33,7 +51,11 @@ class CalendarEventsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const data = UpdateCalendarEventDto.parse(req.body);
       const event = await calendarEventsService.update(req.params.id, data);
@@ -43,7 +65,11 @@ class CalendarEventsController {
     }
   };
 
-  delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await calendarEventsService.delete(req.params.id);
       res.status(204).send();

@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateStudentDto, UpdateStudentDto } from './students.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateStudentDto, UpdateStudentDto } from "./students.dto";
 
 class StudentsService {
   async findAll() {
@@ -21,7 +21,7 @@ class StudentsService {
         career: { select: { name: true } },
       },
     });
-    if (!student) throw new HttpError(404, 'Student not found');
+    if (!student) throw new HttpError(404, "Student not found");
     return student;
   }
 
@@ -33,7 +33,7 @@ class StudentsService {
         career: { select: { name: true } },
       },
     });
-    if (!student) throw new HttpError(404, 'Student not found');
+    if (!student) throw new HttpError(404, "Student not found");
     return student;
   }
 
@@ -43,7 +43,9 @@ class StudentsService {
         userId: dto.userId,
         studentCode: dto.studentCode,
         careerId: dto.careerId,
-        ...(dto.enrollmentDate ? { enrollmentDate: new Date(dto.enrollmentDate) } : {}),
+        ...(dto.enrollmentDate
+          ? { enrollmentDate: new Date(dto.enrollmentDate) }
+          : {}),
       },
     });
   }

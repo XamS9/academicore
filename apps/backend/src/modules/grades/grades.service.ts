@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { notificationsService } from '../notifications/notifications.service';
-import { UpsertGradeDto } from './grades.dto';
+import { prisma } from "../../shared/prisma.client";
+import { notificationsService } from "../notifications/notifications.service";
+import { UpsertGradeDto } from "./grades.dto";
 
 export class GradesService {
   async findByEvaluation(evaluationId: string) {
@@ -30,23 +30,35 @@ export class GradesService {
         },
       },
       create: { ...dto, gradedBy, gradedAt: new Date() },
-      update: { score: dto.score, gradedBy, gradedAt: new Date(), updatedAt: new Date() },
+      update: {
+        score: dto.score,
+        gradedBy,
+        gradedAt: new Date(),
+        updatedAt: new Date(),
+      },
     });
   }
 
   async bulkUpsert(grades: UpsertGradeDto[], gradedBy: string) {
-    const results = await prisma.$transaction(grades.map((dto) =>
-      prisma.grade.upsert({
-        where: {
-          evaluationId_studentId: {
-            evaluationId: dto.evaluationId,
-            studentId: dto.studentId,
+    const results = await prisma.$transaction(
+      grades.map((dto) =>
+        prisma.grade.upsert({
+          where: {
+            evaluationId_studentId: {
+              evaluationId: dto.evaluationId,
+              studentId: dto.studentId,
+            },
           },
-        },
-        create: { ...dto, gradedBy, gradedAt: new Date() },
-        update: { score: dto.score, gradedBy, gradedAt: new Date(), updatedAt: new Date() },
-      }),
-    ));
+          create: { ...dto, gradedBy, gradedAt: new Date() },
+          update: {
+            score: dto.score,
+            gradedBy,
+            gradedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        }),
+      ),
+    );
 
     // Notify students
     const studentIds = [...new Set(grades.map((g) => g.studentId))];
@@ -55,16 +67,19 @@ export class GradesService {
       select: { id: true, userId: true },
     });
     const evaluation = grades[0]
-      ? await prisma.evaluation.findUnique({ where: { id: grades[0].evaluationId }, include: { group: { include: { subject: true } } } })
+      ? await prisma.evaluation.findUnique({
+          where: { id: grades[0].evaluationId },
+          include: { group: { include: { subject: true } } },
+        })
       : null;
     if (evaluation) {
       await notificationsService.createBulk(
         students.map((s) => s.userId),
         {
-          title: 'Calificación publicada',
+          title: "Calificación publicada",
           message: `Se ha publicado tu calificación de ${evaluation.name} en ${evaluation.group.subject.name}`,
-          type: 'GRADE_POSTED',
-          relatedEntity: 'evaluation',
+          type: "GRADE_POSTED",
+          relatedEntity: "evaluation",
           relatedEntityId: evaluation.id,
         },
       );

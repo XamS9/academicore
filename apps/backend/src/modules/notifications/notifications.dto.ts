@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const NotificationQuerySchema = z.object({
   unreadOnly: z.coerce.boolean().optional(),

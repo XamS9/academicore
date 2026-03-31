@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const EnrollStudentDto = z.object({
   studentId: z.string().uuid(),

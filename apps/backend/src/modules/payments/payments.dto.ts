@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const CreateFeeConceptDto = z.object({
   name: z.string().min(1).max(200),
@@ -25,7 +25,7 @@ export const BulkAssignStudentFeeDto = z.object({
 });
 
 export const PayStudentFeeDto = z.object({
-  method: z.enum(['CARD', 'TRANSFER', 'CASH']),
+  method: z.enum(["CARD", "TRANSFER", "CASH"]),
 });
 
 export type CreateFeeConceptInput = z.infer<typeof CreateFeeConceptDto>;

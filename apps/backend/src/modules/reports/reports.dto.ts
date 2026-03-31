@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const ReportQuerySchema = z.object({
   periodId: z.string().uuid().optional(),

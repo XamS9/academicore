@@ -1,6 +1,9 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import type { CreateCalendarEventInput, UpdateCalendarEventInput } from './calendar-events.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import type {
+  CreateCalendarEventInput,
+  UpdateCalendarEventInput,
+} from "./calendar-events.dto";
 
 export class CalendarEventsService {
   async findAll(filters?: { periodId?: string; upcoming?: boolean }) {
@@ -10,7 +13,7 @@ export class CalendarEventsService {
         ...(filters?.upcoming ? { endDate: { gte: new Date() } } : {}),
       },
       include: { period: { select: { id: true, name: true } } },
-      orderBy: { startDate: 'asc' },
+      orderBy: { startDate: "asc" },
     });
   }
 
@@ -19,7 +22,7 @@ export class CalendarEventsService {
       where: { id },
       include: { period: { select: { id: true, name: true } } },
     });
-    if (!event) throw new HttpError(404, 'Evento no encontrado');
+    if (!event) throw new HttpError(404, "Evento no encontrado");
     return event;
   }
 

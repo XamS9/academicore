@@ -1,9 +1,9 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { env } from '../../config/env';
-import { LoginDto } from './auth.dto';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { env } from "../../config/env";
+import { LoginDto } from "./auth.dto";
 
 interface JwtPayload {
   sub: string;
@@ -24,19 +24,25 @@ class AuthService {
   async login(dto: LoginDto): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: { id: string; email: string; firstName: string; lastName: string; userType: string };
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      userType: string;
+    };
   }> {
     const user = await prisma.user.findFirst({
       where: { email: dto.email, deletedAt: null, isActive: true },
     });
 
     if (!user) {
-      throw new HttpError(401, 'Invalid credentials');
+      throw new HttpError(401, "Invalid credentials");
     }
 
     const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatch) {
-      throw new HttpError(401, 'Invalid credentials');
+      throw new HttpError(401, "Invalid credentials");
     }
 
     const roles = await this.getRoles(user.id);
@@ -49,11 +55,11 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     });
 
     const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     });
 
     return {
@@ -74,7 +80,7 @@ class AuthService {
     try {
       decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as JwtPayload;
     } catch {
-      throw new HttpError(401, 'Invalid or expired refresh token');
+      throw new HttpError(401, "Invalid or expired refresh token");
     }
 
     const user = await prisma.user.findFirst({
@@ -82,7 +88,7 @@ class AuthService {
     });
 
     if (!user) {
-      throw new HttpError(401, 'User not found or inactive');
+      throw new HttpError(401, "User not found or inactive");
     }
 
     const roles = await this.getRoles(user.id);
@@ -95,7 +101,7 @@ class AuthService {
     };
 
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     });
 
     return { accessToken };

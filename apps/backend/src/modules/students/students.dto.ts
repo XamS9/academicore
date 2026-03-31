@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const CreateStudentDto = z.object({
   userId: z.string().uuid(),
@@ -11,7 +11,14 @@ export type CreateStudentDto = z.infer<typeof CreateStudentDto>;
 export const UpdateStudentDto = z.object({
   careerId: z.string().uuid().optional(),
   academicStatus: z
-    .enum(['ACTIVE', 'AT_RISK', 'ELIGIBLE_FOR_GRADUATION', 'SUSPENDED', 'GRADUATED', 'WITHDRAWN'])
+    .enum([
+      "ACTIVE",
+      "AT_RISK",
+      "ELIGIBLE_FOR_GRADUATION",
+      "SUSPENDED",
+      "GRADUATED",
+      "WITHDRAWN",
+    ])
     .optional(),
 });
 export type UpdateStudentDto = z.infer<typeof UpdateStudentDto>;

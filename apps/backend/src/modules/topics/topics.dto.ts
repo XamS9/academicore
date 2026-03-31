@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const CreateTopicDto = z.object({
   groupId: z.string().uuid(),

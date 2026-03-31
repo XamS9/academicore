@@ -1,6 +1,9 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateAcademicPeriodDto, UpdateAcademicPeriodDto } from './academic-periods.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import {
+  CreateAcademicPeriodDto,
+  UpdateAcademicPeriodDto,
+} from "./academic-periods.dto";
 
 class AcademicPeriodsService {
   async findAll() {
@@ -17,7 +20,7 @@ class AcademicPeriodsService {
     const period = await prisma.academicPeriod.findUnique({
       where: { id },
     });
-    if (!period) throw new HttpError(404, 'Academic period not found');
+    if (!period) throw new HttpError(404, "Academic period not found");
     return period;
   }
 
@@ -38,9 +41,15 @@ class AcademicPeriodsService {
       where: { id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.startDate !== undefined ? { startDate: new Date(dto.startDate) } : {}),
-        ...(dto.endDate !== undefined ? { endDate: new Date(dto.endDate) } : {}),
-        ...(dto.enrollmentOpen !== undefined ? { enrollmentOpen: dto.enrollmentOpen } : {}),
+        ...(dto.startDate !== undefined
+          ? { startDate: new Date(dto.startDate) }
+          : {}),
+        ...(dto.endDate !== undefined
+          ? { endDate: new Date(dto.endDate) }
+          : {}),
+        ...(dto.enrollmentOpen !== undefined
+          ? { enrollmentOpen: dto.enrollmentOpen }
+          : {}),
       },
     });
   }

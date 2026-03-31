@@ -1,6 +1,6 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateCareerDto, UpdateCareerDto } from './careers.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import { CreateCareerDto, UpdateCareerDto } from "./careers.dto";
 
 class CareersService {
   async findAll() {
@@ -18,7 +18,7 @@ class CareersService {
         },
       },
     });
-    if (!career) throw new HttpError(404, 'Career not found');
+    if (!career) throw new HttpError(404, "Career not found");
     return career;
   }
 

@@ -1,9 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
-import { reportsService } from './reports.service';
-import { ReportQuerySchema } from './reports.dto';
+import { Request, Response, NextFunction } from "express";
+import { reportsService } from "./reports.service";
+import { ReportQuerySchema } from "./reports.dto";
 
 class ReportsController {
-  enrollmentStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  enrollmentStats = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const query = ReportQuerySchema.parse(req.query);
       res.json(await reportsService.enrollmentStats(query));
@@ -12,7 +16,11 @@ class ReportsController {
     }
   };
 
-  passFail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  passFail = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const query = ReportQuerySchema.parse(req.query);
       res.json(await reportsService.passFail(query));
@@ -21,7 +29,11 @@ class ReportsController {
     }
   };
 
-  gpaTrends = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  gpaTrends = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       res.json(await reportsService.gpaTrends());
     } catch (err) {
@@ -29,7 +41,11 @@ class ReportsController {
     }
   };
 
-  atRisk = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  atRisk = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       res.json(await reportsService.atRisk());
     } catch (err) {
@@ -37,7 +53,11 @@ class ReportsController {
     }
   };
 
-  summary = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  summary = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       res.json(await reportsService.summary());
     } catch (err) {

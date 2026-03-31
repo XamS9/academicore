@@ -1,24 +1,27 @@
-import { prisma } from '../../shared/prisma.client';
-import { HttpError } from '../../shared/http-error';
-import { CreateContentItemDto, UpdateContentItemDto } from './content-items.dto';
+import { prisma } from "../../shared/prisma.client";
+import { HttpError } from "../../shared/http-error";
+import {
+  CreateContentItemDto,
+  UpdateContentItemDto,
+} from "./content-items.dto";
 
 export class ContentItemsService {
   async findByTopic(topicId: string) {
     return prisma.contentItem.findMany({
       where: { topicId },
-      orderBy: { sortOrder: 'asc' },
+      orderBy: { sortOrder: "asc" },
     });
   }
 
   async findById(id: string) {
     const item = await prisma.contentItem.findUnique({ where: { id } });
-    if (!item) throw new HttpError(404, 'Content item not found');
+    if (!item) throw new HttpError(404, "Content item not found");
     return item;
   }
 
   async create(dto: CreateContentItemDto) {
     const topic = await prisma.topic.findUnique({ where: { id: dto.topicId } });
-    if (!topic) throw new HttpError(404, 'Topic not found');
+    if (!topic) throw new HttpError(404, "Topic not found");
 
     return prisma.contentItem.create({
       data: {
@@ -33,7 +36,7 @@ export class ContentItemsService {
 
   async update(id: string, dto: UpdateContentItemDto) {
     const existing = await prisma.contentItem.findUnique({ where: { id } });
-    if (!existing) throw new HttpError(404, 'Content item not found');
+    if (!existing) throw new HttpError(404, "Content item not found");
 
     return prisma.contentItem.update({
       where: { id },
@@ -49,7 +52,7 @@ export class ContentItemsService {
 
   async delete(id: string) {
     const existing = await prisma.contentItem.findUnique({ where: { id } });
-    if (!existing) throw new HttpError(404, 'Content item not found');
+    if (!existing) throw new HttpError(404, "Content item not found");
     return prisma.contentItem.delete({ where: { id } });
   }
 }

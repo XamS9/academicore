@@ -1,2 +1,2 @@
-export * from './classrooms.router';
-export * from './classrooms.service';
+export * from "./classrooms.router";
+export * from "./classrooms.service";

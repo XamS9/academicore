@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const UpdateSystemSettingsDto = z.object({
   passingGrade: z.number().min(0).max(100).optional(),

@@ -1,11 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import { TopicsService } from './topics.service';
-import { CreateTopicDto, UpdateTopicDto, ReorderTopicsDto } from './topics.dto';
+import { Request, Response, NextFunction } from "express";
+import { TopicsService } from "./topics.service";
+import { CreateTopicDto, UpdateTopicDto, ReorderTopicsDto } from "./topics.dto";
 
 export class TopicsController {
   constructor(private service: TopicsService) {}
 
-  findByGroup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByGroup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findByGroup(req.params.groupId);
       res.json(result);
@@ -14,7 +18,11 @@ export class TopicsController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findById(req.params.id);
       res.json(result);
@@ -23,7 +31,11 @@ export class TopicsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateTopicDto.parse(req.body);
       const result = await this.service.create(dto);
@@ -33,7 +45,11 @@ export class TopicsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateTopicDto.parse(req.body);
       const result = await this.service.update(req.params.id, dto);
@@ -43,7 +59,11 @@ export class TopicsController {
     }
   };
 
-  delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await this.service.delete(req.params.id);
       res.status(204).send();
@@ -52,7 +72,11 @@ export class TopicsController {
     }
   };
 
-  reorder = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  reorder = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const { orderedIds } = ReorderTopicsDto.parse(req.body);
       await this.service.reorder(req.params.groupId, orderedIds);

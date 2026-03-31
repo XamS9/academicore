@@ -1,11 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
-import { ContentItemsService } from './content-items.service';
-import { CreateContentItemDto, UpdateContentItemDto } from './content-items.dto';
+import { Request, Response, NextFunction } from "express";
+import { ContentItemsService } from "./content-items.service";
+import {
+  CreateContentItemDto,
+  UpdateContentItemDto,
+} from "./content-items.dto";
 
 export class ContentItemsController {
   constructor(private service: ContentItemsService) {}
 
-  findByTopic = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByTopic = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findByTopic(req.params.topicId);
       res.json(result);
@@ -14,7 +21,11 @@ export class ContentItemsController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findById(req.params.id);
       res.json(result);
@@ -23,7 +34,11 @@ export class ContentItemsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateContentItemDto.parse(req.body);
       const result = await this.service.create(dto);
@@ -33,7 +48,11 @@ export class ContentItemsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateContentItemDto.parse(req.body);
       const result = await this.service.update(req.params.id, dto);
@@ -43,7 +62,11 @@ export class ContentItemsController {
     }
   };
 
-  delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await this.service.delete(req.params.id);
       res.status(204).send();

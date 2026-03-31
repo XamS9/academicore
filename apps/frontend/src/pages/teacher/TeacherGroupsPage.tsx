@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import Snackbar from '@mui/material/Snackbar';
-import Alert from '@mui/material/Alert';
-import { DataTable, Column } from '../../components/ui/DataTable';
-import { useToast } from '../../hooks/useToast';
-import { useAuth } from '../../store/auth.context';
-import { teachersService } from '../../services/teachers.service';
-import { groupsService } from '../../services/groups.service';
+import { useEffect, useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Chip from "@mui/material/Chip";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import { DataTable, Column } from "../../components/ui/DataTable";
+import { useToast } from "../../hooks/useToast";
+import { useAuth } from "../../store/auth.context";
+import { teachersService } from "../../services/teachers.service";
+import { groupsService } from "../../services/groups.service";
 
 interface GroupItem {
   id: string;
@@ -34,7 +34,7 @@ export default function TeacherGroupsPage() {
         const data = await groupsService.getByTeacher(teacher.id);
         setItems(data);
       } catch {
-        showToast('Error al cargar mis grupos', 'error');
+        showToast("Error al cargar mis grupos", "error");
       } finally {
         setLoading(false);
       }
@@ -43,29 +43,29 @@ export default function TeacherGroupsPage() {
   }, []);
 
   const columns: Column<GroupItem>[] = [
-    { key: 'groupCode', label: 'Código' },
+    { key: "groupCode", label: "Código" },
     {
-      key: 'subject',
-      label: 'Materia',
+      key: "subject",
+      label: "Materia",
       render: (row) => `${row.subject.name} (${row.subject.code})`,
     },
     {
-      key: 'academicPeriod',
-      label: 'Período',
-      render: (row) => row.academicPeriod?.name ?? '—',
+      key: "academicPeriod",
+      label: "Período",
+      render: (row) => row.academicPeriod?.name ?? "—",
     },
     {
-      key: 'cupos',
-      label: 'Cupos',
+      key: "cupos",
+      label: "Cupos",
       render: (row) => `${row.currentStudents}/${row.maxStudents}`,
     },
     {
-      key: 'isActive',
-      label: 'Estado',
+      key: "isActive",
+      label: "Estado",
       render: (row) => (
         <Chip
-          label={row.isActive ? 'Activo' : 'Inactivo'}
-          color={row.isActive ? 'success' : 'default'}
+          label={row.isActive ? "Activo" : "Inactivo"}
+          color={row.isActive ? "success" : "default"}
           size="small"
         />
       ),
@@ -78,7 +78,12 @@ export default function TeacherGroupsPage() {
         <Typography variant="h5">Mis Grupos</Typography>
       </Box>
 
-      <DataTable columns={columns} rows={items} loading={loading} getRowKey={(r) => r.id} />
+      <DataTable
+        columns={columns}
+        rows={items}
+        loading={loading}
+        getRowKey={(r) => r.id}
+      />
 
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>
         <Alert severity={toast?.severity} onClose={clearToast}>

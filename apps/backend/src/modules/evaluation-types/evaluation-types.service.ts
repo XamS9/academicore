@@ -1,5 +1,5 @@
-import { prisma } from '../../shared/prisma.client';
-import { CreateEvaluationTypeDto } from './evaluation-types.dto';
+import { prisma } from "../../shared/prisma.client";
+import { CreateEvaluationTypeDto } from "./evaluation-types.dto";
 
 class EvaluationTypesService {
   async findAll() {

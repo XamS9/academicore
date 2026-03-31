@@ -1,11 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import { EvaluationsService } from './evaluations.service';
-import { CreateEvaluationDto, UpdateEvaluationDto } from './evaluations.dto';
+import { Request, Response, NextFunction } from "express";
+import { EvaluationsService } from "./evaluations.service";
+import { CreateEvaluationDto, UpdateEvaluationDto } from "./evaluations.dto";
 
 export class EvaluationsController {
   constructor(private service: EvaluationsService) {}
 
-  findByGroup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findByGroup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findByGroup(req.params.groupId);
       res.json(result);
@@ -14,7 +18,11 @@ export class EvaluationsController {
     }
   };
 
-  findById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  findById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.findById(req.params.id);
       res.json(result);
@@ -23,7 +31,11 @@ export class EvaluationsController {
     }
   };
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = CreateEvaluationDto.parse(req.body);
       const result = await this.service.create(dto);
@@ -33,7 +45,11 @@ export class EvaluationsController {
     }
   };
 
-  update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = UpdateEvaluationDto.parse(req.body);
       const result = await this.service.update(req.params.id, dto);
@@ -43,7 +59,11 @@ export class EvaluationsController {
     }
   };
 
-  delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await this.service.delete(req.params.id);
       res.status(204).send();

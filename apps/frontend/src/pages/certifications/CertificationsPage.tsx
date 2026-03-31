@@ -1,54 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableHead from '@mui/material/TableHead';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import TextField from '@mui/material/TextField';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Stepper from '@mui/material/Stepper';
-import Step from '@mui/material/Step';
-import StepLabel from '@mui/material/StepLabel';
-import StepContent from '@mui/material/StepContent';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Divider from '@mui/material/Divider';
-import Alert from '@mui/material/Alert';
-import Snackbar from '@mui/material/Snackbar';
-import Grid from '@mui/material/Grid';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
-import CircularProgress from '@mui/material/CircularProgress';
+import React, { useState, useEffect } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Paper from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import TextField from "@mui/material/TextField";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Stepper from "@mui/material/Stepper";
+import Step from "@mui/material/Step";
+import StepLabel from "@mui/material/StepLabel";
+import StepContent from "@mui/material/StepContent";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Divider from "@mui/material/Divider";
+import Alert from "@mui/material/Alert";
+import Snackbar from "@mui/material/Snackbar";
+import Grid from "@mui/material/Grid";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import CircularProgress from "@mui/material/CircularProgress";
 
-import AddIcon from '@mui/icons-material/Add';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import BlockIcon from '@mui/icons-material/Block';
-import DownloadIcon from '@mui/icons-material/Download';
-import SchoolIcon from '@mui/icons-material/School';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import LinkIcon from '@mui/icons-material/Link';
+import AddIcon from "@mui/icons-material/Add";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import BlockIcon from "@mui/icons-material/Block";
+import DownloadIcon from "@mui/icons-material/Download";
+import SchoolIcon from "@mui/icons-material/School";
+import VerifiedIcon from "@mui/icons-material/Verified";
+import LinkIcon from "@mui/icons-material/Link";
 
-import { useAuth } from '../../store/auth.context';
-import { certificationsService } from '../../services/certifications.service';
-import { studentsService } from '../../services/students.service';
-import { api } from '../../services/api';
-import type { CertificationStatus, CertificationType } from '../../types';
+import { useAuth } from "../../store/auth.context";
+import { certificationsService } from "../../services/certifications.service";
+import { studentsService } from "../../services/students.service";
+import { api } from "../../services/api";
+import type { CertificationStatus, CertificationType } from "../../types";
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
@@ -99,26 +99,36 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 const certTypeLabels: Record<CertificationType, string> = {
-  TRANSCRIPT: 'Historial Académico',
-  ENROLLMENT_PROOF: 'Comprobante de Inscripción',
-  DEGREE: 'Título Profesional',
-  COMPLETION: 'Certificado de Terminación',
+  TRANSCRIPT: "Historial Académico",
+  ENROLLMENT_PROOF: "Comprobante de Inscripción",
+  DEGREE: "Título Profesional",
+  COMPLETION: "Certificado de Terminación",
 };
 
-const certStatusMap: Record<CertificationStatus, { label: string; color: 'success' | 'error' | 'warning' }> = {
-  ACTIVE: { label: 'ACTIVO', color: 'success' },
-  REVOKED: { label: 'REVOCADO', color: 'error' },
-  EXPIRED: { label: 'VENCIDO', color: 'warning' },
+const certStatusMap: Record<
+  CertificationStatus,
+  { label: string; color: "success" | "error" | "warning" }
+> = {
+  ACTIVE: { label: "ACTIVO", color: "success" },
+  REVOKED: { label: "REVOCADO", color: "error" },
+  EXPIRED: { label: "VENCIDO", color: "warning" },
 };
 
 function CertStatusChip({ status }: { status: CertificationStatus }) {
-  const { label, color } = certStatusMap[status] ?? { label: status, color: 'warning' };
+  const { label, color } = certStatusMap[status] ?? {
+    label: status,
+    color: "warning",
+  };
   return <Chip label={label} color={color} size="small" />;
 }
 
 function formatDate(iso: string | null) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 // ─── Tab 1 — Criteria ─────────────────────────────────────────────────────────
@@ -129,14 +139,15 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    certificationType: 'TRANSCRIPT' as CertificationType,
+    certificationType: "TRANSCRIPT" as CertificationType,
     minGrade: 6.0,
     validityMonths: 12,
-    description: '',
+    description: "",
   });
 
   useEffect(() => {
-    certificationsService.getCriteria()
+    certificationsService
+      .getCriteria()
       .then((data: CriteriaItem[]) => setCriteria(data))
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -145,10 +156,17 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
   const handleAdd = async () => {
     setSaving(true);
     try {
-      const newEntry = await api.post('/certifications/criteria', form).then((r) => r.data);
+      const newEntry = await api
+        .post("/certifications/criteria", form)
+        .then((r) => r.data);
       setCriteria((prev) => [newEntry, ...prev]);
       setDialogOpen(false);
-      setForm({ certificationType: 'TRANSCRIPT', minGrade: 6.0, validityMonths: 12, description: '' });
+      setForm({
+        certificationType: "TRANSCRIPT",
+        minGrade: 6.0,
+        validityMonths: 12,
+        description: "",
+      });
     } catch (e) {
       console.error(e);
     } finally {
@@ -157,15 +175,26 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
   };
 
   if (loading) {
-    return <Box className="flex justify-center py-8"><CircularProgress /></Box>;
+    return (
+      <Box className="flex justify-center py-8">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
     <Box>
       <Box className="flex items-center justify-between mb-3">
-        <Typography variant="h6" fontWeight={600}>Criterios de Certificación</Typography>
+        <Typography variant="h6" fontWeight={600}>
+          Criterios de Certificación
+        </Typography>
         {canEdit && (
-          <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={() => setDialogOpen(true)}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            size="small"
+            onClick={() => setDialogOpen(true)}
+          >
             Agregar Criterio
           </Button>
         )}
@@ -174,11 +203,15 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
       <TableContainer>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ backgroundColor: 'grey.100' }}>
+            <TableRow sx={{ backgroundColor: "grey.100" }}>
               <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Carrera</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="center">Cal. Mínima</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="center">Vigencia (meses)</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">
+                Cal. Mínima
+              </TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">
+                Vigencia (meses)
+              </TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Descripción</TableCell>
             </TableRow>
           </TableHead>
@@ -186,20 +219,35 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
             {criteria.map((c) => (
               <TableRow key={c.id} hover>
                 <TableCell>
-                  <Chip label={certTypeLabels[c.certificationType] ?? c.certificationType} size="small" color="primary" variant="outlined" />
+                  <Chip
+                    label={
+                      certTypeLabels[c.certificationType] ?? c.certificationType
+                    }
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
                 </TableCell>
-                <TableCell>{c.career?.name ?? '—'}</TableCell>
-                <TableCell align="center">{Number(c.minGrade).toFixed(1)}</TableCell>
+                <TableCell>{c.career?.name ?? "—"}</TableCell>
+                <TableCell align="center">
+                  {Number(c.minGrade).toFixed(1)}
+                </TableCell>
                 <TableCell align="center">{c.validityMonths}</TableCell>
                 <TableCell sx={{ maxWidth: 300 }}>
-                  <Typography variant="caption">{c.description ?? '—'}</Typography>
+                  <Typography variant="caption">
+                    {c.description ?? "—"}
+                  </Typography>
                 </TableCell>
               </TableRow>
             ))}
             {criteria.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ py: 2 }}
+                  >
                     Sin criterios registrados
                   </Typography>
                 </TableCell>
@@ -210,7 +258,12 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
       </TableContainer>
 
       {canEdit && (
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Agregar Criterio de Certificación</DialogTitle>
           <DialogContent className="flex flex-col gap-4 pt-2">
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
@@ -218,10 +271,17 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
               <Select
                 value={form.certificationType}
                 label="Tipo de Certificado"
-                onChange={(e) => setForm((f) => ({ ...f, certificationType: e.target.value as CertificationType }))}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    certificationType: e.target.value as CertificationType,
+                  }))
+                }
               >
                 {Object.entries(certTypeLabels).map(([k, v]) => (
-                  <MenuItem key={k} value={k}>{v}</MenuItem>
+                  <MenuItem key={k} value={k}>
+                    {v}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -229,28 +289,44 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
               label="Calificación Mínima"
               type="number"
               value={form.minGrade}
-              onChange={(e) => setForm((f) => ({ ...f, minGrade: parseFloat(e.target.value) }))}
-              fullWidth size="small"
+              onChange={(e) =>
+                setForm((f) => ({ ...f, minGrade: parseFloat(e.target.value) }))
+              }
+              fullWidth
+              size="small"
               inputProps={{ min: 0, max: 10, step: 0.5 }}
             />
             <TextField
               label="Vigencia (meses)"
               type="number"
               value={form.validityMonths}
-              onChange={(e) => setForm((f) => ({ ...f, validityMonths: parseInt(e.target.value) }))}
-              fullWidth size="small"
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  validityMonths: parseInt(e.target.value),
+                }))
+              }
+              fullWidth
+              size="small"
               inputProps={{ min: 1, max: 60 }}
             />
             <TextField
               label="Descripción"
               value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              fullWidth size="small" multiline rows={2}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+              fullWidth
+              size="small"
+              multiline
+              rows={2}
             />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button variant="contained" onClick={handleAdd} disabled={saving}>Agregar</Button>
+            <Button variant="contained" onClick={handleAdd} disabled={saving}>
+              Agregar
+            </Button>
           </DialogActions>
         </Dialog>
       )}
@@ -263,24 +339,27 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
 function GenerateCertTab() {
   const [activeStep, setActiveStep] = useState(0);
   const [students, setStudents] = useState<StudentItem[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [certType, setCertType] = useState<CertificationType>('TRANSCRIPT');
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [certType, setCertType] = useState<CertificationType>("TRANSCRIPT");
   const [snackOpen, setSnackOpen] = useState(false);
-  const [snackMsg, setSnackMsg] = useState('');
+  const [snackMsg, setSnackMsg] = useState("");
   const [issuing, setIssuing] = useState(false);
 
   const steps = [
-    'Seleccionar Estudiante',
-    'Verificar Criterios',
-    'Configurar Certificado',
-    'Confirmar Emisión',
+    "Seleccionar Estudiante",
+    "Verificar Criterios",
+    "Configurar Certificado",
+    "Confirmar Emisión",
   ];
 
   useEffect(() => {
-    studentsService.getAll().then((data: StudentItem[]) => {
-      setStudents(data);
-      if (data.length > 0) setSelectedStudentId(data[0].id);
-    }).catch(console.error);
+    studentsService
+      .getAll()
+      .then((data: StudentItem[]) => {
+        setStudents(data);
+        if (data.length > 0) setSelectedStudentId(data[0].id);
+      })
+      .catch(console.error);
   }, []);
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
@@ -293,13 +372,13 @@ function GenerateCertTab() {
         certificationType: certType,
         careerId: selectedStudent?.career ? undefined : undefined,
       });
-      setSnackMsg('Certificado emitido exitosamente');
+      setSnackMsg("Certificado emitido exitosamente");
       setSnackOpen(true);
       setActiveStep(0);
-      setSelectedStudentId(students[0]?.id ?? '');
-      setCertType('TRANSCRIPT');
+      setSelectedStudentId(students[0]?.id ?? "");
+      setCertType("TRANSCRIPT");
     } catch (e) {
-      setSnackMsg('Error al emitir el certificado');
+      setSnackMsg("Error al emitir el certificado");
       setSnackOpen(true);
     } finally {
       setIssuing(false);
@@ -334,7 +413,16 @@ function GenerateCertTab() {
                 ))}
               </Select>
             </FormControl>
-            <Box><Button variant="contained" size="small" onClick={handleNext} disabled={!selectedStudentId}>Continuar</Button></Box>
+            <Box>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleNext}
+                disabled={!selectedStudentId}
+              >
+                Continuar
+              </Button>
+            </Box>
           </StepContent>
         </Step>
 
@@ -343,12 +431,16 @@ function GenerateCertTab() {
           <StepLabel>{steps[1]}</StepLabel>
           <StepContent>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              Verificando criterios para {selectedStudent ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}` : '—'}:
+              Verificando criterios para{" "}
+              {selectedStudent
+                ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
+                : "—"}
+              :
             </Typography>
             {[
-              'Estado ACTIVO confirmado',
-              'Sin materias de prerrequisito pendientes',
-              'Inscripción vigente al período actual',
+              "Estado ACTIVO confirmado",
+              "Sin materias de prerrequisito pendientes",
+              "Inscripción vigente al período actual",
             ].map((c) => (
               <Box key={c} className="flex items-center gap-2 py-1">
                 <CheckCircleIcon color="success" fontSize="small" />
@@ -356,8 +448,12 @@ function GenerateCertTab() {
               </Box>
             ))}
             <Box className="flex gap-2 mt-2">
-              <Button size="small" onClick={handleBack}>Atrás</Button>
-              <Button variant="contained" size="small" onClick={handleNext}>Continuar</Button>
+              <Button size="small" onClick={handleBack}>
+                Atrás
+              </Button>
+              <Button variant="contained" size="small" onClick={handleNext}>
+                Continuar
+              </Button>
             </Box>
           </StepContent>
         </Step>
@@ -372,16 +468,20 @@ function GenerateCertTab() {
                 <Select
                   value={certType}
                   label="Tipo de Certificado"
-                  onChange={(e) => setCertType(e.target.value as CertificationType)}
+                  onChange={(e) =>
+                    setCertType(e.target.value as CertificationType)
+                  }
                 >
                   {Object.entries(certTypeLabels).map(([k, v]) => (
-                    <MenuItem key={k} value={k}>{v}</MenuItem>
+                    <MenuItem key={k} value={k}>
+                      {v}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
               <TextField
                 label="Carrera"
-                value={selectedStudent?.career?.name ?? '—'}
+                value={selectedStudent?.career?.name ?? "—"}
                 size="small"
                 disabled
                 sx={{ minWidth: 280 }}
@@ -404,8 +504,12 @@ function GenerateCertTab() {
               />
             </Box>
             <Box className="flex gap-2">
-              <Button size="small" onClick={handleBack}>Atrás</Button>
-              <Button variant="contained" size="small" onClick={handleNext}>Continuar</Button>
+              <Button size="small" onClick={handleBack}>
+                Atrás
+              </Button>
+              <Button variant="contained" size="small" onClick={handleNext}>
+                Continuar
+              </Button>
             </Box>
           </StepContent>
         </Step>
@@ -416,18 +520,29 @@ function GenerateCertTab() {
           <StepContent>
             <Card variant="outlined" sx={{ mb: 2, maxWidth: 400 }}>
               <CardContent>
-                <Typography variant="subtitle2" fontWeight={700} gutterBottom>Resumen de Certificación</Typography>
+                <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                  Resumen de Certificación
+                </Typography>
                 <Divider sx={{ mb: 1 }} />
                 <Typography variant="body2">
-                  <strong>Estudiante:</strong>{' '}
-                  {selectedStudent ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}` : '—'}
+                  <strong>Estudiante:</strong>{" "}
+                  {selectedStudent
+                    ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
+                    : "—"}
                 </Typography>
-                <Typography variant="body2"><strong>Carrera:</strong> {selectedStudent?.career?.name ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Tipo:</strong> {certTypeLabels[certType]}</Typography>
+                <Typography variant="body2">
+                  <strong>Carrera:</strong>{" "}
+                  {selectedStudent?.career?.name ?? "—"}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Tipo:</strong> {certTypeLabels[certType]}
+                </Typography>
               </CardContent>
             </Card>
             <Box className="flex gap-2">
-              <Button size="small" onClick={handleBack}>Atrás</Button>
+              <Button size="small" onClick={handleBack}>
+                Atrás
+              </Button>
               <Button
                 variant="contained"
                 color="success"
@@ -436,7 +551,7 @@ function GenerateCertTab() {
                 onClick={handleEmit}
                 disabled={issuing}
               >
-                {issuing ? 'Emitiendo...' : 'Emitir Certificado'}
+                {issuing ? "Emitiendo..." : "Emitir Certificado"}
               </Button>
             </Box>
           </StepContent>
@@ -456,24 +571,28 @@ function GenerateCertTab() {
 // ─── Tab 3 — Issued certs ─────────────────────────────────────────────────────
 
 function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
-  const [filter, setFilter] = useState<CertificationStatus | 'ALL'>('ALL');
+  const [filter, setFilter] = useState<CertificationStatus | "ALL">("ALL");
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = () => {
     setLoading(true);
-    certificationsService.getAll()
+    certificationsService
+      .getAll()
       .then((data: CertItem[]) => setCerts(data))
       .catch(console.error)
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  const filtered = filter === 'ALL' ? certs : certs.filter((c) => c.status === filter);
+  const filtered =
+    filter === "ALL" ? certs : certs.filter((c) => c.status === filter);
 
   const handleRevoke = async (id: string) => {
-    const reason = prompt('Motivo de revocación:');
+    const reason = prompt("Motivo de revocación:");
     if (!reason) return;
     try {
       await certificationsService.revoke(id, reason);
@@ -487,18 +606,22 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
   return (
     <Box>
       <Alert severity="info" sx={{ mb: 2 }}>
-        Cada certificación está vinculada al historial académico del estudiante y puede ser validada
-        públicamente mediante su código de verificación.
+        Cada certificación está vinculada al historial académico del estudiante
+        y puede ser validada públicamente mediante su código de verificación.
       </Alert>
 
       <Box className="flex items-center gap-3 mb-3">
-        <Typography variant="h6" fontWeight={600}>Certificaciones Emitidas</Typography>
+        <Typography variant="h6" fontWeight={600}>
+          Certificaciones Emitidas
+        </Typography>
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel>Filtrar por estado</InputLabel>
           <Select
             value={filter}
             label="Filtrar por estado"
-            onChange={(e) => setFilter(e.target.value as CertificationStatus | 'ALL')}
+            onChange={(e) =>
+              setFilter(e.target.value as CertificationStatus | "ALL")
+            }
           >
             <MenuItem value="ALL">Todos</MenuItem>
             <MenuItem value="ACTIVE">Activos</MenuItem>
@@ -509,19 +632,27 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
       </Box>
 
       {loading ? (
-        <Box className="flex justify-center py-8"><CircularProgress /></Box>
+        <Box className="flex justify-center py-8">
+          <CircularProgress />
+        </Box>
       ) : (
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: 'grey.100' }}>
+              <TableRow sx={{ backgroundColor: "grey.100" }}>
                 <TableCell sx={{ fontWeight: 700 }}>Estudiante</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Código Verificación</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">Estado</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>
+                  Código Verificación
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="center">
+                  Estado
+                </TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Fecha Emisión</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Vence</TableCell>
-                <TableCell sx={{ fontWeight: 700 }} align="center">Acciones</TableCell>
+                <TableCell sx={{ fontWeight: 700 }} align="center">
+                  Acciones
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -531,10 +662,19 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
                     {cert.student.user.firstName} {cert.student.user.lastName}
                   </TableCell>
                   <TableCell>
-                    <Chip label={certTypeLabels[cert.certificationType] ?? cert.certificationType} size="small" variant="outlined" />
+                    <Chip
+                      label={
+                        certTypeLabels[cert.certificationType] ??
+                        cert.certificationType
+                      }
+                      size="small"
+                      variant="outlined"
+                    />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="caption" fontFamily="monospace">{cert.verificationCode}</Typography>
+                    <Typography variant="caption" fontFamily="monospace">
+                      {cert.verificationCode}
+                    </Typography>
                   </TableCell>
                   <TableCell align="center">
                     <CertStatusChip status={cert.status} />
@@ -546,14 +686,23 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
                       <IconButton
                         size="small"
                         color="primary"
-                        onClick={() => window.open(`/verify/${cert.verificationCode}`, '_blank')}
+                        onClick={() =>
+                          window.open(
+                            `/verify/${cert.verificationCode}`,
+                            "_blank",
+                          )
+                        }
                       >
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    {cert.status === 'ACTIVE' && (
+                    {cert.status === "ACTIVE" && (
                       <Tooltip title="Revocar">
-                        <IconButton size="small" color="error" onClick={() => handleRevoke(cert.id)}>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleRevoke(cert.id)}
+                        >
                           <BlockIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -564,7 +713,11 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} align="center">
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ py: 2 }}
+                    >
                       Sin certificaciones
                     </Typography>
                   </TableCell>
@@ -582,11 +735,12 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
 
 function DigitalCertTab() {
   const [certs, setCerts] = useState<CertItem[]>([]);
-  const [selected, setSelected] = useState('');
+  const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    certificationsService.getAll()
+    certificationsService
+      .getAll()
       .then((data: CertItem[]) => {
         setCerts(data);
         if (data.length > 0) setSelected(data[0].id);
@@ -598,7 +752,11 @@ function DigitalCertTab() {
   const cert = certs.find((c) => c.id === selected);
 
   if (loading) {
-    return <Box className="flex justify-center py-8"><CircularProgress /></Box>;
+    return (
+      <Box className="flex justify-center py-8">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -613,7 +771,8 @@ function DigitalCertTab() {
           >
             {certs.map((c) => (
               <MenuItem key={c.id} value={c.id}>
-                {certTypeLabels[c.certificationType] ?? c.certificationType} — {c.verificationCode.substring(0, 8)}...
+                {certTypeLabels[c.certificationType] ?? c.certificationType} —{" "}
+                {c.verificationCode.substring(0, 8)}...
               </MenuItem>
             ))}
           </Select>
@@ -630,10 +789,10 @@ function DigitalCertTab() {
             sx={{
               maxWidth: 600,
               p: 4,
-              border: '3px solid',
-              borderColor: 'primary.main',
+              border: "3px solid",
+              borderColor: "primary.main",
               borderRadius: 2,
-              background: 'linear-gradient(135deg, #f8fbff 0%, #ffffff 100%)',
+              background: "linear-gradient(135deg, #f8fbff 0%, #ffffff 100%)",
             }}
           >
             {/* Header */}
@@ -642,14 +801,14 @@ function DigitalCertTab() {
                 sx={{
                   width: 56,
                   height: 56,
-                  borderRadius: '50%',
-                  backgroundColor: 'primary.main',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  borderRadius: "50%",
+                  backgroundColor: "primary.main",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <SchoolIcon sx={{ color: 'white', fontSize: 28 }} />
+                <SchoolIcon sx={{ color: "white", fontSize: 28 }} />
               </Box>
               <Box className="text-center">
                 <Typography variant="h6" fontWeight={700} color="primary.main">
@@ -663,40 +822,77 @@ function DigitalCertTab() {
 
             <Divider sx={{ mb: 3 }} />
 
-            <Typography variant="h5" fontWeight={700} align="center" gutterBottom>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              align="center"
+              gutterBottom
+            >
               {certTypeLabels[cert.certificationType] ?? cert.certificationType}
             </Typography>
 
-            <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography
+              variant="body2"
+              align="center"
+              color="text.secondary"
+              sx={{ mb: 3 }}
+            >
               Se certifica que el/la estudiante
             </Typography>
 
-            <Typography variant="h5" fontWeight={700} align="center" color="primary.main" sx={{ mb: 1 }}>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              align="center"
+              color="primary.main"
+              sx={{ mb: 1 }}
+            >
               {cert.student.user.firstName} {cert.student.user.lastName}
             </Typography>
 
-            <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
-              {cert.career?.name ?? '—'}
+            <Typography
+              variant="body2"
+              align="center"
+              color="text.secondary"
+              sx={{ mb: 3 }}
+            >
+              {cert.career?.name ?? "—"}
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Fecha de Emisión</Typography>
-                <Typography variant="body2" fontWeight={600}>{formatDate(cert.issuedAt)}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Fecha de Vencimiento</Typography>
-                <Typography variant="body2" fontWeight={600}>{formatDate(cert.expiresAt)}</Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Emitido por</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Fecha de Emisión
+                </Typography>
                 <Typography variant="body2" fontWeight={600}>
-                  {cert.issuer ? `${cert.issuer.firstName} ${cert.issuer.lastName}` : cert.issuedBy}
+                  {formatDate(cert.issuedAt)}
                 </Typography>
               </Grid>
               <Grid item xs={6}>
-                <Typography variant="caption" color="text.secondary">Estado</Typography>
-                <Box sx={{ mt: 0.5 }}><CertStatusChip status={cert.status} /></Box>
+                <Typography variant="caption" color="text.secondary">
+                  Fecha de Vencimiento
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {formatDate(cert.expiresAt)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary">
+                  Emitido por
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {cert.issuer
+                    ? `${cert.issuer.firstName} ${cert.issuer.lastName}`
+                    : cert.issuedBy}
+                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="caption" color="text.secondary">
+                  Estado
+                </Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  <CertStatusChip status={cert.status} />
+                </Box>
               </Grid>
             </Grid>
 
@@ -704,16 +900,25 @@ function DigitalCertTab() {
             <Paper
               sx={{
                 p: 2,
-                backgroundColor: 'grey.50',
-                border: '1px dashed',
-                borderColor: 'grey.300',
-                textAlign: 'center',
+                backgroundColor: "grey.50",
+                border: "1px dashed",
+                borderColor: "grey.300",
+                textAlign: "center",
               }}
             >
-              <Typography variant="caption" color="text.secondary" display="block">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
                 Código de Verificación
               </Typography>
-              <Typography variant="body1" fontFamily="monospace" fontWeight={700} color="primary.main">
+              <Typography
+                variant="body1"
+                fontFamily="monospace"
+                fontWeight={700}
+                color="primary.main"
+              >
                 {cert.verificationCode}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -721,7 +926,13 @@ function DigitalCertTab() {
               </Typography>
             </Paper>
 
-            <Typography variant="caption" color="text.secondary" display="block" align="center" sx={{ mt: 2 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+              align="center"
+              sx={{ mt: 2 }}
+            >
               Este documento ha sido emitido digitalmente por Academicore
             </Typography>
           </Paper>
@@ -735,13 +946,13 @@ function DigitalCertTab() {
                 try {
                   const blob = await certificationsService.downloadPdf(cert.id);
                   const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
+                  const a = document.createElement("a");
                   a.href = url;
                   a.download = `certificado-${cert.verificationCode.slice(0, 8)}.pdf`;
                   a.click();
                   URL.revokeObjectURL(url);
                 } catch {
-                  alert('Error al descargar el certificado');
+                  alert("Error al descargar el certificado");
                 }
               }}
             >
@@ -751,8 +962,9 @@ function DigitalCertTab() {
 
           {/* Audit info */}
           <Alert severity="info" sx={{ mt: 2, maxWidth: 600 }}>
-            <strong>Info de auditoría:</strong> Emitido el {formatDate(cert.issuedAt)}.
-            Hash del documento: <code style={{ fontSize: '0.75em' }}>{cert.documentHash}</code>
+            <strong>Info de auditoría:</strong> Emitido el{" "}
+            {formatDate(cert.issuedAt)}. Hash del documento:{" "}
+            <code style={{ fontSize: "0.75em" }}>{cert.documentHash}</code>
           </Alert>
         </>
       )}
@@ -771,15 +983,19 @@ interface VerifyResult {
 }
 
 function ThirdPartyValidationTab() {
-  const [code, setCode] = useState('');
-  const [result, setResult] = useState<VerifyResult | null | 'not-searched'>('not-searched');
+  const [code, setCode] = useState("");
+  const [result, setResult] = useState<VerifyResult | null | "not-searched">(
+    "not-searched",
+  );
   const [loading, setLoading] = useState(false);
 
   const handleValidate = async () => {
     if (!code.trim()) return;
     setLoading(true);
     try {
-      const data: VerifyResult = await certificationsService.verify(code.trim());
+      const data: VerifyResult = await certificationsService.verify(
+        code.trim(),
+      );
       setResult(data);
     } catch {
       setResult(null);
@@ -791,18 +1007,28 @@ function ThirdPartyValidationTab() {
   return (
     <Box>
       <Alert severity="info" sx={{ mb: 3 }}>
-        <strong>Interfaz pública — no requiere autenticación.</strong> Esta sección demuestra cómo
-        terceros (empleadores, instituciones) pueden validar la autenticidad de un certificado
-        emitido por Academicore mediante su código único de verificación.
+        <strong>Interfaz pública — no requiere autenticación.</strong> Esta
+        sección demuestra cómo terceros (empleadores, instituciones) pueden
+        validar la autenticidad de un certificado emitido por Academicore
+        mediante su código único de verificación.
       </Alert>
 
       <Typography variant="h6" fontWeight={600} gutterBottom>
         Validación por Terceros
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Ingrese el código de verificación del certificado para consultar su autenticidad.
-        Esta funcionalidad está disponible en la ruta pública{' '}
-        <code style={{ backgroundColor: '#f1f5f9', padding: '2px 4px', borderRadius: 4 }}>/verify/:code</code>.
+        Ingrese el código de verificación del certificado para consultar su
+        autenticidad. Esta funcionalidad está disponible en la ruta pública{" "}
+        <code
+          style={{
+            backgroundColor: "#f1f5f9",
+            padding: "2px 4px",
+            borderRadius: 4,
+          }}
+        >
+          /verify/:code
+        </code>
+        .
       </Typography>
 
       <Box className="flex gap-2 mb-3" sx={{ maxWidth: 500 }}>
@@ -814,43 +1040,77 @@ function ThirdPartyValidationTab() {
           size="small"
           placeholder="UUID del certificado"
         />
-        <Button variant="contained" onClick={handleValidate} startIcon={<VerifiedIcon />} disabled={loading}>
+        <Button
+          variant="contained"
+          onClick={handleValidate}
+          startIcon={<VerifiedIcon />}
+          disabled={loading}
+        >
           Validar
         </Button>
       </Box>
 
       {loading && <CircularProgress size={24} />}
 
-      {result !== 'not-searched' && result !== null && !loading && (
-        <Card sx={{ maxWidth: 500, border: '2px solid', borderColor: 'success.main' }}>
+      {result !== "not-searched" && result !== null && !loading && (
+        <Card
+          sx={{
+            maxWidth: 500,
+            border: "2px solid",
+            borderColor: "success.main",
+          }}
+        >
           <CardContent>
             <Box className="flex items-center gap-2 mb-2">
               <CheckCircleIcon color="success" />
-              <Typography variant="subtitle1" fontWeight={700} color="success.main">
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                color="success.main"
+              >
                 Certificado Válido
               </Typography>
             </Box>
             <Divider sx={{ mb: 1 }} />
-            <Typography variant="body2"><strong>Estudiante:</strong> {result.studentName}</Typography>
-            <Typography variant="body2"><strong>Tipo:</strong> {certTypeLabels[result.certificationType] ?? result.certificationType}</Typography>
-            <Typography variant="body2"><strong>Fecha de Emisión:</strong> {formatDate(result.issuedAt)}</Typography>
-            <Typography variant="body2"><strong>Vence:</strong> {formatDate(result.expiresAt)}</Typography>
-            <Box sx={{ mt: 1 }}><CertStatusChip status={result.status} /></Box>
+            <Typography variant="body2">
+              <strong>Estudiante:</strong> {result.studentName}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Tipo:</strong>{" "}
+              {certTypeLabels[result.certificationType] ??
+                result.certificationType}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Fecha de Emisión:</strong> {formatDate(result.issuedAt)}
+            </Typography>
+            <Typography variant="body2">
+              <strong>Vence:</strong> {formatDate(result.expiresAt)}
+            </Typography>
+            <Box sx={{ mt: 1 }}>
+              <CertStatusChip status={result.status} />
+            </Box>
           </CardContent>
         </Card>
       )}
 
       {result === null && !loading && (
-        <Card sx={{ maxWidth: 500, border: '2px solid', borderColor: 'error.main' }}>
+        <Card
+          sx={{ maxWidth: 500, border: "2px solid", borderColor: "error.main" }}
+        >
           <CardContent>
             <Box className="flex items-center gap-2">
               <BlockIcon color="error" />
-              <Typography variant="subtitle1" fontWeight={700} color="error.main">
+              <Typography
+                variant="subtitle1"
+                fontWeight={700}
+                color="error.main"
+              >
                 Certificado no encontrado o inválido
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              El código ingresado no corresponde a ningún certificado activo en el sistema.
+              El código ingresado no corresponde a ningún certificado activo en
+              el sistema.
             </Typography>
           </CardContent>
         </Card>
@@ -860,7 +1120,7 @@ function ThirdPartyValidationTab() {
         <Button
           variant="text"
           startIcon={<LinkIcon />}
-          onClick={() => window.open('/verify/' + code, '_blank')}
+          onClick={() => window.open("/verify/" + code, "_blank")}
           size="small"
           disabled={!code.trim()}
         >
@@ -880,7 +1140,9 @@ function StudentCertsTab({ userId }: { userId: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const student = await api.get(`/students/by-user/${userId}`).then((r) => r.data);
+        const student = await api
+          .get(`/students/by-user/${userId}`)
+          .then((r) => r.data);
         const data = await certificationsService.getByStudent(student.id);
         setCerts(data);
       } catch {
@@ -892,33 +1154,54 @@ function StudentCertsTab({ userId }: { userId: string }) {
   }, [userId]);
 
   if (loading) {
-    return <Box className="flex justify-center py-8"><CircularProgress /></Box>;
+    return (
+      <Box className="flex justify-center py-8">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
     <Box>
-      <Typography variant="h6" fontWeight={600} gutterBottom>Mis Certificados</Typography>
+      <Typography variant="h6" fontWeight={600} gutterBottom>
+        Mis Certificados
+      </Typography>
 
       <TableContainer>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ backgroundColor: 'grey.100' }}>
+            <TableRow sx={{ backgroundColor: "grey.100" }}>
               <TableCell sx={{ fontWeight: 700 }}>Tipo</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Código Verificación</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="center">Estado</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>
+                Código Verificación
+              </TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">
+                Estado
+              </TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Fecha Emisión</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Vence</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="center">Acciones</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">
+                Acciones
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {certs.map((cert) => (
               <TableRow key={cert.id} hover>
                 <TableCell>
-                  <Chip label={certTypeLabels[cert.certificationType] ?? cert.certificationType} size="small" variant="outlined" />
+                  <Chip
+                    label={
+                      certTypeLabels[cert.certificationType] ??
+                      cert.certificationType
+                    }
+                    size="small"
+                    variant="outlined"
+                  />
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption" fontFamily="monospace">{cert.verificationCode}</Typography>
+                  <Typography variant="caption" fontFamily="monospace">
+                    {cert.verificationCode}
+                  </Typography>
                 </TableCell>
                 <TableCell align="center">
                   <CertStatusChip status={cert.status} />
@@ -930,7 +1213,12 @@ function StudentCertsTab({ userId }: { userId: string }) {
                     <IconButton
                       size="small"
                       color="primary"
-                      onClick={() => window.open(`/verify/${cert.verificationCode}`, '_blank')}
+                      onClick={() =>
+                        window.open(
+                          `/verify/${cert.verificationCode}`,
+                          "_blank",
+                        )
+                      }
                     >
                       <VisibilityIcon fontSize="small" />
                     </IconButton>
@@ -941,15 +1229,17 @@ function StudentCertsTab({ userId }: { userId: string }) {
                       color="secondary"
                       onClick={async () => {
                         try {
-                          const blob = await certificationsService.downloadPdf(cert.id);
+                          const blob = await certificationsService.downloadPdf(
+                            cert.id,
+                          );
                           const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
+                          const a = document.createElement("a");
                           a.href = url;
                           a.download = `certificado-${cert.verificationCode.slice(0, 8)}.pdf`;
                           a.click();
                           URL.revokeObjectURL(url);
                         } catch {
-                          alert('Error al descargar el certificado');
+                          alert("Error al descargar el certificado");
                         }
                       }}
                     >
@@ -962,7 +1252,11 @@ function StudentCertsTab({ userId }: { userId: string }) {
             {certs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ py: 2 }}
+                  >
                     No tienes certificaciones emitidas
                   </Typography>
                 </TableCell>
@@ -980,20 +1274,23 @@ function StudentCertsTab({ userId }: { userId: string }) {
 export default function CertificationsPage() {
   const { currentUser } = useAuth();
   const [tab, setTab] = useState(0);
-  const isAdmin = currentUser?.role === 'ADMIN';
+  const isAdmin = currentUser?.role === "ADMIN";
 
   const adminTabs = [
-    { label: 'Criterios', component: <CriteriasTab canEdit /> },
-    { label: 'Generar', component: <GenerateCertTab /> },
-    { label: 'Emitidas', component: <IssuedCertsTab /> },
-    { label: 'Certificado Digital', component: <DigitalCertTab /> },
-    { label: 'Validación', component: <ThirdPartyValidationTab /> },
+    { label: "Criterios", component: <CriteriasTab canEdit /> },
+    { label: "Generar", component: <GenerateCertTab /> },
+    { label: "Emitidas", component: <IssuedCertsTab /> },
+    { label: "Certificado Digital", component: <DigitalCertTab /> },
+    { label: "Validación", component: <ThirdPartyValidationTab /> },
   ];
 
   const studentTabs = [
-    { label: 'Mis Certificados', component: <StudentCertsTab userId={currentUser!.id} /> },
-    { label: 'Criterios', component: <CriteriasTab canEdit={false} /> },
-    { label: 'Validación', component: <ThirdPartyValidationTab /> },
+    {
+      label: "Mis Certificados",
+      component: <StudentCertsTab userId={currentUser!.id} />,
+    },
+    { label: "Criterios", component: <CriteriasTab canEdit={false} /> },
+    { label: "Validación", component: <ThirdPartyValidationTab /> },
   ];
 
   const tabs = isAdmin ? adminTabs : studentTabs;
@@ -1001,12 +1298,12 @@ export default function CertificationsPage() {
   return (
     <Box>
       <Typography variant="h4" fontWeight={700} gutterBottom>
-        {isAdmin ? 'Gestión de Certificaciones' : 'Mis Certificados'}
+        {isAdmin ? "Gestión de Certificaciones" : "Mis Certificados"}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         {isAdmin
-          ? 'Administración de certificaciones académicas digitales'
-          : 'Consulta y validación de tus certificaciones académicas'}
+          ? "Administración de certificaciones académicas digitales"
+          : "Consulta y validación de tus certificaciones académicas"}
       </Typography>
 
       <Paper elevation={2} sx={{ borderRadius: 2 }}>
@@ -1015,7 +1312,7 @@ export default function CertificationsPage() {
           onChange={(_e, v: number) => setTab(v)}
           variant="scrollable"
           scrollButtons="auto"
-          sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
+          sx={{ borderBottom: 1, borderColor: "divider", px: 2 }}
         >
           {tabs.map((t, i) => (
             <Tab key={i} label={t.label} />
