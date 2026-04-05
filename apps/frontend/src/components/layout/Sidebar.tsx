@@ -263,16 +263,11 @@ function NavItemLink({
 }
 
 interface SidebarProps {
-  open: boolean;
-  onClose: () => void;
-  variant?: "permanent" | "temporary";
+  mobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
-export default function Sidebar({
-  open,
-  onClose,
-  variant = "temporary",
-}: SidebarProps) {
+export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const { currentUser } = useAuth();
   const location = useLocation();
   const role = (currentUser?.role ?? "STUDENT") as Role;
@@ -303,7 +298,7 @@ export default function Sidebar({
     location.pathname === path ||
     (path !== "/dashboard" && location.pathname.startsWith(path));
 
-  const handleNavClick = variant === "temporary" ? onClose : undefined;
+  const handleNavClick = mobileOpen ? onMobileClose : undefined;
 
   const roleLabels: Record<string, string> = {
     ADMIN: "Administrador",
@@ -495,33 +490,38 @@ export default function Sidebar({
     boxSizing: "border-box" as const,
     backgroundColor: SIDEBAR_BG,
     borderRight: "none",
+    top: 0,
+    height: "100vh",
   };
 
-  if (variant === "permanent") {
-    return (
+  return (
+    <>
+      {/* Permanent sidebar — large screens */}
       <Drawer
-        variant="persistent"
-        open={open}
-        sx={{ "& .MuiDrawer-paper": drawerPaperSx }}
+        variant="permanent"
+        sx={{
+          display: { xs: "none", lg: "block" },
+          "& .MuiDrawer-paper": { ...drawerPaperSx, zIndex: 1300 },
+        }}
+        open
       >
         {drawerContent}
       </Drawer>
-    );
-  }
 
-  return (
-    <Drawer
-      variant="temporary"
-      open={open}
-      onClose={onClose}
-      ModalProps={{ keepMounted: true }}
-      sx={{
-        display: { xs: "block", lg: "none" },
-        "& .MuiDrawer-paper": drawerPaperSx,
-      }}
-    >
-      {drawerContent}
-    </Drawer>
+      {/* Temporary sidebar — mobile */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={onMobileClose}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: "block", lg: "none" },
+          "& .MuiDrawer-paper": { ...drawerPaperSx, zIndex: 1300 },
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    </>
   );
 }
 

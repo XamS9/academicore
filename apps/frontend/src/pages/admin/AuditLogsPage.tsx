@@ -52,17 +52,18 @@ const actionColors: Record<
 };
 
 const ENTITY_TYPES = [
-  "User",
-  "Student",
-  "Teacher",
-  "Career",
-  "Subject",
-  "Group",
-  "Enrollment",
-  "Evaluation",
-  "Grade",
-  "Certification",
-  "AcademicRecord",
+  "user",
+  "student",
+  "teacher",
+  "career",
+  "subject",
+  "group",
+  "enrollment",
+  "evaluation",
+  "grade",
+  "certification",
+  "payment",
+  "system_settings",
 ];
 
 export default function AuditLogsPage() {
@@ -111,7 +112,12 @@ export default function AuditLogsPage() {
         />
       ),
     },
-    { key: "entityType", label: "Entidad" },
+    {
+      key: "entityType",
+      label: "Entidad",
+      render: (row) =>
+        row.entityType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    },
     {
       key: "entityId",
       label: "ID Entidad",
@@ -147,7 +153,7 @@ export default function AuditLogsPage() {
         <MenuItem value="">— Todas —</MenuItem>
         {ENTITY_TYPES.map((t) => (
           <MenuItem key={t} value={t}>
-            {t}
+            {t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
           </MenuItem>
         ))}
       </TextField>

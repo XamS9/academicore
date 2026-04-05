@@ -43,6 +43,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import SchoolIcon from "@mui/icons-material/School";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import LinkIcon from "@mui/icons-material/Link";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
 import { useAuth } from "../../store/auth.context";
 import { certificationsService } from "../../services/certifications.service";
@@ -574,6 +575,7 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
   const [filter, setFilter] = useState<CertificationStatus | "ALL">("ALL");
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -682,7 +684,7 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
                   <TableCell>{formatDate(cert.issuedAt)}</TableCell>
                   <TableCell>{formatDate(cert.expiresAt)}</TableCell>
                   <TableCell align="center">
-                    <Tooltip title="Ver verificación">
+                    <Tooltip title="Abrir portal público">
                       <IconButton
                         size="small"
                         color="primary"
@@ -694,6 +696,20 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
                         }
                       >
                         <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Copiar enlace de verificación">
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          navigator.clipboard
+                            .writeText(
+                              `${window.location.origin}/verify/${cert.verificationCode}`,
+                            )
+                            .then(() => setCopied(true));
+                        }}
+                      >
+                        <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     {cert.status === "ACTIVE" && (
@@ -727,6 +743,13 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
           </Table>
         </TableContainer>
       )}
+      <Snackbar
+        open={copied}
+        autoHideDuration={2500}
+        onClose={() => setCopied(false)}
+        message="Enlace copiado al portapapeles"
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Box>
   );
 }
@@ -737,6 +760,14 @@ function DigitalCertTab() {
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = (verificationCode: string) => {
+    const url = `${window.location.origin}/verify/${verificationCode}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+    });
+  };
 
   useEffect(() => {
     certificationsService
@@ -921,9 +952,30 @@ function DigitalCertTab() {
               >
                 {cert.verificationCode}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Verifique en: /verify/{cert.verificationCode}
-              </Typography>
+              <Box
+                className="flex items-center justify-center gap-1"
+                sx={{ mt: 0.5 }}
+              >
+                <Typography
+                  variant="caption"
+                  color="primary.main"
+                  component="a"
+                  href={`/verify/${cert.verificationCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ textDecoration: "underline", cursor: "pointer" }}
+                >
+                  {window.location.origin}/verify/{cert.verificationCode}
+                </Typography>
+                <Tooltip title="Copiar enlace">
+                  <IconButton
+                    size="small"
+                    onClick={() => handleCopyLink(cert.verificationCode)}
+                  >
+                    <ContentCopyIcon sx={{ fontSize: 14 }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Paper>
 
             <Typography
@@ -938,7 +990,7 @@ function DigitalCertTab() {
           </Paper>
 
           {/* Actions */}
-          <Box className="flex gap-2 mt-3">
+          <Box className="flex gap-2 mt-3" sx={{ flexWrap: "wrap" }}>
             <Button
               variant="outlined"
               startIcon={<DownloadIcon />}
@@ -958,7 +1010,31 @@ function DigitalCertTab() {
             >
               Descargar PDF
             </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ContentCopyIcon />}
+              onClick={() => handleCopyLink(cert.verificationCode)}
+            >
+              Copiar enlace
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<LinkIcon />}
+              onClick={() =>
+                window.open(`/verify/${cert.verificationCode}`, "_blank")
+              }
+            >
+              Abrir portal público
+            </Button>
           </Box>
+
+          <Snackbar
+            open={copied}
+            autoHideDuration={2500}
+            onClose={() => setCopied(false)}
+            message="Enlace copiado al portapapeles"
+            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          />
 
           {/* Audit info */}
           <Alert severity="info" sx={{ mt: 2, maxWidth: 600 }}>

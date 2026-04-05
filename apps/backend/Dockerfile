@@ -18,9 +18,9 @@ RUN npm ci
 # Copy backend source and prisma schema
 COPY apps/backend/ ./apps/backend/
 
-# Generate Prisma client (no DB needed — reads schema only)
+# Generate Prisma client (schema-only, no DB connection needed)
 WORKDIR /app/apps/backend
-RUN npx prisma generate
+RUN DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder npx prisma generate
 
 # Compile TypeScript
 RUN npm run build
@@ -40,24 +40,23 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/backend/package.json ./apps/backend/
 
-# Install production dependencies only
+# Install production dependencies (includes prisma + @prisma/client as regular deps)
 RUN npm ci --omit=dev
 
 # Copy compiled output from builder
-COPY --from=builder /app/apps/backend/dist        ./apps/backend/dist
+COPY --from=builder /app/apps/backend/dist          ./apps/backend/dist
 
-# Copy prisma schema + migrations (needed by prisma migrate deploy)
-COPY --from=builder /app/apps/backend/prisma      ./apps/backend/prisma
+# Copy prisma schema + migrations + config (needed by generate and migrate deploy)
+COPY --from=builder /app/apps/backend/prisma        ./apps/backend/prisma
+COPY --from=builder /app/apps/backend/prisma.config.ts ./apps/backend/prisma.config.ts
 
-# Copy generated Prisma client from builder
-COPY --from=builder /app/node_modules/.prisma     ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma     ./node_modules/@prisma
+# Generate Prisma client from the installed schema
+WORKDIR /app/apps/backend
+RUN DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder npx prisma generate
 
 # Copy entrypoint script
-COPY apps/backend/docker-entrypoint.sh ./apps/backend/docker-entrypoint.sh
-RUN chmod +x ./apps/backend/docker-entrypoint.sh
-
-WORKDIR /app/apps/backend
+COPY apps/backend/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3000
 

@@ -8,6 +8,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "../../store/auth.context";
 import NotificationBell from "./NotificationBell";
+import { DRAWER_WIDTH } from "./Sidebar";
 
 const roleLabels: Record<string, string> = {
   ADMIN: "Admin",
@@ -25,10 +26,10 @@ const roleColors: Record<
 };
 
 interface TopBarProps {
-  onToggleSidebar: () => void;
+  onMobileMenuToggle: () => void;
 }
 
-export default function TopBar({ onToggleSidebar }: TopBarProps) {
+export default function TopBar({ onMobileMenuToggle }: TopBarProps) {
   const { currentUser, logout } = useAuth();
 
   return (
@@ -36,28 +37,25 @@ export default function TopBar({ onToggleSidebar }: TopBarProps) {
       position="fixed"
       elevation={0}
       sx={{
-        zIndex: (theme) => theme.zIndex.drawer + 1,
+        left: { lg: `${DRAWER_WIDTH}px` },
+        width: { lg: `calc(100% - ${DRAWER_WIDTH}px)` },
+        zIndex: (theme) => theme.zIndex.drawer - 1,
         backgroundColor: "#ffffff",
         borderBottom: "1px solid rgba(0,0,0,0.06)",
         color: "text.primary",
       }}
     >
       <Toolbar>
+        {/* Hamburger — mobile only */}
         <IconButton
           edge="start"
-          onClick={onToggleSidebar}
-          sx={{ mr: 2, color: "text.secondary" }}
+          onClick={onMobileMenuToggle}
+          sx={{ mr: 2, color: "text.secondary", display: { lg: "none" } }}
           aria-label="abrir menu lateral"
         >
           <MenuIcon />
         </IconButton>
-        <Typography
-          variant="h5"
-          fontWeight={600}
-          sx={{ letterSpacing: "-0.02em" }}
-        >
-          Academicore
-        </Typography>
+
         <Box sx={{ flexGrow: 1 }} />
 
         {currentUser && (

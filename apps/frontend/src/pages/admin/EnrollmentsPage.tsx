@@ -93,9 +93,8 @@ export default function EnrollmentsPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const data = await enrollmentsService.getAll();
-        const filtered = (data as EnrollmentRow[]).filter(() => true);
-        setItems(filtered);
+        const data = await enrollmentsService.getByPeriod(selectedPeriod);
+        setItems(data as EnrollmentRow[]);
       } catch {
         showToast("Error al cargar inscripciones", "error");
       } finally {

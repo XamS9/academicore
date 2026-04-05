@@ -50,9 +50,9 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [selectedRole, setSelectedRole] = useState<RoleOption>("STUDENT");
+  const [selectedRole, setSelectedRole] = useState<RoleOption>("ADMIN");
+  const [email, setEmail] = useState(demoCredentials.ADMIN.email);
+  const [password, setPassword] = useState(demoCredentials.ADMIN.password);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -134,33 +134,37 @@ export default function LoginPage() {
             </Typography>
           </Box>
 
-          {/* Role selector */}
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            fontWeight={600}
-            sx={{ mb: 1, display: "block" }}
-          >
-            SELECCIONAR ROL DE DEMOSTRACIÓN
-          </Typography>
-          <ButtonGroup fullWidth variant="outlined" sx={{ mb: 3 }} size="small">
-            {(
-              Object.entries(rolePresets) as [
-                RoleOption,
-                (typeof rolePresets)[RoleOption],
-              ][]
-            ).map(([role, preset]) => (
-              <Button
-                key={role}
-                color={preset.color}
-                variant={selectedRole === role ? "contained" : "outlined"}
-                onClick={() => handleRoleSelect(role)}
-                startIcon={preset.icon}
+          {/* Role selector — dev only */}
+          {import.meta.env.DEV && (
+            <>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+                sx={{ mb: 1, display: "block" }}
               >
-                {preset.label}
-              </Button>
-            ))}
-          </ButtonGroup>
+                SELECCIONAR ROL DE DEMOSTRACIÓN
+              </Typography>
+              <ButtonGroup fullWidth variant="outlined" sx={{ mb: 3 }} size="small">
+                {(
+                  Object.entries(rolePresets) as [
+                    RoleOption,
+                    (typeof rolePresets)[RoleOption],
+                  ][]
+                ).map(([role, preset]) => (
+                  <Button
+                    key={role}
+                    color={preset.color}
+                    variant={selectedRole === role ? "contained" : "outlined"}
+                    onClick={() => handleRoleSelect(role)}
+                    startIcon={preset.icon}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </ButtonGroup>
+            </>
+          )}
 
           {/* Form */}
           <Box

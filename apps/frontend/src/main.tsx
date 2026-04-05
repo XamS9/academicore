@@ -14,10 +14,10 @@ const theme = createTheme({
       default: "#f8fafc", // Slate-50
       paper: "#ffffff",
     },
-    error: { main: "#ef4444" },
-    warning: { main: "#f59e0b" },
-    success: { main: "#10b981" },
-    info: { main: "#3b82f6" },
+    error: { main: "#ef4444", contrastText: "#ffffff" },
+    warning: { main: "#d97706", contrastText: "#ffffff" }, // Amber-600 (darkened for white text)
+    success: { main: "#059669", contrastText: "#ffffff" }, // Emerald-600 (darkened for white text)
+    info: { main: "#3b82f6", contrastText: "#ffffff" },
     divider: "rgba(0,0,0,0.06)",
     grey: {
       50: "#f8fafc", // Slate-50  — align with background.default
