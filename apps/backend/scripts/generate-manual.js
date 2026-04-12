@@ -350,8 +350,7 @@ const PAGES = {
     {
       route: "/contenido",
       label: "Contenido de Grupos",
-      desc: "Temas y materiales de aprendizaje organizados por grupo. Admite texto, enlaces y referencias a recursos externos.",
-      // Page shows only the group dropdown until a group is selected.
+      desc: "Temas y materiales de aprendizaje organizados por grupo y semana del período. Los temas se agrupan bajo encabezados 'Semana N — DD mmm – DD mmm' con rango de fechas calculado automáticamente desde el inicio del período. Cada material muestra su fecha de publicación.",
       setup: async (page) => {
         await selectFirstMuiOption(page, 0);
         await delay(800);
@@ -359,7 +358,7 @@ const PAGES = {
       extras: [
         {
           label: "Formulario: Nuevo Tema",
-          desc: "Diálogo para crear un tema dentro de un grupo con título, descripción y orden de aparición.",
+          desc: "Diálogo para crear un tema con título, descripción, número de semana del período y orden de aparición dentro de la semana. El número de semana determina bajo qué encabezado de fecha aparece el tema.",
           setup: async (page) => {
             await selectFirstMuiOption(page, 0);
             await delay(400);
@@ -369,7 +368,7 @@ const PAGES = {
         },
         {
           label: "Formulario: Editar Tema",
-          desc: "El ícono de lápiz en el encabezado del acordeón de un tema abre el diálogo para modificar su título, descripción y orden.",
+          desc: "El ícono de lápiz en el encabezado del acordeón abre el diálogo para modificar título, descripción, semana y orden del tema.",
           setup: async (page) => {
             await selectFirstMuiOption(page, 0);
             await delay(600);
@@ -381,8 +380,18 @@ const PAGES = {
           },
         },
         {
+          label: "Diálogo: Copiar contenido de otro grupo",
+          desc: "El botón 'Copiar contenido' permite seleccionar un grupo origen para clonar todos sus temas y materiales al grupo actual. Los números de semana se conservan y los rangos de fechas se recalculan automáticamente según el período destino. Ideal para reutilizar el contenido de un semestre anterior.",
+          setup: async (page) => {
+            await selectFirstMuiOption(page, 0);
+            await delay(400);
+            await clickButtonByText(page, "Copiar contenido");
+            await delay(800);
+          },
+        },
+        {
           label: "Formulario: Agregar Material",
-          desc: "Dentro de cada tema expandido, el botón Agregar Material abre un diálogo para adjuntar un recurso con título, tipo (enlace, texto o referencia) y contenido.",
+          desc: "Dentro de cada tema expandido, el botón Agregar Material abre un diálogo para adjuntar un recurso con título, tipo (enlace, texto o referencia) y contenido. La fecha de publicación se registra automáticamente.",
           setup: async (page) => {
             await selectFirstMuiOption(page, 0);
             await delay(600);
@@ -392,7 +401,7 @@ const PAGES = {
         },
         {
           label: "Formulario: Editar Material",
-          desc: "El ícono de lápiz junto a cada material del tema permite modificar título, tipo y contenido del recurso.",
+          desc: "El ícono de lápiz junto a cada material permite modificar título, tipo y contenido del recurso.",
           setup: async (page) => {
             await selectFirstMuiOption(page, 0);
             await delay(600);
