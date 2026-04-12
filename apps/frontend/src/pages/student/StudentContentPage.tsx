@@ -57,6 +57,7 @@ interface ContentItem {
   type: "LINK" | "TEXT" | "FILE_REF";
   content: string;
   sortOrder: number;
+  createdAt: string;
 }
 
 interface TopicItem {
@@ -64,6 +65,8 @@ interface TopicItem {
   title: string;
   description: string | null;
   sortOrder: number;
+  weekNumber: number | null;
+  createdAt: string;
   contentItems: ContentItem[];
 }
 
@@ -81,6 +84,7 @@ interface GroupCard {
   subjectCode: string;
   groupCode: string;
   periodName: string;
+  periodStartDate: string;
   teacherName: string;
   pendingCount: number;
 }
@@ -97,6 +101,16 @@ interface SubmissionForm {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function weekDateRange(weekNumber: number, periodStartDate: string): string {
+  const start = new Date(periodStartDate);
+  start.setDate(start.getDate() + (weekNumber - 1) * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
 
 const typeIcons: Record<string, React.ReactNode> = {
   LINK: <LinkIcon fontSize="small" />,
@@ -171,7 +185,7 @@ export default function StudentContentPage() {
 
         // Flatten enrolled groups
         type EnrollmentItem = {
-          academicPeriod: { name: string };
+          academicPeriod: { name: string; startDate: string };
           enrollmentSubjects: {
             groupId: string;
             status: string;
@@ -192,6 +206,7 @@ export default function StudentContentPage() {
               subjectCode: es.group.subject.code,
               groupCode: es.group.groupCode,
               periodName: e.academicPeriod.name,
+              periodStartDate: e.academicPeriod.startDate,
               teacherName: es.group.teacher?.user
                 ? `${es.group.teacher.user.firstName} ${es.group.teacher.user.lastName}`
                 : "",
@@ -516,78 +531,98 @@ export default function StudentContentPage() {
               No hay contenido publicado en esta materia.
             </Typography>
           ) : (
-            topics.map((topic) => (
-              <Accordion key={topic.id} defaultExpanded>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box className="flex items-center gap-3">
-                    <Chip
-                      label={`#${topic.sortOrder}`}
-                      size="small"
-                      variant="outlined"
-                    />
-                    <Typography sx={{ fontWeight: 600 }}>
-                      {topic.title}
+            (() => {
+              // Group topics by weekNumber
+              const seen = new Map<number | null, TopicItem[]>();
+              for (const t of topics) {
+                const key = t.weekNumber ?? null;
+                if (!seen.has(key)) seen.set(key, []);
+                seen.get(key)!.push(t);
+              }
+              const numberedKeys = [...seen.keys()]
+                .filter((k) => k !== null)
+                .sort((a, b) => (a as number) - (b as number));
+              const buckets = [
+                ...numberedKeys.map((k) => ({ weekNumber: k, topics: seen.get(k)! })),
+                ...(seen.has(null) ? [{ weekNumber: null, topics: seen.get(null)! }] : []),
+              ];
+
+              return buckets.map((bucket) => (
+                <Box key={bucket.weekNumber ?? "none"} sx={{ mb: 3 }}>
+                  {/* Week header */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                    <Divider sx={{ flex: 1 }} />
+                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>
+                      {bucket.weekNumber !== null
+                        ? `Semana ${bucket.weekNumber}${
+                            selectedCard.periodStartDate
+                              ? ` — ${weekDateRange(bucket.weekNumber, selectedCard.periodStartDate)}`
+                              : ""
+                          }`
+                        : "Sin semana asignada"}
                     </Typography>
+                    <Divider sx={{ flex: 1 }} />
                   </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {topic.description && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mb: 2 }}
-                    >
-                      {topic.description}
-                    </Typography>
-                  )}
-                  {topic.contentItems.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Sin materiales en este tema.
-                    </Typography>
-                  ) : (
-                    <List dense>
-                      {topic.contentItems.map((item) => (
-                        <ListItem key={item.id}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            {typeIcons[item.type]}
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={item.title}
-                            secondaryTypographyProps={{ component: "div" }}
-                            secondary={
-                              item.type === "LINK" ||
-                              item.type === "FILE_REF" ? (
-                                <a
-                                  href={item.content}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    color: "#1976d2",
-                                    wordBreak: "break-all",
-                                  }}
-                                >
-                                  {item.content}
-                                </a>
-                              ) : (
-                                <span style={{ whiteSpace: "pre-wrap" }}>
-                                  {item.content}
-                                </span>
-                              )
-                            }
-                          />
-                          <Chip
-                            label={typeLabels[item.type]}
-                            size="small"
-                            color={typeColors[item.type]}
-                            variant="outlined"
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            ))
+
+                  {bucket.topics.map((topic) => (
+                    <Accordion key={topic.id} defaultExpanded sx={{ mb: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%" }}>
+                          <Chip label={`#${topic.sortOrder}`} size="small" variant="outlined" />
+                          <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>
+                            {topic.title}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(topic.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
+                          </Typography>
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        {topic.description && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            {topic.description}
+                          </Typography>
+                        )}
+                        {topic.contentItems.length === 0 ? (
+                          <Typography variant="body2" color="text.secondary">
+                            Sin materiales en este tema.
+                          </Typography>
+                        ) : (
+                          <List dense>
+                            {topic.contentItems.map((item) => (
+                              <ListItem key={item.id}>
+                                <ListItemIcon sx={{ minWidth: 32 }}>
+                                  {typeIcons[item.type]}
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={item.title}
+                                  secondaryTypographyProps={{ component: "div" }}
+                                  secondary={
+                                    <Box>
+                                      {item.type === "LINK" || item.type === "FILE_REF" ? (
+                                        <a href={item.content} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", wordBreak: "break-all" }}>
+                                          {item.content}
+                                        </a>
+                                      ) : (
+                                        <span style={{ whiteSpace: "pre-wrap" }}>{item.content}</span>
+                                      )}
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                                        Publicado el {new Date(item.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                />
+                                <Chip label={typeLabels[item.type]} size="small" color={typeColors[item.type]} variant="outlined" />
+                              </ListItem>
+                            ))}
+                          </List>
+                        )}
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
+                </Box>
+              ));
+            })()
           )}
         </Box>
       )}

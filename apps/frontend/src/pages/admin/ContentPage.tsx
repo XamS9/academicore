@@ -5,6 +5,7 @@ import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
@@ -19,6 +20,7 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import ListItemIcon from "@mui/material/ListItemIcon";
+import Divider from "@mui/material/Divider";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
@@ -26,6 +28,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LinkIcon from "@mui/icons-material/Link";
 import DescriptionIcon from "@mui/icons-material/Description";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import { useToast } from "../../hooks/useToast";
 import { useAuth } from "../../store/auth.context";
 import { groupsService } from "../../services/groups.service";
@@ -40,6 +44,7 @@ interface ContentItem {
   type: "LINK" | "TEXT" | "FILE_REF";
   content: string;
   sortOrder: number;
+  createdAt: string;
 }
 
 interface TopicItem {
@@ -48,6 +53,8 @@ interface TopicItem {
   title: string;
   description: string | null;
   sortOrder: number;
+  weekNumber: number | null;
+  createdAt: string;
   contentItems: ContentItem[];
 }
 
@@ -55,7 +62,7 @@ interface GroupOption {
   id: string;
   groupCode: string;
   subject: { name: string; code: string };
-  academicPeriod: { name: string };
+  academicPeriod: { name: string; startDate: string };
 }
 
 interface TopicForm {
@@ -63,6 +70,7 @@ interface TopicForm {
   title: string;
   description: string;
   sortOrder: number;
+  weekNumber: string;
 }
 
 interface ContentItemForm {
@@ -78,6 +86,7 @@ const emptyTopicForm: TopicForm = {
   title: "",
   description: "",
   sortOrder: 1,
+  weekNumber: "",
 };
 const emptyItemForm: ContentItemForm = {
   topicId: "",
@@ -103,6 +112,24 @@ const typeColors: Record<string, "primary" | "default" | "secondary"> = {
   FILE_REF: "secondary",
 };
 
+function weekDateRange(weekNumber: number, periodStartDate: string): string {
+  const start = new Date(periodStartDate);
+  start.setDate(start.getDate() + (weekNumber - 1) * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ContentPage() {
   const { currentUser } = useAuth();
   const isTeacher = currentUser?.role === "TEACHER";
@@ -121,6 +148,11 @@ export default function ContentPage() {
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<ContentItem | null>(null);
   const [itemForm, setItemForm] = useState<ContentItemForm>(emptyItemForm);
+
+  // Clone dialog
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [cloneSourceGroup, setCloneSourceGroup] = useState("");
+  const [cloneLoading, setCloneLoading] = useState(false);
 
   const { toast, showToast, clearToast } = useToast();
 
@@ -160,6 +192,8 @@ export default function ContentPage() {
     loadTopics(selectedGroup);
   }, [selectedGroup]);
 
+  const selectedGroupInfo = groups.find((g) => g.id === selectedGroup) ?? null;
+
   // ── Topic CRUD ──────────────────────────────────────────
   const openCreateTopic = () => {
     setEditTopic(null);
@@ -178,15 +212,18 @@ export default function ContentPage() {
       title: topic.title,
       description: topic.description ?? "",
       sortOrder: topic.sortOrder,
+      weekNumber: topic.weekNumber !== null ? String(topic.weekNumber) : "",
     });
     setTopicDialogOpen(true);
   };
 
   const handleSaveTopic = async () => {
     try {
+      const weekNum = topicForm.weekNumber !== "" ? Number(topicForm.weekNumber) : undefined;
       const payload = {
         ...topicForm,
         description: topicForm.description || undefined,
+        weekNumber: weekNum,
       };
       if (editTopic) {
         await topicsService.update(editTopic.id, payload);
@@ -257,18 +294,63 @@ export default function ContentPage() {
     }
   };
 
+  // ── Clone ───────────────────────────────────────────────
+  const handleClone = async () => {
+    if (!cloneSourceGroup || !selectedGroup) return;
+    setCloneLoading(true);
+    try {
+      const cloned = await topicsService.cloneFromGroup(cloneSourceGroup, selectedGroup);
+      setTopics(cloned);
+      showToast("Contenido copiado exitosamente");
+      setCloneDialogOpen(false);
+      setCloneSourceGroup("");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showToast(msg ?? "Error al copiar contenido", "error");
+    } finally {
+      setCloneLoading(false);
+    }
+  };
+
+  // ── Grouping by week ────────────────────────────────────
+  type WeekBucket = { weekNumber: number | null; topics: TopicItem[] };
+
+  const weekBuckets: WeekBucket[] = [];
+  const seen = new Map<number | null, TopicItem[]>();
+  for (const t of topics) {
+    const key = t.weekNumber ?? null;
+    if (!seen.has(key)) seen.set(key, []);
+    seen.get(key)!.push(t);
+  }
+  // Sorted: numbered weeks first (ascending), then null at end
+  const numberedKeys = [...seen.keys()]
+    .filter((k) => k !== null)
+    .sort((a, b) => (a as number) - (b as number));
+  for (const k of numberedKeys) weekBuckets.push({ weekNumber: k, topics: seen.get(k)! });
+  if (seen.has(null)) weekBuckets.push({ weekNumber: null, topics: seen.get(null)! });
+
   return (
     <Box>
-      <Box className="flex justify-between items-center mb-6">
-        <Typography variant="h5">Contenido de Grupos</Typography>
-        <Button
-          variant="contained"
-          onClick={openCreateTopic}
-          disabled={!selectedGroup}
-          startIcon={<AddIcon />}
-        >
-          Nuevo Tema
-        </Button>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography variant="h5" fontWeight={700}>Contenido de Grupos</Typography>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<ContentCopyIcon />}
+            disabled={!selectedGroup}
+            onClick={() => setCloneDialogOpen(true)}
+          >
+            Copiar contenido
+          </Button>
+          <Button
+            variant="contained"
+            onClick={openCreateTopic}
+            disabled={!selectedGroup}
+            startIcon={<AddIcon />}
+          >
+            Nuevo Tema
+          </Button>
+        </Box>
       </Box>
 
       <TextField
@@ -295,199 +377,183 @@ export default function ContentPage() {
         </Typography>
       )}
 
-      {topics.map((topic) => (
-        <Accordion key={topic.id} defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box className="flex items-center gap-3 w-full">
-              <Chip
-                label={`#${topic.sortOrder}`}
-                size="small"
-                variant="outlined"
-              />
-              <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>
-                {topic.title}
+      {weekBuckets.map((bucket) => (
+        <Box key={bucket.weekNumber ?? "none"} sx={{ mb: 3 }}>
+          {/* Week header */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+            <Divider sx={{ flex: 1 }} />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
+              <CalendarTodayIcon sx={{ fontSize: 14, color: "text.secondary" }} />
+              <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {bucket.weekNumber !== null
+                  ? `Semana ${bucket.weekNumber}${
+                      selectedGroupInfo?.academicPeriod?.startDate
+                        ? ` — ${weekDateRange(bucket.weekNumber, selectedGroupInfo.academicPeriod.startDate)}`
+                        : ""
+                    }`
+                  : "Sin semana asignada"}
               </Typography>
-              <Chip
-                label={`${topic.contentItems.length} material(es)`}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openEditTopic(topic);
-                }}
-                title="Editar tema"
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                color="error"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteTopic(topic.id);
-                }}
-                title="Eliminar tema"
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
             </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            {topic.description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {topic.description}
-              </Typography>
-            )}
-            <List dense>
-              {topic.contentItems.map((item) => (
-                <ListItem
-                  key={item.id}
-                  secondaryAction={
-                    <>
-                      <IconButton
-                        size="small"
-                        onClick={() => openEditItem(item)}
-                        title="Editar"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteItem(item.id)}
-                        title="Eliminar"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </>
-                  }
-                  sx={{ pr: 12 }}
-                >
-                  <ListItemIcon sx={{ minWidth: 32 }}>
-                    {typeIcons[item.type]}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Box className="flex items-center gap-2">
-                        <span>{item.title}</span>
-                        <Chip
-                          label={typeLabels[item.type]}
-                          size="small"
-                          color={typeColors[item.type]}
-                          variant="outlined"
-                        />
-                      </Box>
-                    }
-                    secondaryTypographyProps={{ component: "div" }}
-                    secondary={
-                      item.type === "LINK" || item.type === "FILE_REF" ? (
-                        <a
-                          href={item.content}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: "#1976d2", wordBreak: "break-all" }}
-                        >
-                          {item.content}
-                        </a>
-                      ) : (
-                        <span>
-                          {item.content.length > 120
-                            ? `${item.content.slice(0, 120)}…`
-                            : item.content}
-                        </span>
-                      )
-                    }
+            <Divider sx={{ flex: 1 }} />
+          </Box>
+
+          {bucket.topics.map((topic) => (
+            <Accordion key={topic.id} defaultExpanded sx={{ mb: 1 }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%" }}>
+                  <Chip label={`#${topic.sortOrder}`} size="small" variant="outlined" />
+                  <Typography sx={{ fontWeight: 600, flexGrow: 1 }}>
+                    {topic.title}
+                  </Typography>
+                  <Chip
+                    label={`${topic.contentItems.length} material(es)`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
                   />
-                </ListItem>
-              ))}
-            </List>
-            <Button
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() =>
-                openCreateItem(topic.id, topic.contentItems.length)
-              }
-              sx={{ mt: 1 }}
-            >
-              Agregar Material
-            </Button>
-          </AccordionDetails>
-        </Accordion>
+                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                    {formatDate(topic.createdAt)}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => { e.stopPropagation(); openEditTopic(topic); }}
+                    title="Editar tema"
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteTopic(topic.id); }}
+                    title="Eliminar tema"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails>
+                {topic.description && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {topic.description}
+                  </Typography>
+                )}
+                <List dense>
+                  {topic.contentItems.map((item) => (
+                    <ListItem
+                      key={item.id}
+                      secondaryAction={
+                        <>
+                          <IconButton size="small" onClick={() => openEditItem(item)} title="Editar">
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleDeleteItem(item.id)} title="Eliminar">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </>
+                      }
+                      sx={{ pr: 12 }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        {typeIcons[item.type]}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <span>{item.title}</span>
+                            <Chip label={typeLabels[item.type]} size="small" color={typeColors[item.type]} variant="outlined" />
+                          </Box>
+                        }
+                        secondaryTypographyProps={{ component: "div" }}
+                        secondary={
+                          <Box>
+                            {item.type === "LINK" || item.type === "FILE_REF" ? (
+                              <a href={item.content} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", wordBreak: "break-all" }}>
+                                {item.content}
+                              </a>
+                            ) : (
+                              <span>
+                                {item.content.length > 120 ? `${item.content.slice(0, 120)}…` : item.content}
+                              </span>
+                            )}
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
+                              Publicado el {formatDate(item.createdAt)}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => openCreateItem(topic.id, topic.contentItems.length)}
+                  sx={{ mt: 1 }}
+                >
+                  Agregar Material
+                </Button>
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </Box>
       ))}
 
       {/* Topic Dialog */}
-      <Dialog
-        open={topicDialogOpen}
-        onClose={() => setTopicDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={topicDialogOpen} onClose={() => setTopicDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editTopic ? "Editar Tema" : "Nuevo Tema"}</DialogTitle>
-        <DialogContent className="flex flex-col gap-4 pt-4">
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1, pt: 2 }}>
           <TextField
             label="Título"
             value={topicForm.title}
-            onChange={(e) =>
-              setTopicForm({ ...topicForm, title: e.target.value })
-            }
+            onChange={(e) => setTopicForm({ ...topicForm, title: e.target.value })}
             fullWidth
             margin="dense"
           />
           <TextField
             label="Descripción"
             value={topicForm.description}
-            onChange={(e) =>
-              setTopicForm({ ...topicForm, description: e.target.value })
-            }
+            onChange={(e) => setTopicForm({ ...topicForm, description: e.target.value })}
             fullWidth
             margin="dense"
             multiline
             rows={3}
           />
-          <TextField
-            label="Orden"
-            type="number"
-            value={topicForm.sortOrder}
-            onChange={(e) =>
-              setTopicForm({
-                ...topicForm,
-                sortOrder: Math.max(1, Number(e.target.value)),
-              })
-            }
-            inputProps={{ min: 1 }}
-            fullWidth
-            margin="dense"
-          />
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField
+              label="Semana"
+              type="number"
+              value={topicForm.weekNumber}
+              onChange={(e) => setTopicForm({ ...topicForm, weekNumber: e.target.value })}
+              inputProps={{ min: 1 }}
+              fullWidth
+              margin="dense"
+              helperText="Número de semana del período"
+            />
+            <TextField
+              label="Orden dentro de la semana"
+              type="number"
+              value={topicForm.sortOrder}
+              onChange={(e) => setTopicForm({ ...topicForm, sortOrder: Math.max(1, Number(e.target.value)) })}
+              inputProps={{ min: 1 }}
+              fullWidth
+              margin="dense"
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setTopicDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSaveTopic}>
-            Guardar
-          </Button>
+          <Button variant="contained" onClick={handleSaveTopic}>Guardar</Button>
         </DialogActions>
       </Dialog>
 
       {/* Content Item Dialog */}
-      <Dialog
-        open={itemDialogOpen}
-        onClose={() => setItemDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {editItem ? "Editar Material" : "Nuevo Material"}
-        </DialogTitle>
-        <DialogContent className="flex flex-col gap-4 pt-4">
+      <Dialog open={itemDialogOpen} onClose={() => setItemDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editItem ? "Editar Material" : "Nuevo Material"}</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 1, pt: 2 }}>
           <TextField
             label="Título"
             value={itemForm.title}
-            onChange={(e) =>
-              setItemForm({ ...itemForm, title: e.target.value })
-            }
+            onChange={(e) => setItemForm({ ...itemForm, title: e.target.value })}
             fullWidth
             margin="dense"
           />
@@ -495,12 +561,7 @@ export default function ContentPage() {
             select
             label="Tipo"
             value={itemForm.type}
-            onChange={(e) =>
-              setItemForm({
-                ...itemForm,
-                type: e.target.value as ContentItemForm["type"],
-              })
-            }
+            onChange={(e) => setItemForm({ ...itemForm, type: e.target.value as ContentItemForm["type"] })}
             fullWidth
             margin="dense"
           >
@@ -511,9 +572,7 @@ export default function ContentPage() {
           <TextField
             label={itemForm.type === "TEXT" ? "Contenido" : "URL"}
             value={itemForm.content}
-            onChange={(e) =>
-              setItemForm({ ...itemForm, content: e.target.value })
-            }
+            onChange={(e) => setItemForm({ ...itemForm, content: e.target.value })}
             fullWidth
             margin="dense"
             multiline={itemForm.type === "TEXT"}
@@ -523,12 +582,7 @@ export default function ContentPage() {
             label="Orden"
             type="number"
             value={itemForm.sortOrder}
-            onChange={(e) =>
-              setItemForm({
-                ...itemForm,
-                sortOrder: Math.max(1, Number(e.target.value)),
-              })
-            }
+            onChange={(e) => setItemForm({ ...itemForm, sortOrder: Math.max(1, Number(e.target.value)) })}
             inputProps={{ min: 1 }}
             fullWidth
             margin="dense"
@@ -536,16 +590,48 @@ export default function ContentPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setItemDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSaveItem}>
-            Guardar
+          <Button variant="contained" onClick={handleSaveItem}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Clone Dialog */}
+      <Dialog open={cloneDialogOpen} onClose={() => { setCloneDialogOpen(false); setCloneSourceGroup(""); }} maxWidth="sm" fullWidth>
+        <DialogTitle>Copiar contenido de otro grupo</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Selecciona el grupo origen. Todos sus temas y materiales se copiarán al grupo actual manteniendo el orden de semanas. <strong>El contenido existente en el grupo destino será reemplazado.</strong>
+          </DialogContentText>
+          <TextField
+            select
+            label="Grupo origen"
+            value={cloneSourceGroup}
+            onChange={(e) => setCloneSourceGroup(e.target.value)}
+            fullWidth
+          >
+            <MenuItem value="">— Seleccione un grupo —</MenuItem>
+            {groups
+              .filter((g) => g.id !== selectedGroup)
+              .map((g) => (
+                <MenuItem key={g.id} value={g.id}>
+                  {g.subject.name} ({g.groupCode}) — {g.academicPeriod?.name}
+                </MenuItem>
+              ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setCloneDialogOpen(false); setCloneSourceGroup(""); }}>Cancelar</Button>
+          <Button
+            variant="contained"
+            onClick={handleClone}
+            disabled={!cloneSourceGroup || cloneLoading}
+          >
+            Copiar
           </Button>
         </DialogActions>
       </Dialog>
 
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>
-        <Alert severity={toast?.severity} onClose={clearToast}>
-          {toast?.message}
-        </Alert>
+        <Alert severity={toast?.severity} onClose={clearToast}>{toast?.message}</Alert>
       </Snackbar>
     </Box>
   );

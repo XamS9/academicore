@@ -5,6 +5,7 @@ export const CreateTopicDto = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
   sortOrder: z.number().int().min(1),
+  weekNumber: z.number().int().min(1).optional(),
 });
 export type CreateTopicDto = z.infer<typeof CreateTopicDto>;
 
@@ -15,3 +16,9 @@ export const ReorderTopicsDto = z.object({
   orderedIds: z.array(z.string().uuid()).min(1),
 });
 export type ReorderTopicsDto = z.infer<typeof ReorderTopicsDto>;
+
+export const CloneTopicsDto = z.object({
+  sourceGroupId: z.string().uuid(),
+  targetGroupId: z.string().uuid(),
+});
+export type CloneTopicsDto = z.infer<typeof CloneTopicsDto>;

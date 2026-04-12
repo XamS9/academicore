@@ -613,6 +613,7 @@ model Topic {
   title       String   @db.VarChar(200)
   description String?  @db.VarChar(500)
   sortOrder   Int      @map("sort_order") @db.SmallInt
+  weekNumber  Int?     @map("week_number") @db.SmallInt
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

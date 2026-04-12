@@ -23,7 +23,7 @@ interface GroupDetail {
   currentStudents: number;
   isActive: boolean;
   subject: { name: string; code: string };
-  academicPeriod: { name: string };
+  academicPeriod: { name: string; startDate: string };
 }
 
 export default function TeacherGroupDetailPage() {
@@ -98,7 +98,7 @@ export default function TeacherGroupDetailPage() {
       {/* ── Tab panels ── */}
       {tab === 0 && <GroupEvaluationsPanel groupId={groupId} />}
       {tab === 1 && <GroupGradesPanel groupId={groupId} />}
-      {tab === 2 && <GroupContentPanel groupId={groupId} />}
+      {tab === 2 && <GroupContentPanel groupId={groupId} periodStartDate={group?.academicPeriod?.startDate} />}
     </Box>
   );
 }
