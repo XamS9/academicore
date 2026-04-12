@@ -11,12 +11,14 @@ This document describes every business process the application currently handles
 | Step | Description |
 |------|-------------|
 | 1 | User submits email + password to `POST /api/auth/login` |
-| 2 | System verifies credentials (bcrypt), checks user is active and not soft-deleted |
+| 2 | System verifies credentials (bcrypt), checks user is active (`isActive=true`) and not soft-deleted |
 | 3 | Returns JWT access token (short-lived) + refresh token (long-lived) + user info |
 | 4 | Frontend stores tokens in localStorage, attaches Bearer token on every request |
 | 5 | On 401, frontend redirects to `/login` |
 
 **Refresh flow:** `POST /api/auth/refresh` exchanges a valid refresh token for a new access token.
+
+**Login page:** Includes a "¿Eres nuevo? Crear cuenta" link to `/registro` for student self-registration.
 
 ---
 
@@ -47,19 +49,45 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 
 | Operation | Endpoint | Notes |
 |-----------|----------|-------|
-| List | `GET /api/estudiantes` | With user (id, name, email) & career |
+| List | `GET /api/estudiantes` | With user (id, name, email, isActive) & career (id, name) |
 | Get | `GET /api/estudiantes/:id` | Full profile |
 | Get by user | `GET /api/estudiantes/by-user/:userId` | Lookup by user FK |
-| Create | `POST /api/usuarios` (userType=STUDENT) | Admin creates from the Estudiantes filter on `/usuarios`; role locked to STUDENT; backend auto-generates student profile |
+| Self-register | `POST /api/auth/register` | Public — see Process 1a below |
+| Admin create | `POST /api/usuarios` (userType=STUDENT) | Admin creates from the Estudiantes filter on `/usuarios`; backend auto-generates student profile |
 | Update user fields | `PATCH /api/usuarios/:userId` | firstName, lastName, email — called in parallel with student update |
-| Update student fields | `PATCH /api/estudiantes/:id` | academicStatus transitions only |
-| Delete | `DELETE /api/estudiantes/:id` | Soft delete |
+| Update student fields | `PATCH /api/estudiantes/:id` | academicStatus, careerId (optional) |
+| Approve | `PATCH /api/estudiantes/:id/approve` | Sets `User.isActive=true` + `academicStatus=ACTIVE` atomically |
+| Delete | `DELETE /api/estudiantes/:id` | Soft delete (also used to reject a pending registration) |
 
-**Academic statuses:** ACTIVE, AT_RISK, ELIGIBLE_FOR_GRADUATION, SUSPENDED, GRADUATED, WITHDRAWN.
+**Academic statuses:** PENDING, ACTIVE, AT_RISK, ELIGIBLE_FOR_GRADUATION, SUSPENDED, GRADUATED, WITHDRAWN.
+- `PENDING` — set on self-registered students awaiting admin approval; user login is blocked (`isActive=false`)
+- All other transitions are manual admin actions via the edit dialog
 
-**Frontend create flow:** With the Estudiantes filter active on `/usuarios`, the "Nuevo Estudiante" button opens a user-creation form (Nombre, Apellido, Correo, Contraseña) with the role field pre-set to "Estudiante" and disabled. Saving calls `POST /api/usuarios` with `userType: "STUDENT"` — the backend trigger auto-creates the student profile.
+**Frontend admin create flow:** With the Estudiantes filter active on `/usuarios`, "Nuevo Usuario" opens a unified create form with role selector. Setting role to Estudiante and saving calls `POST /api/usuarios` with `userType: "STUDENT"`.
 
-**Frontend edit flow:** The edit dialog shows all user fields (Nombre, Apellido, Correo) plus Código de estudiante (read-only) and Estado académico. Saving fires two parallel requests: `PATCH /api/usuarios/:userId` and `PATCH /api/estudiantes/:id`.
+**Frontend edit flow:** The edit dialog shows Nombre, Apellido, Correo, Código (read-only), Estado académico, and Carrera. The career selector is locked by default — admin must click the lock icon to unlock it, which displays a warning about academic history impact. Saving fires two parallel requests: `PATCH /api/usuarios/:userId` and `PATCH /api/estudiantes/:id`.
+
+**Frontend approve flow:** PENDING students show a green checkmark button in the Estudiantes table and on the `/solicitudes-registro` page. One click calls `PATCH /api/estudiantes/:id/approve`.
+
+---
+
+## 3a. Student Self-Registration
+
+**Actors:** Public (unauthenticated)
+
+| Step | Description |
+|------|-------------|
+| 1 | Prospective student visits `/registro` (public page, no auth required) |
+| 2 | Step 1 — fills in firstName, lastName, email, password (min 6 chars) |
+| 3 | Step 2 — selects a career from the active careers grid (fetched from the now-public `GET /api/carreras`) |
+| 4 | Step 3 — reviews a summary and submits |
+| 5 | `POST /api/auth/register` creates User (`isActive=false`) + Student (`academicStatus=PENDING`, auto-generated `studentCode`) in one transaction |
+| 6 | Success screen informs student their account is pending approval |
+| 7 | Admin reviews the request at `/solicitudes-registro`, approves or rejects |
+| 8 | On approval: `PATCH /api/estudiantes/:id/approve` sets `isActive=true` + `academicStatus=ACTIVE` atomically |
+| 9 | Student can now log in |
+
+**Rules:** Email must be unique. Duplicate email returns HTTP 409. Career must be active. Student cannot log in until approved (`isActive=false` blocks login).
 
 ---
 
@@ -91,8 +119,8 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 
 | Operation | Endpoint | Notes |
 |-----------|----------|-------|
-| List | `GET /api/carreras` | Basic list |
-| Get | `GET /api/carreras/:id` | Includes CareerSubjects with subject details |
+| List | `GET /api/carreras` | Basic list — **public, no auth required** (needed for self-registration) |
+| Get | `GET /api/carreras/:id` | Includes CareerSubjects with subject details — **public, no auth required** |
 | Create | `POST /api/carreras` | name, code (unique), totalSemesters |
 | Update | `PATCH /api/carreras/:id` | Any field |
 | Delete | `DELETE /api/carreras/:id` | Soft delete |
@@ -636,6 +664,22 @@ Departments are seeded on first run and ordered alphabetically. The 21 seeded de
 Administración de Empresas, Arquitectura, Biología, Ciencias Computacionales, Comunicación, Contabilidad, Derecho, Diseño Gráfico, Educación, Enfermería, Física, Humanidades, Idiomas, Ingeniería Civil, Ingeniería Eléctrica, Ingeniería Mecánica, Ingeniería en Sistemas, Matemáticas, Medicina, Psicología, Química.
 
 **Rules:** No create/update/delete via API — managed through DB seed. The `department` field on the `teachers` table remains a `varchar(150)` string (not a foreign key) so historical records are preserved if a department name is ever renamed in the seed.
+
+---
+
+## 24. Signup Request Management
+
+**Actors:** ADMIN
+
+Admin-facing queue for reviewing and acting on pending student self-registrations (see Process 3a).
+
+| Operation | Endpoint | Notes |
+|-----------|----------|-------|
+| List pending | `GET /api/estudiantes` (filtered client-side to `academicStatus=PENDING`) | Returns all students; PENDING ones shown in the queue |
+| Approve | `PATCH /api/estudiantes/:id/approve` | Activates login + sets ACTIVE status atomically |
+| Reject | `DELETE /api/estudiantes/:id` | Soft-deletes student record; associated User is not deleted |
+
+**Frontend:** `/solicitudes-registro` page shows only PENDING students with a summary card (pending count), a DataTable (name, email, career, date), and per-row Approve / Reject actions. Reject opens a confirmation dialog. Empty state is shown when the queue is clear. Also accessible from the admin dashboard quick actions.
 
 ---
 
