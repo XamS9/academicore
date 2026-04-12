@@ -109,9 +109,8 @@ const PAGES = {
       extras: [
         {
           label: "Filtro: Docentes",
-          desc: "Al seleccionar el filtro Docentes se muestran número de empleado, nombre, correo y departamento. El botón cambia a 'Nuevo Docente' y el formulario incluye los campos específicos del perfil docente.",
+          desc: "Al seleccionar el filtro Docentes se muestran número de empleado, nombre, correo y departamento con columnas específicas del perfil docente.",
           setup: async (page) => {
-            // Click the "Docentes" toggle button
             await page.evaluate(() => {
               const btn = Array.from(document.querySelectorAll("button"))
                 .find((b) => b.textContent.trim() === "Docentes");
@@ -122,7 +121,7 @@ const PAGES = {
         },
         {
           label: "Filtro: Estudiantes",
-          desc: "Al seleccionar el filtro Estudiantes se muestran código de matrícula, nombre, correo, carrera y estado académico. El botón cambia a 'Nuevo Estudiante' y el formulario incluye el selector de estado académico.",
+          desc: "Al seleccionar el filtro Estudiantes se muestran código de matrícula, nombre, correo, carrera y estado académico.",
           setup: async (page) => {
             await page.evaluate(() => {
               const btn = Array.from(document.querySelectorAll("button"))
@@ -134,29 +133,15 @@ const PAGES = {
         },
         {
           label: "Formulario: Nuevo Usuario",
-          desc: "Al hacer clic en Nuevo Usuario (con filtro Todos) se abre este diálogo con nombre, correo, contraseña y un selector de tipo de rol.",
+          desc: "El botón Nuevo Usuario siempre abre el mismo formulario unificado con nombre, apellido, correo, contraseña y un selector de rol (Administrador, Docente o Estudiante). El filtro activo no cambia el formulario.",
           setup: async (page) => {
             await clickButtonByText(page, "Nuevo Usuario");
             await delay(800);
           },
         },
         {
-          label: "Formulario: Nuevo Estudiante",
-          desc: "Con el filtro Estudiantes activo, el botón abre un formulario de alta rápida con nombre, apellido, correo y contraseña. El tipo de usuario queda fijo como Estudiante.",
-          setup: async (page) => {
-            await page.evaluate(() => {
-              const btn = Array.from(document.querySelectorAll("button"))
-                .find((b) => b.textContent.trim() === "Estudiantes");
-              if (btn) btn.click();
-            });
-            await delay(800);
-            await clickButtonByText(page, "Nuevo Estudiante");
-            await delay(800);
-          },
-        },
-        {
           label: "Formulario: Editar Estudiante",
-          desc: "El botón de lápiz en la vista de Estudiantes abre el diálogo con datos personales y el selector de estado académico (Activo, En Riesgo, Suspendido, Graduado, Retirado o Elegible para Graduación). El código de matrícula se muestra deshabilitado.",
+          desc: "El botón de lápiz en la vista de Estudiantes abre el diálogo con datos personales, estado académico y selector de carrera (bloqueado por defecto — se desbloquea con el ícono de candado). El código de matrícula se muestra deshabilitado.",
           setup: async (page) => {
             await page.evaluate(() => {
               const btn = Array.from(document.querySelectorAll("button"))
@@ -438,6 +423,28 @@ const PAGES = {
           desc: "El botón de lápiz en cada fila abre el mismo formulario con los datos del anuncio precargados para modificar su contenido, audiencia o fecha de expiración.",
           setup: async (page) => {
             await clickFirstRowButton(page, 0);
+            await delay(800);
+          },
+        },
+      ],
+    },
+    {
+      route: "/solicitudes-registro",
+      label: "Solicitudes de Registro",
+      desc: "Cola de estudiantes que se registraron desde el portal público y esperan aprobación. Muestra nombre, correo, carrera solicitada y fecha de solicitud. Aprobar activa el acceso al sistema y asigna automáticamente el cargo de inscripción; Rechazar elimina el registro.",
+      extras: [
+        {
+          label: "Diálogo: Rechazar Solicitud",
+          desc: "Al hacer clic en el ícono de cancelación se abre un diálogo de confirmación con el nombre del estudiante y la carrera antes de proceder al rechazo.",
+          setup: async (page) => {
+            // Click the reject (cancel) icon on the first row if it exists
+            await page.evaluate(() => {
+              const row = document.querySelector("tbody tr");
+              if (!row) return;
+              const buttons = Array.from(row.querySelectorAll("button"));
+              // reject button is index 1 (after approve)
+              if (buttons[1]) buttons[1].click();
+            });
             await delay(800);
           },
         },
