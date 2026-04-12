@@ -26,7 +26,7 @@ import GroupsIcon from "@mui/icons-material/Groups";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import HistoryIcon from "@mui/icons-material/History";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import PaletteIcon from "@mui/icons-material/Palette";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import UploadIcon from "@mui/icons-material/Upload";
 import CampaignIcon from "@mui/icons-material/Campaign";
@@ -107,9 +107,9 @@ const quickActions: QuickAction[] = [
     roles: ["TEACHER"],
   },
   {
-    label: "Estándar UI",
-    path: "/ui-standards",
-    icon: <PaletteIcon />,
+    label: "Solicitudes de Registro",
+    path: "/solicitudes-registro",
+    icon: <PersonAddIcon />,
     roles: ["ADMIN"],
   },
 ];
@@ -124,7 +124,7 @@ const actionColors: Record<
   "/calificaciones": "warning",
   "/mis-grupos": "primary",
   "/anuncios": "info",
-  "/ui-standards": "secondary",
+  "/solicitudes-registro": "info",
 };
 
 const auditActionLabels: Record<string, string> = {
