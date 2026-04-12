@@ -106,11 +106,12 @@ const ACADEMIC_STATUS_COLORS: Record<
 
 // ─── Form shapes ──────────────────────────────────────────────────────────────
 
-interface BaseCreateForm {
+interface CreateForm {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
+  userType: "ADMIN" | "TEACHER" | "STUDENT";
 }
 
 interface StudentEditForm {
@@ -149,20 +150,19 @@ export default function UsersPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Dialog state
+  // Dialog state — null = create mode, non-null = edit mode
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editStudentTarget, setEditStudentTarget] = useState<StudentItem | null>(null);
+  const [editTeacherTarget, setEditTeacherTarget] = useState<TeacherItem | null>(null);
   const [editUserTarget, setEditUserTarget] = useState<UserItem | null>(null);
-  const [editStudentTarget, setEditStudentTarget] =
-    useState<StudentItem | null>(null);
-  const [editTeacherTarget, setEditTeacherTarget] =
-    useState<TeacherItem | null>(null);
 
   // Forms
-  const [createForm, setCreateForm] = useState<BaseCreateForm>({
+  const [createForm, setCreateForm] = useState<CreateForm>({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
+    userType: "STUDENT",
   });
   const [studentEditForm, setStudentEditForm] = useState<StudentEditForm>({
     firstName: "",
@@ -219,14 +219,14 @@ export default function UsersPage() {
     }
   };
 
-  const reload = () => {
+  const reloadCurrent = () => {
     if (roleFilter === "STUDENT") loadStudents();
     else if (roleFilter === "TEACHER") loadTeachers();
     else loadUsers();
   };
 
   useEffect(() => {
-    reload();
+    reloadCurrent();
   }, [roleFilter]);
 
   useEffect(() => {
@@ -246,7 +246,7 @@ export default function UsersPage() {
     setEditUserTarget(null);
     setEditStudentTarget(null);
     setEditTeacherTarget(null);
-    setCreateForm({ firstName: "", lastName: "", email: "", password: "" });
+    setCreateForm({ firstName: "", lastName: "", email: "", password: "", userType: "STUDENT" });
     setDialogOpen(true);
   };
 
@@ -290,62 +290,58 @@ export default function UsersPage() {
     setDialogOpen(true);
   };
 
-  // ─── Save handlers ─────────────────────────────────────────────────────────
+  // ─── Save handler ──────────────────────────────────────────────────────────
+
+  const isEditing = editUserTarget !== null || editStudentTarget !== null || editTeacherTarget !== null;
 
   const handleSave = async () => {
     try {
-      if (roleFilter === "STUDENT") {
-        if (editStudentTarget) {
-          await Promise.all([
-            usersService.update(editStudentTarget.user.id, {
-              firstName: studentEditForm.firstName,
-              lastName: studentEditForm.lastName,
-              email: studentEditForm.email,
-            }),
-            studentsService.update(editStudentTarget.id, {
-              academicStatus: studentEditForm.academicStatus,
-            }),
-          ]);
-          showToast("Estudiante actualizado exitosamente");
-        } else {
-          await usersService.create({ ...createForm, userType: "STUDENT" });
-          showToast("Estudiante creado exitosamente");
-        }
-      } else if (roleFilter === "TEACHER") {
-        if (editTeacherTarget) {
-          await Promise.all([
-            usersService.update(editTeacherTarget.user.id, {
-              firstName: teacherEditForm.firstName,
-              lastName: teacherEditForm.lastName,
-              email: teacherEditForm.email,
-            }),
-            teachersService.update(editTeacherTarget.id, {
-              employeeCode: teacherEditForm.employeeCode,
-              department: teacherEditForm.department,
-            }),
-          ]);
-          showToast("Docente actualizado exitosamente");
-        } else {
-          await usersService.create({ ...createForm, userType: "TEACHER" });
-          showToast("Docente creado exitosamente");
-        }
-      } else {
-        // ALL or ADMIN filter → generic user form
-        if (editUserTarget) {
-          await usersService.update(editUserTarget.id, {
-            firstName: genericEditForm.firstName,
-            lastName: genericEditForm.lastName,
-            email: genericEditForm.email,
-            userType: genericEditForm.userType,
-          });
-          showToast("Usuario actualizado exitosamente");
-        } else {
-          await usersService.create({ ...createForm, userType: "ADMIN" });
-          showToast("Usuario creado exitosamente");
-        }
+      if (!isEditing) {
+        // ── Create: always use the unified form's userType ──
+        await usersService.create(createForm);
+        showToast("Usuario creado exitosamente");
+        // Refresh whichever table matches the new user's role
+        if (createForm.userType === "STUDENT") loadStudents();
+        else if (createForm.userType === "TEACHER") loadTeachers();
+        else loadUsers();
+      } else if (editStudentTarget) {
+        await Promise.all([
+          usersService.update(editStudentTarget.user.id, {
+            firstName: studentEditForm.firstName,
+            lastName: studentEditForm.lastName,
+            email: studentEditForm.email,
+          }),
+          studentsService.update(editStudentTarget.id, {
+            academicStatus: studentEditForm.academicStatus,
+          }),
+        ]);
+        showToast("Estudiante actualizado exitosamente");
+        reloadCurrent();
+      } else if (editTeacherTarget) {
+        await Promise.all([
+          usersService.update(editTeacherTarget.user.id, {
+            firstName: teacherEditForm.firstName,
+            lastName: teacherEditForm.lastName,
+            email: teacherEditForm.email,
+          }),
+          teachersService.update(editTeacherTarget.id, {
+            employeeCode: teacherEditForm.employeeCode,
+            department: teacherEditForm.department,
+          }),
+        ]);
+        showToast("Docente actualizado exitosamente");
+        reloadCurrent();
+      } else if (editUserTarget) {
+        await usersService.update(editUserTarget.id, {
+          firstName: genericEditForm.firstName,
+          lastName: genericEditForm.lastName,
+          email: genericEditForm.email,
+          userType: genericEditForm.userType,
+        });
+        showToast("Usuario actualizado exitosamente");
+        reloadCurrent();
       }
       setDialogOpen(false);
-      reload();
     } catch {
       showToast("Error al guardar", "error");
     }
@@ -354,9 +350,7 @@ export default function UsersPage() {
   const handleToggleActive = async (item: UserItem) => {
     try {
       await api.patch(`/users/${item.id}/toggle-active`);
-      showToast(
-        `Usuario ${item.isActive ? "desactivado" : "activado"} exitosamente`,
-      );
+      showToast(`Usuario ${item.isActive ? "desactivado" : "activado"} exitosamente`);
       loadUsers();
     } catch {
       showToast("Error al cambiar estado del usuario", "error");
@@ -388,11 +382,7 @@ export default function UsersPage() {
   // ─── Columns ───────────────────────────────────────────────────────────────
 
   const userColumns: Column<UserItem>[] = [
-    {
-      key: "name",
-      label: "Nombre",
-      render: (row) => `${row.firstName} ${row.lastName}`,
-    },
+    { key: "name", label: "Nombre", render: (row) => `${row.firstName} ${row.lastName}` },
     { key: "email", label: "Email" },
     {
       key: "userType",
@@ -439,17 +429,9 @@ export default function UsersPage() {
 
   const studentColumns: Column<StudentItem>[] = [
     { key: "studentCode", label: "Código" },
-    {
-      key: "name",
-      label: "Nombre",
-      render: (row) => `${row.user.firstName} ${row.user.lastName}`,
-    },
+    { key: "name", label: "Nombre", render: (row) => `${row.user.firstName} ${row.user.lastName}` },
     { key: "email", label: "Email", render: (row) => row.user.email },
-    {
-      key: "career",
-      label: "Carrera",
-      render: (row) => row.career?.name ?? "—",
-    },
+    { key: "career", label: "Carrera", render: (row) => row.career?.name ?? "—" },
     {
       key: "academicStatus",
       label: "Estado",
@@ -472,12 +454,7 @@ export default function UsersPage() {
           <IconButton size="small" onClick={() => openEditStudent(row)} title="Editar">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => handleDeleteStudent(row.id)}
-            title="Eliminar"
-          >
+          <IconButton size="small" color="error" onClick={() => handleDeleteStudent(row.id)} title="Eliminar">
             <DeleteIcon fontSize="small" />
           </IconButton>
         </>
@@ -487,11 +464,7 @@ export default function UsersPage() {
 
   const teacherColumns: Column<TeacherItem>[] = [
     { key: "employeeCode", label: "Código" },
-    {
-      key: "name",
-      label: "Nombre",
-      render: (row) => `${row.user.firstName} ${row.user.lastName}`,
-    },
+    { key: "name", label: "Nombre", render: (row) => `${row.user.firstName} ${row.user.lastName}` },
     { key: "email", label: "Email", render: (row) => row.user.email },
     { key: "department", label: "Departamento", render: (row) => row.department ?? "—" },
     {
@@ -502,12 +475,7 @@ export default function UsersPage() {
           <IconButton size="small" onClick={() => openEditTeacher(row)} title="Editar">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => handleDeleteTeacher(row.id)}
-            title="Eliminar"
-          >
+          <IconButton size="small" color="error" onClick={() => handleDeleteTeacher(row.id)} title="Eliminar">
             <DeleteIcon fontSize="small" />
           </IconButton>
         </>
@@ -515,23 +483,13 @@ export default function UsersPage() {
     },
   ];
 
-  // ─── Dialog labels ─────────────────────────────────────────────────────────
-
-  const isEditing =
-    editUserTarget !== null ||
-    editStudentTarget !== null ||
-    editTeacherTarget !== null;
+  // ─── Dialog title ──────────────────────────────────────────────────────────
 
   const dialogTitle = () => {
-    if (roleFilter === "STUDENT") return isEditing ? "Editar Estudiante" : "Nuevo Estudiante";
-    if (roleFilter === "TEACHER") return isEditing ? "Editar Docente" : "Nuevo Docente";
-    return isEditing ? "Editar Usuario" : "Nuevo Usuario";
-  };
-
-  const newButtonLabel = () => {
-    if (roleFilter === "STUDENT") return "Nuevo Estudiante";
-    if (roleFilter === "TEACHER") return "Nuevo Docente";
-    return "Nuevo Usuario";
+    if (!isEditing) return "Nuevo Usuario";
+    if (editStudentTarget) return "Editar Estudiante";
+    if (editTeacherTarget) return "Editar Docente";
+    return "Editar Usuario";
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -541,11 +499,11 @@ export default function UsersPage() {
       <Box className="flex justify-between items-center mb-4">
         <Typography variant="h5">Usuarios</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          {newButtonLabel()}
+          Nuevo Usuario
         </Button>
       </Box>
 
-      {/* Role filter */}
+      {/* Role filter — only affects which data is displayed */}
       <ToggleButtonGroup
         value={roleFilter}
         exclusive
@@ -561,34 +519,19 @@ export default function UsersPage() {
 
       {/* Table */}
       {roleFilter === "STUDENT" ? (
-        <DataTable
-          columns={studentColumns}
-          rows={students}
-          loading={loading}
-          getRowKey={(r) => r.id}
-        />
+        <DataTable columns={studentColumns} rows={students} loading={loading} getRowKey={(r) => r.id} />
       ) : roleFilter === "TEACHER" ? (
-        <DataTable
-          columns={teacherColumns}
-          rows={teachers}
-          loading={loading}
-          getRowKey={(r) => r.id}
-        />
+        <DataTable columns={teacherColumns} rows={teachers} loading={loading} getRowKey={(r) => r.id} />
       ) : (
-        <DataTable
-          columns={userColumns}
-          rows={filteredUsers}
-          loading={loading}
-          getRowKey={(r) => r.id}
-        />
+        <DataTable columns={userColumns} rows={filteredUsers} loading={loading} getRowKey={(r) => r.id} />
       )}
 
-      {/* Create / Edit dialog */}
+      {/* Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{dialogTitle()}</DialogTitle>
         <DialogContent className="flex flex-col gap-4 pt-4">
 
-          {/* ── CREATE forms (shared base fields + role hint) ── */}
+          {/* ── CREATE: unified form with role selector ── */}
           {!isEditing && (
             <>
               <TextField
@@ -617,10 +560,24 @@ export default function UsersPage() {
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 fullWidth margin="dense"
               />
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Rol</InputLabel>
+                <Select
+                  label="Rol"
+                  value={createForm.userType}
+                  onChange={(e) =>
+                    setCreateForm({ ...createForm, userType: e.target.value as CreateForm["userType"] })
+                  }
+                >
+                  <MenuItem value="ADMIN">Administrador</MenuItem>
+                  <MenuItem value="TEACHER">Docente</MenuItem>
+                  <MenuItem value="STUDENT">Estudiante</MenuItem>
+                </Select>
+              </FormControl>
             </>
           )}
 
-          {/* ── EDIT: Generic (ALL / ADMIN filter) ── */}
+          {/* ── EDIT: Generic user (admin/all view) ── */}
           {isEditing && editUserTarget && (
             <>
               <TextField
@@ -643,15 +600,12 @@ export default function UsersPage() {
                 fullWidth margin="dense"
               />
               <FormControl fullWidth margin="dense">
-                <InputLabel>Tipo de usuario</InputLabel>
+                <InputLabel>Rol</InputLabel>
                 <Select
-                  label="Tipo de usuario"
+                  label="Rol"
                   value={genericEditForm.userType}
                   onChange={(e) =>
-                    setGenericEditForm({
-                      ...genericEditForm,
-                      userType: e.target.value as GenericEditForm["userType"],
-                    })
+                    setGenericEditForm({ ...genericEditForm, userType: e.target.value as GenericEditForm["userType"] })
                   }
                 >
                   <MenuItem value="ADMIN">Administrador</MenuItem>
@@ -696,16 +650,11 @@ export default function UsersPage() {
                   label="Estado académico"
                   value={studentEditForm.academicStatus}
                   onChange={(e) =>
-                    setStudentEditForm({
-                      ...studentEditForm,
-                      academicStatus: e.target.value as AcademicStatus,
-                    })
+                    setStudentEditForm({ ...studentEditForm, academicStatus: e.target.value as AcademicStatus })
                   }
                 >
                   {(Object.keys(ACADEMIC_STATUS_LABELS) as AcademicStatus[]).map((key) => (
-                    <MenuItem key={key} value={key}>
-                      {ACADEMIC_STATUS_LABELS[key]}
-                    </MenuItem>
+                    <MenuItem key={key} value={key}>{ACADEMIC_STATUS_LABELS[key]}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -748,9 +697,7 @@ export default function UsersPage() {
                 fullWidth margin="dense"
               >
                 {departments.map((d) => (
-                  <MenuItem key={d.id} value={d.name}>
-                    {d.name}
-                  </MenuItem>
+                  <MenuItem key={d.id} value={d.name}>{d.name}</MenuItem>
                 ))}
               </TextField>
             </>
