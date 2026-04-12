@@ -32,7 +32,6 @@ import ArticleIcon from "@mui/icons-material/Article";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import BadgeIcon from "@mui/icons-material/Badge";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
@@ -72,18 +71,7 @@ type Role = "ADMIN" | "TEACHER" | "STUDENT";
 const navByRole: Record<Role, NavEntry[]> = {
   ADMIN: [
     { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
-    {
-      key: "users",
-      label: "Usuarios",
-      icon: <BadgeIcon />,
-      items: [
-        {
-          label: "Usuarios",
-          path: "/usuarios",
-          icon: <PeopleIcon />,
-        },
-      ],
-    },
+    { label: "Usuarios", path: "/usuarios", icon: <PeopleIcon /> },
     {
       key: "academic",
       label: "Gestión Académica",
