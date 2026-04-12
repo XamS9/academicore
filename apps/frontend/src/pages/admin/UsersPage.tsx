@@ -340,11 +340,7 @@ export default function UsersPage() {
           });
           showToast("Usuario actualizado exitosamente");
         } else {
-          const userType =
-            roleFilter === "ADMIN"
-              ? "ADMIN"
-              : (genericEditForm.userType as "ADMIN" | "TEACHER" | "STUDENT");
-          await usersService.create({ ...createForm, userType });
+          await usersService.create({ ...createForm, userType: "ADMIN" });
           showToast("Usuario creado exitosamente");
         }
       }
@@ -621,33 +617,6 @@ export default function UsersPage() {
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 fullWidth margin="dense"
               />
-              {/* For ALL filter, let admin pick the type */}
-              {roleFilter === "ALL" && (
-                <FormControl fullWidth margin="dense">
-                  <InputLabel>Tipo de usuario</InputLabel>
-                  <Select
-                    label="Tipo de usuario"
-                    value={genericEditForm.userType}
-                    onChange={(e) =>
-                      setGenericEditForm({
-                        ...genericEditForm,
-                        userType: e.target.value as GenericEditForm["userType"],
-                      })
-                    }
-                  >
-                    <MenuItem value="ADMIN">Administrador</MenuItem>
-                    <MenuItem value="TEACHER">Docente</MenuItem>
-                    <MenuItem value="STUDENT">Estudiante</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-              {roleFilter !== "ALL" && (
-                <TextField
-                  label="Tipo de usuario"
-                  value={USER_TYPE_LABELS[roleFilter === "ADMIN" ? "ADMIN" : roleFilter === "TEACHER" ? "TEACHER" : "STUDENT"]}
-                  disabled fullWidth margin="dense"
-                />
-              )}
             </>
           )}
 
