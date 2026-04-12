@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import IconButton from "@mui/material/IconButton";
 import Badge from "@mui/material/Badge";
 import Popover from "@mui/material/Popover";
@@ -9,18 +10,45 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
+import Chip from "@mui/material/Chip";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { notificationsService } from "../../services/notifications.service";
+import { evaluationsService } from "../../services/evaluations.service";
 
 interface Notification {
   id: string;
   title: string;
   message: string;
+  type: string;
+  relatedEntity: string | null;
+  relatedEntityId: string | null;
   isRead: boolean;
   createdAt: string;
 }
 
+// Maps notification type → frontend route
+const NOTIFICATION_LINKS: Record<string, string> = {
+  GRADE_POSTED: "/mis-calificaciones",
+  ENROLLMENT_CONFIRMED: "/mi-inscripcion",
+  CERTIFICATION_ISSUED: "/certifications",
+  ANNOUNCEMENT: "/anuncios",
+  PAYMENT_DUE: "/mis-pagos",
+  PAYMENT_CONFIRMED: "/mis-pagos",
+};
+
+const TYPE_LABELS: Record<string, { label: string; color: "primary" | "success" | "warning" | "error" | "default" }> = {
+  GRADE_POSTED: { label: "Calificación", color: "primary" },
+  ENROLLMENT_CONFIRMED: { label: "Inscripción", color: "success" },
+  CERTIFICATION_ISSUED: { label: "Certificado", color: "success" },
+  ANNOUNCEMENT: { label: "Anuncio", color: "default" },
+  PAYMENT_DUE: { label: "Pago", color: "warning" },
+  PAYMENT_CONFIRMED: { label: "Pago", color: "success" },
+  GENERAL: { label: "General", color: "default" },
+};
+
 export default function NotificationBell() {
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -56,12 +84,34 @@ export default function NotificationBell() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   };
 
-  const handleMarkRead = async (id: string) => {
-    await notificationsService.markRead(id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    );
-    setUnreadCount((c) => Math.max(0, c - 1));
+  const handleNotificationClick = async (n: Notification) => {
+    if (!n.isRead) {
+      await notificationsService.markRead(n.id).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)),
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+
+    let link = NOTIFICATION_LINKS[n.type] ?? null;
+
+    // For grade notifications resolve the groupId so the page deep-links
+    // directly to the right subject card instead of just the list view.
+    if (n.type === "GRADE_POSTED" && n.relatedEntityId) {
+      try {
+        const evaluation = await evaluationsService.getById(n.relatedEntityId);
+        if (evaluation?.groupId) {
+          link = `/mis-calificaciones?groupId=${evaluation.groupId}`;
+        }
+      } catch {
+        // fall back to the plain page
+      }
+    }
+
+    if (link) {
+      handleClose();
+      navigate(link);
+    }
   };
 
   const timeAgo = (dateStr: string) => {
@@ -88,11 +138,12 @@ export default function NotificationBell() {
         onClose={handleClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
-        slotProps={{ paper: { sx: { width: 360, maxHeight: 420 } } }}
+        slotProps={{ paper: { sx: { width: 380, maxHeight: 480 } } }}
       >
         <Box
           sx={{
-            p: 1.5,
+            px: 2,
+            py: 1.5,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -108,48 +159,94 @@ export default function NotificationBell() {
           )}
         </Box>
         <Divider />
+
         {notifications.length === 0 ? (
           <Typography
             variant="body2"
             color="text.secondary"
-            sx={{ p: 2, textAlign: "center" }}
+            sx={{ p: 3, textAlign: "center" }}
           >
             Sin notificaciones
           </Typography>
         ) : (
-          <List dense sx={{ p: 0 }}>
-            {notifications.map((n) => (
-              <ListItem
-                key={n.id}
-                sx={{
-                  bgcolor: n.isRead ? "transparent" : "action.hover",
-                  cursor: n.isRead ? "default" : "pointer",
-                }}
-                onClick={() => !n.isRead && handleMarkRead(n.id)}
-              >
-                <ListItemText
-                  primary={n.title}
-                  secondary={
-                    <>
-                      {n.message}
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        display="block"
-                        color="text.secondary"
-                      >
-                        {timeAgo(n.createdAt)}
-                      </Typography>
-                    </>
-                  }
-                  primaryTypographyProps={{
-                    variant: "body2",
-                    fontWeight: n.isRead ? 400 : 600,
-                  }}
-                  secondaryTypographyProps={{ variant: "caption" }}
-                />
-              </ListItem>
-            ))}
+          <List dense sx={{ p: 0, overflowY: "auto" }}>
+            {notifications.map((n, idx) => {
+              const link = NOTIFICATION_LINKS[n.type];
+              const typeInfo = TYPE_LABELS[n.type];
+              return (
+                <Box key={n.id}>
+                  <ListItem
+                    onClick={() => handleNotificationClick(n)}
+                    sx={{
+                      bgcolor: n.isRead ? "transparent" : "action.hover",
+                      cursor: link ? "pointer" : "default",
+                      alignItems: "flex-start",
+                      py: 1.5,
+                      pr: link ? 5 : 2,
+                      "&:hover": link
+                        ? { bgcolor: n.isRead ? "action.hover" : "action.selected" }
+                        : {},
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.25 }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={n.isRead ? 400 : 600}
+                            component="span"
+                          >
+                            {n.title}
+                          </Typography>
+                          {typeInfo && (
+                            <Chip
+                              label={typeInfo.label}
+                              size="small"
+                              color={typeInfo.color}
+                              variant="outlined"
+                              sx={{ height: 18, fontSize: "0.65rem" }}
+                            />
+                          )}
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          <Typography
+                            component="span"
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block" }}
+                          >
+                            {n.message}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="caption"
+                            color="text.disabled"
+                          >
+                            {timeAgo(n.createdAt)}
+                          </Typography>
+                        </>
+                      }
+                      secondaryTypographyProps={{ component: "div" }}
+                    />
+                    {link && (
+                      <ChevronRightIcon
+                        fontSize="small"
+                        sx={{
+                          position: "absolute",
+                          right: 12,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "text.disabled",
+                        }}
+                      />
+                    )}
+                  </ListItem>
+                  {idx < notifications.length - 1 && <Divider />}
+                </Box>
+              );
+            })}
           </List>
         )}
       </Popover>

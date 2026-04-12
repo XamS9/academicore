@@ -1,5 +1,6 @@
 import { prisma } from "../../shared/prisma.client";
 import { notificationsService } from "../notifications/notifications.service";
+import { certificationsService } from "../certifications/certifications.service";
 import { UpsertGradeDto } from "./grades.dto";
 
 export class GradesService {
@@ -85,7 +86,64 @@ export class GradesService {
       );
     }
 
+    await this.checkAndAutoIssueCertifications(studentIds, gradedBy);
+
     return results;
+  }
+
+  private async checkAndAutoIssueCertifications(
+    studentIds: string[],
+    issuedBy: string,
+  ) {
+    for (const studentId of studentIds) {
+      try {
+        const student = await prisma.student.findUnique({
+          where: { id: studentId },
+          select: { id: true, careerId: true, userId: true },
+        });
+        if (!student) continue;
+
+        const mandatorySubjects = await prisma.careerSubject.findMany({
+          where: { careerId: student.careerId, isMandatory: true },
+          select: { subjectId: true },
+        });
+        if (mandatorySubjects.length === 0) continue;
+
+        const passedRecords = await prisma.academicRecord.findMany({
+          where: { studentId, passed: true },
+          include: { group: { select: { subjectId: true } } },
+        });
+        const passedSubjectIds = new Set(
+          passedRecords.map((r) => r.group.subjectId),
+        );
+
+        const allPassed = mandatorySubjects.every((ms) =>
+          passedSubjectIds.has(ms.subjectId),
+        );
+        if (!allPassed) continue;
+
+        const existing = await prisma.certification.findFirst({
+          where: {
+            studentId,
+            careerId: student.careerId,
+            certificationType: "COMPLETION",
+            status: "ACTIVE",
+          },
+        });
+        if (existing) continue;
+
+        await certificationsService.issue(
+          {
+            studentId,
+            careerId: student.careerId,
+            certificationType: "COMPLETION",
+          },
+          issuedBy,
+        );
+      } catch {
+        // Non-fatal: don't block grade saving if auto-cert fails
+      }
+    }
   }
 }
 

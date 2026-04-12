@@ -11,8 +11,6 @@ import CertificationsPage from "./pages/certifications/CertificationsPage";
 import ValidateCertPage from "./pages/certifications/ValidateCertPage";
 import UIStandardsPage from "./pages/UIStandardsPage";
 import UsersPage from "./pages/admin/UsersPage";
-import StudentsPage from "./pages/admin/StudentsPage";
-import TeachersPage from "./pages/admin/TeachersPage";
 import CareersPage from "./pages/admin/CareersPage";
 import SubjectsPage from "./pages/admin/SubjectsPage";
 import AcademicPeriodsPage from "./pages/admin/AcademicPeriodsPage";
@@ -23,6 +21,7 @@ import EvaluationsPage from "./pages/admin/EvaluationsPage";
 import GradesPage from "./pages/admin/GradesPage";
 import AuditLogsPage from "./pages/admin/AuditLogsPage";
 import TeacherGroupsPage from "./pages/teacher/TeacherGroupsPage";
+import TeacherGroupDetailPage from "./pages/teacher/TeacherGroupDetailPage";
 import StudentEnrollmentPage from "./pages/student/StudentEnrollmentPage";
 import StudentGradesPage from "./pages/student/StudentGradesPage";
 import ContentPage from "./pages/admin/ContentPage";
@@ -34,6 +33,7 @@ import PaymentsPage from "./pages/admin/PaymentsPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import StudentPaymentsPage from "./pages/student/StudentPaymentsPage";
 import StudentSelfEnrollPage from "./pages/student/StudentSelfEnrollPage";
+import StudentGradesHistoryPage from "./pages/student/StudentGradesHistoryPage";
 
 export default function App() {
   return (
@@ -54,8 +54,8 @@ export default function App() {
             <Route path="ui-standards" element={<UIStandardsPage />} />
             {/* Admin */}
             <Route path="usuarios" element={<UsersPage />} />
-            <Route path="estudiantes" element={<StudentsPage />} />
-            <Route path="profesores" element={<TeachersPage />} />
+            <Route path="estudiantes" element={<Navigate to="/usuarios" replace />} />
+            <Route path="profesores" element={<Navigate to="/usuarios" replace />} />
             <Route path="carreras" element={<CareersPage />} />
             <Route path="materias" element={<SubjectsPage />} />
             <Route path="periodos" element={<AcademicPeriodsPage />} />
@@ -71,9 +71,11 @@ export default function App() {
             <Route path="reportes" element={<ReportsPage />} />
             {/* Admin + Teacher */}
             <Route path="contenido" element={<ContentPage />} />
+            {/* Admin + Teacher + Student (read-only for students) */}
             <Route path="anuncios" element={<AnnouncementsPage />} />
             {/* Teacher */}
             <Route path="mis-grupos" element={<TeacherGroupsPage />} />
+            <Route path="mis-grupos/:groupId" element={<TeacherGroupDetailPage />} />
             {/* Student */}
             <Route path="mi-inscripcion" element={<StudentEnrollmentPage />} />
             <Route
@@ -81,6 +83,7 @@ export default function App() {
               element={<StudentSelfEnrollPage />}
             />
             <Route path="mis-calificaciones" element={<StudentGradesPage />} />
+            <Route path="historial-calificaciones" element={<StudentGradesHistoryPage />} />
             <Route path="mi-contenido" element={<StudentContentPage />} />
             <Route path="mis-pagos" element={<StudentPaymentsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

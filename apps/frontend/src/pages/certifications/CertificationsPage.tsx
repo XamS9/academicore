@@ -21,10 +21,6 @@ import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import Stepper from "@mui/material/Stepper";
-import Step from "@mui/material/Step";
-import StepLabel from "@mui/material/StepLabel";
-import StepContent from "@mui/material/StepContent";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Divider from "@mui/material/Divider";
@@ -44,10 +40,11 @@ import SchoolIcon from "@mui/icons-material/School";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import LinkIcon from "@mui/icons-material/Link";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 import { useAuth } from "../../store/auth.context";
 import { certificationsService } from "../../services/certifications.service";
-import { studentsService } from "../../services/students.service";
 import { api } from "../../services/api";
 import type { CertificationStatus, CertificationType } from "../../types";
 
@@ -74,13 +71,6 @@ interface CertItem {
   student: { user: { firstName: string; lastName: string } };
   career: { name: string } | null;
   issuer: { firstName: string; lastName: string } | null;
-}
-
-interface StudentItem {
-  id: string;
-  studentCode: string;
-  user: { firstName: string; lastName: string; email: string };
-  career: { name: string };
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -335,241 +325,7 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-// ─── Tab 2 — Generate cert ────────────────────────────────────────────────────
-
-function GenerateCertTab() {
-  const [activeStep, setActiveStep] = useState(0);
-  const [students, setStudents] = useState<StudentItem[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [certType, setCertType] = useState<CertificationType>("TRANSCRIPT");
-  const [snackOpen, setSnackOpen] = useState(false);
-  const [snackMsg, setSnackMsg] = useState("");
-  const [issuing, setIssuing] = useState(false);
-
-  const steps = [
-    "Seleccionar Estudiante",
-    "Verificar Criterios",
-    "Configurar Certificado",
-    "Confirmar Emisión",
-  ];
-
-  useEffect(() => {
-    studentsService
-      .getAll()
-      .then((data: StudentItem[]) => {
-        setStudents(data);
-        if (data.length > 0) setSelectedStudentId(data[0].id);
-      })
-      .catch(console.error);
-  }, []);
-
-  const selectedStudent = students.find((s) => s.id === selectedStudentId);
-
-  const handleEmit = async () => {
-    setIssuing(true);
-    try {
-      await certificationsService.issue({
-        studentId: selectedStudentId,
-        certificationType: certType,
-        careerId: selectedStudent?.career ? undefined : undefined,
-      });
-      setSnackMsg("Certificado emitido exitosamente");
-      setSnackOpen(true);
-      setActiveStep(0);
-      setSelectedStudentId(students[0]?.id ?? "");
-      setCertType("TRANSCRIPT");
-    } catch (e) {
-      setSnackMsg("Error al emitir el certificado");
-      setSnackOpen(true);
-    } finally {
-      setIssuing(false);
-    }
-  };
-
-  const handleNext = () => setActiveStep((s) => s + 1);
-  const handleBack = () => setActiveStep((s) => s - 1);
-
-  return (
-    <Box>
-      <Typography variant="h6" fontWeight={600} gutterBottom>
-        Generar Nueva Certificación
-      </Typography>
-
-      <Stepper activeStep={activeStep} orientation="vertical">
-        {/* Step 0 */}
-        <Step>
-          <StepLabel>{steps[0]}</StepLabel>
-          <StepContent>
-            <FormControl size="small" sx={{ minWidth: 300, mb: 2 }}>
-              <InputLabel>Estudiante</InputLabel>
-              <Select
-                value={selectedStudentId}
-                label="Estudiante"
-                onChange={(e) => setSelectedStudentId(e.target.value)}
-              >
-                {students.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>
-                    {s.user.firstName} {s.user.lastName} — {s.studentCode}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Box>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleNext}
-                disabled={!selectedStudentId}
-              >
-                Continuar
-              </Button>
-            </Box>
-          </StepContent>
-        </Step>
-
-        {/* Step 1 */}
-        <Step>
-          <StepLabel>{steps[1]}</StepLabel>
-          <StepContent>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Verificando criterios para{" "}
-              {selectedStudent
-                ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
-                : "—"}
-              :
-            </Typography>
-            {[
-              "Estado ACTIVO confirmado",
-              "Sin materias de prerrequisito pendientes",
-              "Inscripción vigente al período actual",
-            ].map((c) => (
-              <Box key={c} className="flex items-center gap-2 py-1">
-                <CheckCircleIcon color="success" fontSize="small" />
-                <Typography variant="body2">{c}</Typography>
-              </Box>
-            ))}
-            <Box className="flex gap-2 mt-2">
-              <Button size="small" onClick={handleBack}>
-                Atrás
-              </Button>
-              <Button variant="contained" size="small" onClick={handleNext}>
-                Continuar
-              </Button>
-            </Box>
-          </StepContent>
-        </Step>
-
-        {/* Step 2 */}
-        <Step>
-          <StepLabel>{steps[2]}</StepLabel>
-          <StepContent>
-            <Box className="flex flex-col gap-3 mb-3">
-              <FormControl size="small" sx={{ minWidth: 280 }}>
-                <InputLabel>Tipo de Certificado</InputLabel>
-                <Select
-                  value={certType}
-                  label="Tipo de Certificado"
-                  onChange={(e) =>
-                    setCertType(e.target.value as CertificationType)
-                  }
-                >
-                  {Object.entries(certTypeLabels).map(([k, v]) => (
-                    <MenuItem key={k} value={k}>
-                      {v}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Carrera"
-                value={selectedStudent?.career?.name ?? "—"}
-                size="small"
-                disabled
-                sx={{ minWidth: 280 }}
-              />
-              <TextField
-                label="Código de Verificación"
-                value="(generado automáticamente al emitir)"
-                size="small"
-                disabled
-                sx={{ minWidth: 280 }}
-                helperText="UUID generado en el servidor"
-              />
-              <TextField
-                label="Hash del Documento"
-                value="(calculado en el servidor con SHA-256)"
-                size="small"
-                disabled
-                sx={{ minWidth: 280 }}
-                helperText="Calculado sobre el contenido del documento"
-              />
-            </Box>
-            <Box className="flex gap-2">
-              <Button size="small" onClick={handleBack}>
-                Atrás
-              </Button>
-              <Button variant="contained" size="small" onClick={handleNext}>
-                Continuar
-              </Button>
-            </Box>
-          </StepContent>
-        </Step>
-
-        {/* Step 3 */}
-        <Step>
-          <StepLabel>{steps[3]}</StepLabel>
-          <StepContent>
-            <Card variant="outlined" sx={{ mb: 2, maxWidth: 400 }}>
-              <CardContent>
-                <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-                  Resumen de Certificación
-                </Typography>
-                <Divider sx={{ mb: 1 }} />
-                <Typography variant="body2">
-                  <strong>Estudiante:</strong>{" "}
-                  {selectedStudent
-                    ? `${selectedStudent.user.firstName} ${selectedStudent.user.lastName}`
-                    : "—"}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Carrera:</strong>{" "}
-                  {selectedStudent?.career?.name ?? "—"}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Tipo:</strong> {certTypeLabels[certType]}
-                </Typography>
-              </CardContent>
-            </Card>
-            <Box className="flex gap-2">
-              <Button size="small" onClick={handleBack}>
-                Atrás
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                size="small"
-                startIcon={<VerifiedIcon />}
-                onClick={handleEmit}
-                disabled={issuing}
-              >
-                {issuing ? "Emitiendo..." : "Emitir Certificado"}
-              </Button>
-            </Box>
-          </StepContent>
-        </Step>
-      </Stepper>
-
-      <Snackbar
-        open={snackOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackOpen(false)}
-        message={snackMsg}
-      />
-    </Box>
-  );
-}
-
-// ─── Tab 3 — Issued certs ─────────────────────────────────────────────────────
+// ─── Tab 2 — Issued certs ─────────────────────────────────────────────────────
 
 function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
   const [filter, setFilter] = useState<CertificationStatus | "ALL">("ALL");
@@ -754,33 +510,28 @@ function IssuedCertsTab({ onRevoke }: { onRevoke?: () => void }) {
   );
 }
 
-// ─── Tab 4 — Digital cert ─────────────────────────────────────────────────────
+// ─── Tab 3 — Digital cert ─────────────────────────────────────────────────────
 
 function DigitalCertTab() {
   const [certs, setCerts] = useState<CertItem[]>([]);
-  const [selected, setSelected] = useState("");
+  const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = (verificationCode: string) => {
     const url = `${window.location.origin}/verify/${verificationCode}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-    });
+    navigator.clipboard.writeText(url).then(() => setCopied(true));
   };
 
   useEffect(() => {
     certificationsService
       .getAll()
-      .then((data: CertItem[]) => {
-        setCerts(data);
-        if (data.length > 0) setSelected(data[0].id);
-      })
+      .then((data: CertItem[]) => setCerts(data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const cert = certs.find((c) => c.id === selected);
+  const cert = certs[index];
 
   if (loading) {
     return (
@@ -792,22 +543,26 @@ function DigitalCertTab() {
 
   return (
     <Box>
-      {certs.length > 0 && (
-        <FormControl size="small" sx={{ minWidth: 300, mb: 3 }}>
-          <InputLabel>Seleccionar Certificación</InputLabel>
-          <Select
-            value={selected}
-            label="Seleccionar Certificación"
-            onChange={(e) => setSelected(e.target.value)}
+      {certs.length > 1 && (
+        <Box className="flex items-center gap-2 mb-3">
+          <IconButton
+            size="small"
+            onClick={() => setIndex((i) => i - 1)}
+            disabled={index === 0}
           >
-            {certs.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {certTypeLabels[c.certificationType] ?? c.certificationType} —{" "}
-                {c.verificationCode.substring(0, 8)}...
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <ChevronLeftIcon />
+          </IconButton>
+          <Typography variant="body2" color="text.secondary">
+            Certificado {index + 1} de {certs.length}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={() => setIndex((i) => i + 1)}
+            disabled={index === certs.length - 1}
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        </Box>
       )}
 
       {!cert ? (
@@ -1354,7 +1109,6 @@ export default function CertificationsPage() {
 
   const adminTabs = [
     { label: "Criterios", component: <CriteriasTab canEdit /> },
-    { label: "Generar", component: <GenerateCertTab /> },
     { label: "Emitidas", component: <IssuedCertsTab /> },
     { label: "Certificado Digital", component: <DigitalCertTab /> },
     { label: "Validación", component: <ThirdPartyValidationTab /> },

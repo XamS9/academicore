@@ -2,6 +2,7 @@ import puppeteer from "puppeteer";
 import QRCode from "qrcode";
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
+import { systemSettingsService } from "../system-settings/system-settings.service";
 
 const certTypeLabels: Record<string, string> = {
   TRANSCRIPT: "Historial Académico",
@@ -45,6 +46,9 @@ export async function generateCertificatePdf(
 
   if (!cert) throw new HttpError(404, "Certification not found");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const settings: any = await systemSettingsService.get().catch(() => null);
+
   const verifyUrl = `${baseUrl}/verify/${cert.verificationCode}`;
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, {
     width: 160,
@@ -79,7 +83,7 @@ export async function generateCertificatePdf(
 
     .page {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       padding: 0;
       position: relative;
       overflow: hidden;
@@ -112,17 +116,17 @@ export async function generateCertificatePdf(
     .content {
       position: relative;
       z-index: 1;
-      padding: 28mm 30mm 24mm;
+      padding: 18mm 28mm 16mm;
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-height: 297mm;
+      height: 297mm;
     }
 
     /* Header */
     .header {
       text-align: center;
-      margin-bottom: 12mm;
+      margin-bottom: 6mm;
     }
 
     .logo-circle {
@@ -162,7 +166,7 @@ export async function generateCertificatePdf(
       max-width: 480px;
       height: 1px;
       background: linear-gradient(90deg, transparent, #1a237e, transparent);
-      margin: 8mm 0;
+      margin: 5mm 0;
     }
 
     /* Certificate type */
@@ -172,13 +176,13 @@ export async function generateCertificatePdf(
       letter-spacing: 4px;
       text-transform: uppercase;
       color: #1a237e;
-      margin-bottom: 6mm;
+      margin-bottom: 4mm;
     }
 
     .cert-preamble {
       font-size: 13px;
       color: #616161;
-      margin-bottom: 4mm;
+      margin-bottom: 2mm;
     }
 
     /* Student name */
@@ -194,17 +198,17 @@ export async function generateCertificatePdf(
       font-size: 15px;
       font-weight: 500;
       color: #455a64;
-      margin-bottom: 10mm;
+      margin-bottom: 5mm;
     }
 
     /* Details grid */
     .details {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 6mm 16mm;
+      gap: 4mm 16mm;
       width: 100%;
       max-width: 420px;
-      margin-bottom: 10mm;
+      margin-bottom: 6mm;
     }
 
     .detail-label {
@@ -240,14 +244,14 @@ export async function generateCertificatePdf(
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 12px 20px;
+      padding: 8px 16px;
       border: 1px dashed #bdbdbd;
       border-radius: 8px;
       background: #fafafa;
-      margin-bottom: 8mm;
+      margin-bottom: 5mm;
     }
 
-    .qr-section img { width: 120px; height: 120px; }
+    .qr-section img { width: 90px; height: 90px; }
 
     .qr-info {
       text-align: left;
@@ -284,12 +288,19 @@ export async function generateCertificatePdf(
       width: 100%;
       max-width: 440px;
       margin-top: auto;
-      padding-top: 14mm;
+      padding-top: 6mm;
     }
 
     .sig-block {
       text-align: center;
       width: 160px;
+    }
+
+    .sig-img {
+      width: 120px;
+      height: 48px;
+      object-fit: contain;
+      margin-bottom: 2px;
     }
 
     .sig-line {
@@ -313,7 +324,7 @@ export async function generateCertificatePdf(
     /* Footer */
     .footer {
       text-align: center;
-      margin-top: 8mm;
+      margin-top: 3mm;
     }
 
     .footer-text {
@@ -404,14 +415,16 @@ export async function generateCertificatePdf(
       <!-- Signatures -->
       <div class="signatures">
         <div class="sig-block">
+          ${settings?.signatureImage1 ? `<img class="sig-img" src="${settings.signatureImage1}" alt="Firma 1" />` : ""}
           <div class="sig-line"></div>
-          <div class="sig-name">${issuerName}</div>
-          <div class="sig-title">Autoridad Emisora</div>
+          <div class="sig-name">${settings?.signatureName1 ?? issuerName}</div>
+          <div class="sig-title">${settings?.signatureTitle1 ?? "Autoridad Emisora"}</div>
         </div>
         <div class="sig-block">
+          ${settings?.signatureImage2 ? `<img class="sig-img" src="${settings.signatureImage2}" alt="Firma 2" />` : ""}
           <div class="sig-line"></div>
-          <div class="sig-name">Director Académico</div>
-          <div class="sig-title">Academicore</div>
+          <div class="sig-name">${settings?.signatureName2 ?? "Director Académico"}</div>
+          <div class="sig-title">${settings?.signatureTitle2 ?? "Academicore"}</div>
         </div>
       </div>
 

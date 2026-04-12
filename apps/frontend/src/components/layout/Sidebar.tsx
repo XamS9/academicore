@@ -15,7 +15,6 @@ import Box from "@mui/material/Box";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleIcon from "@mui/icons-material/People";
 import SchoolIcon from "@mui/icons-material/School";
-import PersonIcon from "@mui/icons-material/Person";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SubjectIcon from "@mui/icons-material/Subject";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -42,6 +41,7 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import EventIcon from "@mui/icons-material/Event";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../store/auth.context";
@@ -78,12 +78,10 @@ const navByRole: Record<Role, NavEntry[]> = {
       icon: <BadgeIcon />,
       items: [
         {
-          label: "Todos los Usuarios",
+          label: "Usuarios",
           path: "/usuarios",
           icon: <PeopleIcon />,
         },
-        { label: "Estudiantes", path: "/estudiantes", icon: <SchoolIcon /> },
-        { label: "Profesores", path: "/profesores", icon: <PersonIcon /> },
       ],
     },
     {
@@ -148,40 +146,33 @@ const navByRole: Record<Role, NavEntry[]> = {
   TEACHER: [
     { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
     { label: "Mis Grupos", path: "/mis-grupos", icon: <GroupsIcon /> },
-    { label: "Contenido", path: "/contenido", icon: <ArticleIcon /> },
-    { label: "Evaluaciones", path: "/evaluaciones", icon: <AssignmentIcon /> },
-    { label: "Calificaciones", path: "/calificaciones", icon: <GradingIcon /> },
     { label: "Anuncios", path: "/anuncios", icon: <CampaignIcon /> },
   ],
   STUDENT: [
     { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
     {
-      label: "Mi Inscripción",
-      path: "/mi-inscripcion",
-      icon: <AssignmentTurnedInIcon />,
+      key: "academic",
+      label: "Académico",
+      icon: <SchoolIcon />,
+      items: [
+        { label: "Mi Inscripción", path: "/mi-inscripcion", icon: <AssignmentTurnedInIcon /> },
+        { label: "Inscribir Materias", path: "/inscribir-materias", icon: <AddCircleIcon /> },
+        { label: "Mi Contenido", path: "/mi-contenido", icon: <ArticleIcon /> },
+        { label: "Mis Calificaciones", path: "/mis-calificaciones", icon: <StarIcon /> },
+      ],
     },
     {
-      label: "Inscribir Materias",
-      path: "/inscribir-materias",
-      icon: <AddCircleIcon />,
+      key: "trayectoria",
+      label: "Mi Trayectoria",
+      icon: <WorkspacePremiumIcon />,
+      items: [
+        { label: "Historial de Notas", path: "/historial-calificaciones", icon: <GradingIcon /> },
+        { label: "Historial Académico", path: "/academic-history", icon: <ListAltIcon /> },
+        { label: "Mis Certificados", path: "/certifications", icon: <VerifiedIcon /> },
+      ],
     },
-    { label: "Mi Contenido", path: "/mi-contenido", icon: <ArticleIcon /> },
-    {
-      label: "Mis Calificaciones",
-      path: "/mis-calificaciones",
-      icon: <StarIcon />,
-    },
+    { label: "Anuncios", path: "/anuncios", icon: <CampaignIcon /> },
     { label: "Mis Pagos", path: "/mis-pagos", icon: <PaymentIcon /> },
-    {
-      label: "Historial Académico",
-      path: "/academic-history",
-      icon: <ListAltIcon />,
-    },
-    {
-      label: "Mis Certificados",
-      path: "/certifications",
-      icon: <VerifiedIcon />,
-    },
   ],
 };
 

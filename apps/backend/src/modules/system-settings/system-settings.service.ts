@@ -61,6 +61,24 @@ export class SystemSettingsService {
         ...(dto.atRiskThreshold !== undefined && {
           atRiskThreshold: dto.atRiskThreshold,
         }),
+        ...(dto.signatureImage1 !== undefined && {
+          signatureImage1: dto.signatureImage1,
+        }),
+        ...(dto.signatureName1 !== undefined && {
+          signatureName1: dto.signatureName1,
+        }),
+        ...(dto.signatureTitle1 !== undefined && {
+          signatureTitle1: dto.signatureTitle1,
+        }),
+        ...(dto.signatureImage2 !== undefined && {
+          signatureImage2: dto.signatureImage2,
+        }),
+        ...(dto.signatureName2 !== undefined && {
+          signatureName2: dto.signatureName2,
+        }),
+        ...(dto.signatureTitle2 !== undefined && {
+          signatureTitle2: dto.signatureTitle2,
+        }),
         updatedBy: userId,
       },
     });

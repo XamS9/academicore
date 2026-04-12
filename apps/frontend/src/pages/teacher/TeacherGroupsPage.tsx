@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
@@ -22,6 +23,7 @@ interface GroupItem {
 
 export default function TeacherGroupsPage() {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<GroupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast, showToast, clearToast } = useToast();
@@ -83,6 +85,7 @@ export default function TeacherGroupsPage() {
         rows={items}
         loading={loading}
         getRowKey={(r) => r.id}
+        onRowClick={(r) => navigate(`/mis-grupos/${r.id}`)}
       />
 
       <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>

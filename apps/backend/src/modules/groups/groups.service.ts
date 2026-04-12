@@ -42,6 +42,27 @@ class GroupsService {
     });
   }
 
+  async findStudentsByGroup(groupId: string) {
+    const subjects = await prisma.enrollmentSubject.findMany({
+      where: { groupId, status: "ENROLLED" },
+      include: {
+        enrollment: {
+          include: {
+            student: {
+              include: { user: { select: { firstName: true, lastName: true } } },
+            },
+          },
+        },
+      },
+    });
+    return subjects.map((es) => ({
+      studentId: es.enrollment.student.id,
+      studentCode: es.enrollment.student.studentCode,
+      firstName: es.enrollment.student.user.firstName,
+      lastName: es.enrollment.student.user.lastName,
+    }));
+  }
+
   async create(dto: CreateGroupDto) {
     return prisma.group.create({
       data: dto,

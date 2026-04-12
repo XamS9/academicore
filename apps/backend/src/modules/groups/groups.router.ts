@@ -11,6 +11,7 @@ groupsRouter.get(
   groupsController.findByTeacher,
 );
 groupsRouter.get("/:id", authenticate, groupsController.findById);
+groupsRouter.get("/:id/students", authenticate, groupsController.findStudentsByGroup);
 groupsRouter.post(
   "/",
   authenticate,

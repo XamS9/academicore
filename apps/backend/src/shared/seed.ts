@@ -15,11 +15,45 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import {
+  SIGNATURE_1_BASE64,
+  SIGNATURE_2_BASE64,
+} from "./signature-seeds";
 
 export async function runSeed(prisma: PrismaClient): Promise<void> {
   console.log("🌱  Seeding database…");
 
   const hash = (pw: string) => bcrypt.hash(pw, 10);
+
+  // ── 0. DEPARTMENTS ───────────────────────────────────────────────────────────
+  const departmentNames = [
+    "Ciencias Computacionales",
+    "Ingeniería en Sistemas",
+    "Matemáticas",
+    "Física",
+    "Química",
+    "Biología",
+    "Ingeniería Civil",
+    "Ingeniería Mecánica",
+    "Ingeniería Eléctrica",
+    "Administración de Empresas",
+    "Contabilidad",
+    "Derecho",
+    "Medicina",
+    "Enfermería",
+    "Psicología",
+    "Arquitectura",
+    "Diseño Gráfico",
+    "Comunicación",
+    "Idiomas",
+    "Humanidades",
+    "Educación",
+  ];
+  await Promise.all(
+    departmentNames.map((name) =>
+      prisma.department.upsert({ where: { name }, update: {}, create: { name } })
+    )
+  );
 
   // ── 1. ROLES ────────────────────────────────────────────────────────────────
   const [adminRole, teacherRole, studentRole] = await Promise.all([
@@ -1169,6 +1203,24 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         maxEvaluationWeight: 100,
         atRiskThreshold: 3,
         updatedBy: adminUser.id,
+        signatureImage1: SIGNATURE_1_BASE64,
+        signatureName1: "Rector/a",
+        signatureTitle1: "Rectorado",
+        signatureImage2: SIGNATURE_2_BASE64,
+        signatureName2: "Director/a Académico/a",
+        signatureTitle2: "Dirección Académica",
+      },
+    });
+  } else if (!existingSettings.signatureImage1) {
+    await prisma.systemSettings.update({
+      where: { id: existingSettings.id },
+      data: {
+        signatureImage1: SIGNATURE_1_BASE64,
+        signatureName1: existingSettings.signatureName1 ?? "Rector/a",
+        signatureTitle1: existingSettings.signatureTitle1 ?? "Rectorado",
+        signatureImage2: SIGNATURE_2_BASE64,
+        signatureName2: existingSettings.signatureName2 ?? "Director/a Académico/a",
+        signatureTitle2: existingSettings.signatureTitle2 ?? "Dirección Académica",
       },
     });
   }

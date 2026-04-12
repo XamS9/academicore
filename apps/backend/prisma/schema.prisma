@@ -154,13 +154,14 @@ model Student {
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user            User             @relation(fields: [userId], references: [id])
-  career          Career           @relation(fields: [careerId], references: [id])
+  user            User               @relation(fields: [userId], references: [id])
+  career          Career             @relation(fields: [careerId], references: [id])
   enrollments     Enrollment[]
   grades          Grade[]
   academicRecords AcademicRecord[]
   certifications  Certification[]
   studentFees     StudentFee[]
+  submissions     StudentSubmission[]
 
   @@map("students")
 }
@@ -457,8 +458,34 @@ model Evaluation {
   group          Group          @relation(fields: [groupId], references: [id])
   evaluationType EvaluationType @relation(fields: [evaluationTypeId], references: [id])
   grades         Grade[]
+  submissions    StudentSubmission[]
 
   @@map("evaluations")
+}
+
+// ─────────────────────────────────────────────
+// 17b. STUDENT_SUBMISSIONS
+// ─────────────────────────────────────────────
+
+model StudentSubmission {
+  id           String          @id @default(uuid()) @db.Uuid
+  studentId    String          @map("student_id") @db.Uuid
+  evaluationId String          @map("evaluation_id") @db.Uuid
+  title        String          @db.VarChar(255)
+  type         ContentItemType
+  content      String          @db.Text       // URL/text/file URL
+  fileKey      String?         @map("file_key") @db.VarChar(500)  // storage key for deletion
+  fileName     String?         @map("file_name") @db.VarChar(255)
+  fileSize     Int?            @map("file_size")
+  fileMimeType String?         @map("file_mime_type") @db.VarChar(100)
+  submittedAt  DateTime        @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student    Student    @relation(fields: [studentId], references: [id])
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+
+  @@unique([studentId, evaluationId])
+  @@map("student_submissions")
 }
 
 // ─────────────────────────────────────────────
@@ -625,6 +652,12 @@ model SystemSettings {
   maxSubjectsPerEnrollment Int      @default(7) @map("max_subjects_per_enrollment") @db.SmallInt
   maxEvaluationWeight      Decimal  @default(100) @map("max_evaluation_weight") @db.Decimal(5, 2)
   atRiskThreshold          Int      @default(3) @map("at_risk_threshold") @db.SmallInt
+  signatureImage1          String?  @map("signature_image_1") @db.Text
+  signatureName1           String?  @map("signature_name_1") @db.VarChar(200)
+  signatureTitle1          String?  @map("signature_title_1") @db.VarChar(200)
+  signatureImage2          String?  @map("signature_image_2") @db.Text
+  signatureName2           String?  @map("signature_name_2") @db.VarChar(200)
+  signatureTitle2          String?  @map("signature_title_2") @db.VarChar(200)
   updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   updatedBy                String?  @map("updated_by") @db.Uuid
 
@@ -753,4 +786,16 @@ model CalendarEvent {
   period AcademicPeriod? @relation(fields: [periodId], references: [id])
 
   @@map("calendar_events")
+}
+
+// ─────────────────────────────────────────────
+// 28. DEPARTMENTS — Catalogue of academic departments
+// ─────────────────────────────────────────────
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(150)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("departments")
 }

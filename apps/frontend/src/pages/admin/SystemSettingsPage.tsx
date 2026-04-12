@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
@@ -8,14 +8,24 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Divider from "@mui/material/Divider";
 import SaveIcon from "@mui/icons-material/Save";
+import DeleteIcon from "@mui/icons-material/Delete";
+import UploadIcon from "@mui/icons-material/Upload";
 import { useToast } from "../../hooks/useToast";
 import { systemSettingsService } from "../../services/system-settings.service";
+
+interface SignatureBlock {
+  image: string | null;
+  name: string;
+  title: string;
+}
 
 interface SettingsForm {
   passingGrade: number;
   maxSubjectsPerEnrollment: number;
   maxEvaluationWeight: number;
   atRiskThreshold: number;
+  sig1: SignatureBlock;
+  sig2: SignatureBlock;
 }
 
 const defaultForm: SettingsForm = {
@@ -23,7 +33,117 @@ const defaultForm: SettingsForm = {
   maxSubjectsPerEnrollment: 7,
   maxEvaluationWeight: 100,
   atRiskThreshold: 3,
+  sig1: { image: null, name: "", title: "" },
+  sig2: { image: null, name: "", title: "" },
 };
+
+function SignatureUpload({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: SignatureBlock;
+  onChange: (v: SignatureBlock) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      onChange({ ...value, image: ev.target?.result as string });
+    };
+    reader.readAsDataURL(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  return (
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+        {label}
+      </Typography>
+
+      <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <Box
+          sx={{
+            width: 200,
+            height: 80,
+            border: "1px dashed",
+            borderColor: "divider",
+            borderRadius: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "grey.50",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          {value.image ? (
+            <img
+              src={value.image}
+              alt="Firma"
+              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+            />
+          ) : (
+            <Typography variant="caption" color="text.disabled">
+              Sin imagen
+            </Typography>
+          )}
+        </Box>
+
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFile}
+          />
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<UploadIcon />}
+            onClick={() => inputRef.current?.click()}
+          >
+            Subir imagen
+          </Button>
+          {value.image && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              onClick={() => onChange({ ...value, image: null })}
+            >
+              Quitar
+            </Button>
+          )}
+        </Box>
+      </Box>
+
+      <Box sx={{ display: "flex", gap: 2, mt: 1.5 }}>
+        <TextField
+          label="Nombre"
+          size="small"
+          value={value.name}
+          onChange={(e) => onChange({ ...value, name: e.target.value })}
+          sx={{ flex: 1 }}
+        />
+        <TextField
+          label="Cargo / Título"
+          size="small"
+          value={value.title}
+          onChange={(e) => onChange({ ...value, title: e.target.value })}
+          sx={{ flex: 1 }}
+        />
+      </Box>
+    </Box>
+  );
+}
 
 export default function SystemSettingsPage() {
   const [form, setForm] = useState<SettingsForm>(defaultForm);
@@ -41,6 +161,16 @@ export default function SystemSettingsPage() {
           maxSubjectsPerEnrollment: data.maxSubjectsPerEnrollment,
           maxEvaluationWeight: Number(data.maxEvaluationWeight),
           atRiskThreshold: data.atRiskThreshold,
+          sig1: {
+            image: data.signatureImage1 ?? null,
+            name: data.signatureName1 ?? "",
+            title: data.signatureTitle1 ?? "",
+          },
+          sig2: {
+            image: data.signatureImage2 ?? null,
+            name: data.signatureName2 ?? "",
+            title: data.signatureTitle2 ?? "",
+          },
         });
         setUpdatedAt(data.updatedAt);
       } catch {
@@ -55,7 +185,18 @@ export default function SystemSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const data = await systemSettingsService.update(form);
+      const data = await systemSettingsService.update({
+        passingGrade: form.passingGrade,
+        maxSubjectsPerEnrollment: form.maxSubjectsPerEnrollment,
+        maxEvaluationWeight: form.maxEvaluationWeight,
+        atRiskThreshold: form.atRiskThreshold,
+        signatureImage1: form.sig1.image,
+        signatureName1: form.sig1.name || null,
+        signatureTitle1: form.sig1.title || null,
+        signatureImage2: form.sig2.image,
+        signatureName2: form.sig2.name || null,
+        signatureTitle2: form.sig2.title || null,
+      });
       setUpdatedAt(data.updatedAt);
       showToast("Configuración guardada");
     } catch {
@@ -82,7 +223,7 @@ export default function SystemSettingsPage() {
         Configuración del Sistema
       </Typography>
 
-      <Paper sx={{ p: 3, maxWidth: 600 }}>
+      <Paper sx={{ p: 3 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
           Parámetros Académicos
         </Typography>
@@ -160,6 +301,26 @@ export default function SystemSettingsPage() {
           helperText="Cantidad de materias reprobadas para marcar al estudiante como EN RIESGO"
           fullWidth
           margin="normal"
+        />
+
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+          Firmas Digitales para Certificaciones
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Las imágenes aparecerán en el PDF de las certificaciones. Se recomienda usar imágenes con fondo transparente (PNG).
+        </Typography>
+
+        <SignatureUpload
+          label="Firma 1 (Autoridad Emisora)"
+          value={form.sig1}
+          onChange={(v) => setForm({ ...form, sig1: v })}
+        />
+
+        <SignatureUpload
+          label="Firma 2 (Director Académico)"
+          value={form.sig2}
+          onChange={(v) => setForm({ ...form, sig2: v })}
         />
 
         <Divider sx={{ my: 2 }} />

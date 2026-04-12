@@ -6,16 +6,19 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import Typography from "@mui/material/Typography";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import AlertTitle from "@mui/material/AlertTitle";
 import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
 import EditIcon from "@mui/icons-material/Edit";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { groupsService } from "../../services/groups.service";
+import { subjectsService } from "../../services/subjects.service";
+import { academicPeriodsService } from "../../services/academic-periods.service";
+import { teachersService } from "../../services/teachers.service";
 
 interface GroupSubject {
   name: string;
@@ -46,8 +49,31 @@ interface GroupItem {
   teacher: GroupTeacher;
 }
 
-interface GroupForm {
+interface SubjectOption {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface PeriodOption {
+  id: string;
+  name: string;
+}
+
+interface TeacherOption {
+  id: string;
+  user: { firstName: string; lastName: string };
+}
+
+interface CreateForm {
+  subjectId: string;
+  academicPeriodId: string;
+  teacherId: string;
   groupCode: string;
+  maxStudents: number;
+}
+
+interface EditForm {
   maxStudents: number;
 }
 
@@ -56,10 +82,17 @@ export default function GroupsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<GroupItem | null>(null);
-  const [form, setForm] = useState<GroupForm>({
+  const [subjects, setSubjects] = useState<SubjectOption[]>([]);
+  const [periods, setPeriods] = useState<PeriodOption[]>([]);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
+  const [createForm, setCreateForm] = useState<CreateForm>({
+    subjectId: "",
+    academicPeriodId: "",
+    teacherId: "",
     groupCode: "",
     maxStudents: 30,
   });
+  const [editForm, setEditForm] = useState<EditForm>({ maxStudents: 30 });
   const { toast, showToast, clearToast } = useToast();
 
   const load = async () => {
@@ -76,28 +109,40 @@ export default function GroupsPage() {
 
   useEffect(() => {
     load();
+    subjectsService.getAll().then(setSubjects).catch(() => {});
+    academicPeriodsService.getAll().then(setPeriods).catch(() => {});
+    teachersService.getAll().then(setTeachers).catch(() => {});
   }, []);
 
   const openCreate = () => {
     setEditTarget(null);
-    setForm({ groupCode: "", maxStudents: 30 });
+    setCreateForm({
+      subjectId: "",
+      academicPeriodId: "",
+      teacherId: "",
+      groupCode: "",
+      maxStudents: 30,
+    });
     setDialogOpen(true);
   };
 
   const openEdit = (item: GroupItem) => {
     setEditTarget(item);
-    setForm({ groupCode: item.groupCode, maxStudents: item.maxStudents });
+    setEditForm({ maxStudents: item.maxStudents });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
       if (editTarget) {
-        await groupsService.update(editTarget.id, form);
+        await groupsService.update(editTarget.id, editForm);
         showToast("Grupo actualizado exitosamente");
-        setDialogOpen(false);
-        load();
+      } else {
+        await groupsService.create(createForm);
+        showToast("Grupo creado exitosamente");
       }
+      setDialogOpen(false);
+      load();
     } catch {
       showToast("Error al guardar grupo", "error");
     }
@@ -179,19 +224,63 @@ export default function GroupsPage() {
         <DialogTitle>{editTarget ? "Editar Grupo" : "Nuevo Grupo"}</DialogTitle>
         <DialogContent className="flex flex-col gap-4 pt-4">
           {!editTarget ? (
-            <Alert severity="info">
-              <AlertTitle>Información</AlertTitle>
-              Para crear un grupo, use la API directamente con los siguientes
-              campos: subjectId, academicPeriodId, teacherId, groupCode y
-              maxStudents.
-            </Alert>
-          ) : (
             <>
               <TextField
-                label="Código del grupo"
-                value={form.groupCode}
+                select
+                label="Materia"
+                value={createForm.subjectId}
                 onChange={(e) =>
-                  setForm({ ...form, groupCode: e.target.value })
+                  setCreateForm({ ...createForm, subjectId: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              >
+                {subjects.map((s) => (
+                  <MenuItem key={s.id} value={s.id}>
+                    {s.name} ({s.code})
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Período Académico"
+                value={createForm.academicPeriodId}
+                onChange={(e) =>
+                  setCreateForm({
+                    ...createForm,
+                    academicPeriodId: e.target.value,
+                  })
+                }
+                fullWidth
+                margin="dense"
+              >
+                {periods.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Docente"
+                value={createForm.teacherId}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, teacherId: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              >
+                {teachers.map((t) => (
+                  <MenuItem key={t.id} value={t.id}>
+                    {t.user.firstName} {t.user.lastName}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                label="Código del grupo"
+                value={createForm.groupCode}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, groupCode: e.target.value })
                 }
                 fullWidth
                 margin="dense"
@@ -199,10 +288,10 @@ export default function GroupsPage() {
               <TextField
                 label="Máximo de estudiantes"
                 type="number"
-                value={form.maxStudents}
+                value={createForm.maxStudents}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
+                  setCreateForm({
+                    ...createForm,
                     maxStudents: Math.max(1, parseInt(e.target.value, 10) || 1),
                   })
                 }
@@ -211,15 +300,27 @@ export default function GroupsPage() {
                 margin="dense"
               />
             </>
+          ) : (
+            <TextField
+              label="Máximo de estudiantes"
+              type="number"
+              value={editForm.maxStudents}
+              onChange={(e) =>
+                setEditForm({
+                  maxStudents: Math.max(1, parseInt(e.target.value, 10) || 1),
+                })
+              }
+              inputProps={{ min: 1 }}
+              fullWidth
+              margin="dense"
+            />
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          {editTarget && (
-            <Button variant="contained" onClick={handleSave}>
-              Guardar
-            </Button>
-          )}
+          <Button variant="contained" onClick={handleSave}>
+            {editTarget ? "Guardar" : "Crear"}
+          </Button>
         </DialogActions>
       </Dialog>
 

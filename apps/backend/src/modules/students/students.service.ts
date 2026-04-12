@@ -7,7 +7,7 @@ class StudentsService {
     return prisma.student.findMany({
       where: { deletedAt: null },
       include: {
-        user: { select: { firstName: true, lastName: true, email: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
         career: { select: { name: true } },
       },
     });
@@ -17,7 +17,7 @@ class StudentsService {
     const student = await prisma.student.findFirst({
       where: { id, deletedAt: null },
       include: {
-        user: { select: { firstName: true, lastName: true, email: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
         career: { select: { name: true } },
       },
     });
@@ -29,7 +29,7 @@ class StudentsService {
     const student = await prisma.student.findFirst({
       where: { userId, deletedAt: null },
       include: {
-        user: { select: { firstName: true, lastName: true, email: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
         career: { select: { name: true } },
       },
     });

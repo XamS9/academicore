@@ -9,4 +9,6 @@ export const groupsService = {
   update: (id: string, data: unknown) =>
     api.patch(`/groups/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/groups/${id}`).then((r) => r.data),
+  getStudentsByGroup: (groupId: string) =>
+    api.get(`/groups/${groupId}/students`).then((r) => r.data),
 };

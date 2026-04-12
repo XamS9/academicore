@@ -9,7 +9,6 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import AlertTitle from "@mui/material/AlertTitle";
 import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
 import MenuItem from "@mui/material/MenuItem";
@@ -21,8 +20,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { studentsService } from "../../services/students.service";
+import { usersService } from "../../services/users.service";
 
 interface StudentUser {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -70,16 +71,35 @@ const ACADEMIC_STATUS_COLORS: Record<
   ELIGIBLE_FOR_GRADUATION: "secondary",
 };
 
+interface CreateForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
+interface EditForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  academicStatus: AcademicStatus;
+}
+
 export default function StudentsPage() {
   const [items, setItems] = useState<StudentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StudentItem | null>(null);
-  const [form, setForm] = useState<{
-    studentCode: string;
-    academicStatus: AcademicStatus;
-  }>({
-    studentCode: "",
+  const [createForm, setCreateForm] = useState<CreateForm>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
+  const [editForm, setEditForm] = useState<EditForm>({
+    firstName: "",
+    lastName: "",
+    email: "",
     academicStatus: "ACTIVE",
   });
   const { toast, showToast, clearToast } = useToast();
@@ -102,14 +122,16 @@ export default function StudentsPage() {
 
   const openCreate = () => {
     setEditTarget(null);
-    setForm({ studentCode: "", academicStatus: "ACTIVE" });
+    setCreateForm({ firstName: "", lastName: "", email: "", password: "" });
     setDialogOpen(true);
   };
 
   const openEdit = (item: StudentItem) => {
     setEditTarget(item);
-    setForm({
-      studentCode: item.studentCode,
+    setEditForm({
+      firstName: item.user.firstName,
+      lastName: item.user.lastName,
+      email: item.user.email,
       academicStatus: item.academicStatus as AcademicStatus,
     });
     setDialogOpen(true);
@@ -118,13 +140,23 @@ export default function StudentsPage() {
   const handleSave = async () => {
     try {
       if (editTarget) {
-        await studentsService.update(editTarget.id, {
-          academicStatus: form.academicStatus,
-        });
+        await Promise.all([
+          usersService.update(editTarget.user.id, {
+            firstName: editForm.firstName,
+            lastName: editForm.lastName,
+            email: editForm.email,
+          }),
+          studentsService.update(editTarget.id, {
+            academicStatus: editForm.academicStatus,
+          }),
+        ]);
         showToast("Estudiante actualizado exitosamente");
-        setDialogOpen(false);
-        load();
+      } else {
+        await usersService.create({ ...createForm, userType: "STUDENT" });
+        showToast("Estudiante creado exitosamente");
       }
+      setDialogOpen(false);
+      load();
     } catch {
       showToast("Error al guardar estudiante", "error");
     }
@@ -218,17 +250,86 @@ export default function StudentsPage() {
         </DialogTitle>
         <DialogContent className="flex flex-col gap-4 pt-4">
           {!editTarget ? (
-            <Alert severity="info">
-              <AlertTitle>Información</AlertTitle>
-              Para crear un estudiante, primero cree un usuario de tipo
-              ESTUDIANTE desde la sección de Usuarios. Luego el perfil de
-              estudiante se generará automáticamente.
-            </Alert>
+            <>
+              <TextField
+                label="Nombre"
+                value={createForm.firstName}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, firstName: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
+                label="Apellido"
+                value={createForm.lastName}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, lastName: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
+                label="Correo electrónico"
+                type="email"
+                value={createForm.email}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, email: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
+                label="Contraseña"
+                type="password"
+                value={createForm.password}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, password: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
+                label="Tipo de usuario"
+                value="Estudiante"
+                disabled
+                fullWidth
+                margin="dense"
+              />
+            </>
           ) : (
             <>
               <TextField
+                label="Nombre"
+                value={editForm.firstName}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, firstName: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
+                label="Apellido"
+                value={editForm.lastName}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, lastName: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
+                label="Correo electrónico"
+                type="email"
+                value={editForm.email}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, email: e.target.value })
+                }
+                fullWidth
+                margin="dense"
+              />
+              <TextField
                 label="Código de estudiante"
-                value={form.studentCode}
+                value={editTarget.studentCode}
                 disabled
                 fullWidth
                 margin="dense"
@@ -238,10 +339,10 @@ export default function StudentsPage() {
                 <InputLabel>Estado académico</InputLabel>
                 <Select
                   label="Estado académico"
-                  value={form.academicStatus}
+                  value={editForm.academicStatus}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
+                    setEditForm({
+                      ...editForm,
                       academicStatus: e.target.value as AcademicStatus,
                     })
                   }
@@ -260,11 +361,9 @@ export default function StudentsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          {editTarget && (
-            <Button variant="contained" onClick={handleSave}>
-              Guardar
-            </Button>
-          )}
+          <Button variant="contained" onClick={handleSave}>
+            {editTarget ? "Guardar" : "Crear"}
+          </Button>
         </DialogActions>
       </Dialog>
 

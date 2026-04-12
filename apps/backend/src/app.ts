@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
 import { errorMiddleware } from "./middleware/error.middleware";
 
 // Module routers
@@ -28,6 +29,9 @@ import { calendarEventsRouter } from "./modules/calendar-events/calendar-events.
 import { announcementsRouter } from "./modules/announcements/announcements.router";
 import { paymentsRouter } from "./modules/payments/payments.router";
 import { reportsRouter } from "./modules/reports/reports.router";
+import { departmentsRouter } from "./modules/departments/departments.router";
+import { studentSubmissionsRouter } from "./modules/student-submissions/student-submissions.router";
+import { uploadsRouter } from "./modules/uploads/uploads.router";
 
 const app = express();
 
@@ -35,6 +39,12 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Serve locally uploaded files (only active when STORAGE_PROVIDER=local or unset)
+if (!process.env.STORAGE_PROVIDER || process.env.STORAGE_PROVIDER === "local") {
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads"));
+  app.use("/api/files", express.static(uploadDir));
+}
 
 // Health check
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -65,6 +75,9 @@ api.use("/calendar-events", calendarEventsRouter);
 api.use("/announcements", announcementsRouter);
 api.use("/payments", paymentsRouter);
 api.use("/reports", reportsRouter);
+api.use("/departments", departmentsRouter);
+api.use("/student-submissions", studentSubmissionsRouter);
+api.use("/uploads", uploadsRouter);
 
 app.use("/api", api);
 

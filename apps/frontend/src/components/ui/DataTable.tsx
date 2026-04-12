@@ -21,6 +21,7 @@ interface DataTableProps<T> {
   rows: T[];
   loading?: boolean;
   getRowKey: (row: T) => string;
+  onRowClick?: (row: T) => void;
 }
 
 export function DataTable<T>({
@@ -28,6 +29,7 @@ export function DataTable<T>({
   rows,
   loading,
   getRowKey,
+  onRowClick,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -87,9 +89,11 @@ export function DataTable<T>({
             rows.map((row) => (
               <TableRow
                 key={getRowKey(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
                 sx={{
                   "&:hover": { backgroundColor: "rgba(99,102,241,0.03)" },
                   transition: "background-color 0.15s ease",
+                  ...(onRowClick && { cursor: "pointer" }),
                 }}
               >
                 {columns.map((col) => (

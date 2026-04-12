@@ -37,6 +37,8 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 
 **Rules:** Email must be unique. Deleted/inactive users cannot log in.
 
+**Frontend:** All user types are managed from a single `/usuarios` page. A `ToggleButtonGroup` filter (Todos / Administradores / Docentes / Estudiantes) switches the table columns, row actions, and create/edit forms to the appropriate type. The separate `/estudiantes` and `/profesores` routes redirect to `/usuarios`.
+
 ---
 
 ## 3. Student Lifecycle Management
@@ -45,14 +47,19 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 
 | Operation | Endpoint | Notes |
 |-----------|----------|-------|
-| List | `GET /api/estudiantes` | With user & career |
+| List | `GET /api/estudiantes` | With user (id, name, email) & career |
 | Get | `GET /api/estudiantes/:id` | Full profile |
 | Get by user | `GET /api/estudiantes/by-user/:userId` | Lookup by user FK |
-| Create | `POST /api/estudiantes` | Requires userId, studentCode, careerId |
-| Update | `PATCH /api/estudiantes/:id` | Includes academicStatus transitions |
+| Create | `POST /api/usuarios` (userType=STUDENT) | Admin creates from the Estudiantes filter on `/usuarios`; role locked to STUDENT; backend auto-generates student profile |
+| Update user fields | `PATCH /api/usuarios/:userId` | firstName, lastName, email — called in parallel with student update |
+| Update student fields | `PATCH /api/estudiantes/:id` | academicStatus transitions only |
 | Delete | `DELETE /api/estudiantes/:id` | Soft delete |
 
 **Academic statuses:** ACTIVE, AT_RISK, ELIGIBLE_FOR_GRADUATION, SUSPENDED, GRADUATED, WITHDRAWN.
+
+**Frontend create flow:** With the Estudiantes filter active on `/usuarios`, the "Nuevo Estudiante" button opens a user-creation form (Nombre, Apellido, Correo, Contraseña) with the role field pre-set to "Estudiante" and disabled. Saving calls `POST /api/usuarios` with `userType: "STUDENT"` — the backend trigger auto-creates the student profile.
+
+**Frontend edit flow:** The edit dialog shows all user fields (Nombre, Apellido, Correo) plus Código de estudiante (read-only) and Estado académico. Saving fires two parallel requests: `PATCH /api/usuarios/:userId` and `PATCH /api/estudiantes/:id`.
 
 ---
 
@@ -62,14 +69,19 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 
 | Operation | Endpoint | Notes |
 |-----------|----------|-------|
-| List | `GET /api/profesores` | With user details |
+| List | `GET /api/profesores` | With full user object (id, name, email, …) |
 | Get | `GET /api/profesores/:id` | Includes groups taught |
 | Get by user | `GET /api/profesores/by-user/:userId` | Lookup by user FK |
-| Create | `POST /api/profesores` | Requires userId, employeeCode |
-| Update | `PATCH /api/profesores/:id` | Department, etc. |
+| Create | `POST /api/usuarios` (userType=TEACHER) | Admin creates from the Docentes filter on `/usuarios`; role locked to TEACHER; backend auto-generates teacher profile |
+| Update user fields | `PATCH /api/usuarios/:userId` | firstName, lastName, email — called in parallel with teacher update |
+| Update teacher fields | `PATCH /api/profesores/:id` | employeeCode, department |
 | Delete | `DELETE /api/profesores/:id` | Soft delete |
 
-**Rules:** Employee code must be unique. One-to-one with User.
+**Rules:** Employee code must be unique. One-to-one with User. Department is selected from the predefined `departments` catalogue (see Process 23).
+
+**Frontend create flow:** With the Docentes filter active on `/usuarios`, the "Nuevo Docente" button opens a user-creation form (Nombre, Apellido, Correo, Contraseña) with the role field pre-set to "Docente" and disabled.
+
+**Frontend edit flow:** The edit dialog shows Nombre, Apellido, Correo, Código de empleado, and a Departamento dropdown populated from `GET /api/departments`. Saving fires two parallel requests: `PATCH /api/usuarios/:userId` and `PATCH /api/profesores/:id`.
 
 ---
 
@@ -144,7 +156,7 @@ Classrooms are assigned to groups via the scheduling process (see Process 9).
 
 ## 9. Group & Schedule Management
 
-**Actors:** ADMIN (full CRUD + scheduling), TEACHER (read own groups), STUDENT (read enrolled groups)
+**Actors:** ADMIN (full CRUD + scheduling), TEACHER (read own groups + manage content/evaluations/grades via group detail page), STUDENT (read enrolled groups)
 
 ### Group CRUD
 
@@ -153,9 +165,24 @@ Classrooms are assigned to groups via the scheduling process (see Process 9).
 | List | `GET /api/grupos?periodId=` | Optional period filter |
 | Get | `GET /api/grupos/:id` | Includes subject, teacher, classrooms, period |
 | By teacher | `GET /api/grupos/teacher/:teacherId` | Teacher's groups |
+| Students in group | `GET /api/grupos/:id/students` | Enrolled students (status=ENROLLED) for grade entry |
 | Create | `POST /api/grupos` | subjectId, periodId, teacherId, groupCode, maxStudents |
 | Update | `PATCH /api/grupos/:id` | maxStudents, groupCode |
 | Toggle active | `PATCH /api/grupos/:id/toggle-active` | Enable/disable |
+
+### Teacher Group Hub (Frontend UX)
+
+Teachers access all group-specific actions from a dedicated **Group Detail Page** reachable from **Mis Grupos**. The list page shows each group with a "Ver Detalles" button that navigates to `/mis-grupos/:groupId`. The detail page has three tabs:
+
+| Tab | Content |
+|-----|---------|
+| Evaluaciones | Evaluation table + create/edit/delete + submissions viewer with inline grade entry |
+| Calificaciones | Grade matrix for all enrolled students across all evaluations |
+| Contenido | Topic accordion + content item CRUD |
+
+The **Evaluaciones** tab includes a submissions viewer dialog (opened per evaluation) that shows each enrolled student's submission content (text, link, or file) and a grade input field next to each row. Teachers can review submissions and enter grades in one view, then save all grades with a single button.
+
+The separate `/contenido`, `/evaluaciones`, and `/calificaciones` routes remain available for ADMIN users with their group-dropdown selectors. They are no longer shown in the TEACHER sidebar.
 
 ### Classroom Scheduling
 
@@ -591,6 +618,24 @@ Aggregation queries on existing data — no new tables required.
 | `GET /api/reports/summary` | Combined dashboard stats (students, teachers, periods, enrollments, at-risk, pending fees) |
 
 **Frontend:** Admin reports page with 4 chart cards (recharts): enrollment bar chart, pass/fail pie chart, GPA trend line chart, at-risk student count.
+
+---
+
+## 23. Department Catalogue
+
+**Actors:** All authenticated (read-only)
+
+Read-only reference catalogue of academic departments used to populate the Departamento dropdown in the teacher create/edit form.
+
+| Operation | Endpoint | Roles |
+|-----------|----------|-------|
+| List | `GET /api/departments` | All authenticated |
+
+Departments are seeded on first run and ordered alphabetically. The 21 seeded departments cover the main academic areas of a Mexican university:
+
+Administración de Empresas, Arquitectura, Biología, Ciencias Computacionales, Comunicación, Contabilidad, Derecho, Diseño Gráfico, Educación, Enfermería, Física, Humanidades, Idiomas, Ingeniería Civil, Ingeniería Eléctrica, Ingeniería Mecánica, Ingeniería en Sistemas, Matemáticas, Medicina, Psicología, Química.
+
+**Rules:** No create/update/delete via API — managed through DB seed. The `department` field on the `teachers` table remains a `varchar(150)` string (not a foreign key) so historical records are preserved if a department name is ever renamed in the seed.
 
 ---
 

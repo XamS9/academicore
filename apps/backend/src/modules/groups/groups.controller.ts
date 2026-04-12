@@ -75,6 +75,19 @@ class GroupsController {
     }
   };
 
+  findStudentsByGroup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const students = await groupsService.findStudentsByGroup(req.params.id);
+      res.status(200).json(students);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   assignClassroom = async (
     req: Request,
     res: Response,

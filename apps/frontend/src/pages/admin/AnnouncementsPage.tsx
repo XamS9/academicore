@@ -43,6 +43,8 @@ const emptyForm = { title: "", body: "", audience: "ALL", targetId: "" };
 export default function AnnouncementsPage() {
   const { currentUser } = useAuth();
   const isAdmin = currentUser?.role === "ADMIN";
+  const isTeacher = currentUser?.role === "TEACHER";
+  const canManage = isAdmin || isTeacher;
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -57,7 +59,12 @@ export default function AnnouncementsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      setAnnouncements(await announcementsService.getAll());
+      // Students see only their relevant announcements; admins/teachers see all
+      setAnnouncements(
+        canManage
+          ? await announcementsService.getAll()
+          : await announcementsService.getMy(),
+      );
     } catch {
       showToast("Error al cargar anuncios", "error");
     } finally {
@@ -67,14 +74,16 @@ export default function AnnouncementsPage() {
 
   useEffect(() => {
     load();
-    careersService
-      .getAll()
-      .then(setCareers)
-      .catch(() => {});
-    groupsService
-      .getAll()
-      .then(setGroups)
-      .catch(() => {});
+    if (canManage) {
+      careersService
+        .getAll()
+        .then(setCareers)
+        .catch(() => {});
+      groupsService
+        .getAll()
+        .then(setGroups)
+        .catch(() => {});
+    }
   }, []);
 
   const handleOpen = (a?: Announcement) => {
@@ -143,39 +152,45 @@ export default function AnnouncementsPage() {
       label: "Fecha",
       render: (r) => new Date(r.publishedAt).toLocaleDateString("es-MX"),
     },
-    {
-      key: "actions",
-      label: "Acciones",
-      render: (r) => (
-        <Box>
-          <IconButton size="small" onClick={() => handleOpen(r)}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          {isAdmin && (
-            <IconButton
-              size="small"
-              color="error"
-              onClick={() => handleDelete(r.id)}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Box>
-      ),
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            label: "Acciones",
+            render: (r: Announcement) => (
+              <Box>
+                <IconButton size="small" onClick={() => handleOpen(r)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                {isAdmin && (
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(r.id)}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </Box>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
     <Box>
       <Box className="flex justify-between items-center mb-6">
         <Typography variant="h5">Anuncios</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpen()}
-        >
-          Nuevo Anuncio
-        </Button>
+        {canManage && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpen()}
+          >
+            Nuevo Anuncio
+          </Button>
+        )}
       </Box>
 
       <DataTable
