@@ -41,6 +41,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import EventIcon from "@mui/icons-material/Event";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../store/auth.context";
@@ -113,6 +114,11 @@ const navByRole: Record<Role, NavEntry[]> = {
       label: "Sistema",
       icon: <AdminPanelSettingsIcon />,
       items: [
+        {
+          label: "Solicitudes de Registro",
+          path: "/solicitudes-registro",
+          icon: <PersonAddIcon />,
+        },
         {
           label: "Certificaciones",
           path: "/certifications",

@@ -12,6 +12,7 @@ import CertificationsPage from "./pages/certifications/CertificationsPage";
 import ValidateCertPage from "./pages/certifications/ValidateCertPage";
 import UIStandardsPage from "./pages/UIStandardsPage";
 import UsersPage from "./pages/admin/UsersPage";
+import SignupRequestsPage from "./pages/admin/SignupRequestsPage";
 import CareersPage from "./pages/admin/CareersPage";
 import SubjectsPage from "./pages/admin/SubjectsPage";
 import AcademicPeriodsPage from "./pages/admin/AcademicPeriodsPage";
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="ui-standards" element={<UIStandardsPage />} />
             {/* Admin */}
             <Route path="usuarios" element={<UsersPage />} />
+            <Route path="solicitudes-registro" element={<SignupRequestsPage />} />
             <Route path="estudiantes" element={<Navigate to="/usuarios" replace />} />
             <Route path="profesores" element={<Navigate to="/usuarios" replace />} />
             <Route path="carreras" element={<CareersPage />} />
