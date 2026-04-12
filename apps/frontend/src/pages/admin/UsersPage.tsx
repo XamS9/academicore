@@ -21,6 +21,9 @@ import EditIcon from "@mui/icons-material/Edit";
 import PowerSettingsNewIcon from "@mui/icons-material/PowerSettingsNew";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { usersService } from "../../services/users.service";
@@ -30,6 +33,7 @@ import {
   departmentsService,
   type Department,
 } from "../../services/departments.service";
+import { careersService } from "../../services/careers.service";
 import { api } from "../../services/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,10 +52,11 @@ interface UserItem {
 interface StudentItem {
   id: string;
   studentCode: string;
+  careerId: string;
   academicStatus: string;
   enrollmentDate: string;
-  user: { id: string; firstName: string; lastName: string; email: string };
-  career: { name: string } | null;
+  user: { id: string; firstName: string; lastName: string; email: string; isActive: boolean };
+  career: { id: string; name: string } | null;
 }
 
 interface TeacherItem {
@@ -76,6 +81,7 @@ const USER_TYPE_COLORS: Record<string, "primary" | "success" | "warning"> = {
 };
 
 type AcademicStatus =
+  | "PENDING"
   | "ACTIVE"
   | "AT_RISK"
   | "SUSPENDED"
@@ -84,6 +90,7 @@ type AcademicStatus =
   | "ELIGIBLE_FOR_GRADUATION";
 
 const ACADEMIC_STATUS_LABELS: Record<AcademicStatus, string> = {
+  PENDING: "Pendiente",
   ACTIVE: "Activo",
   AT_RISK: "En riesgo",
   SUSPENDED: "Suspendido",
@@ -94,8 +101,9 @@ const ACADEMIC_STATUS_LABELS: Record<AcademicStatus, string> = {
 
 const ACADEMIC_STATUS_COLORS: Record<
   AcademicStatus,
-  "success" | "warning" | "error" | "primary" | "default" | "secondary"
+  "success" | "warning" | "error" | "primary" | "default" | "secondary" | "info"
 > = {
+  PENDING: "info",
   ACTIVE: "success",
   AT_RISK: "warning",
   SUSPENDED: "error",
@@ -119,6 +127,8 @@ interface StudentEditForm {
   lastName: string;
   email: string;
   academicStatus: AcademicStatus;
+  careerId: string;
+  careerLocked: boolean;
 }
 
 interface TeacherEditForm {
@@ -148,6 +158,7 @@ export default function UsersPage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [careers, setCareers] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Dialog state — null = create mode, non-null = edit mode
@@ -169,6 +180,8 @@ export default function UsersPage() {
     lastName: "",
     email: "",
     academicStatus: "ACTIVE",
+    careerId: "",
+    careerLocked: true,
   });
   const [teacherEditForm, setTeacherEditForm] = useState<TeacherEditForm>({
     firstName: "",
@@ -231,6 +244,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     departmentsService.getAll().then(setDepartments).catch(() => {});
+    careersService.getAll().then(setCareers).catch(() => {});
   }, []);
 
   // ─── Derived rows ──────────────────────────────────────────────────────────
@@ -272,6 +286,8 @@ export default function UsersPage() {
       lastName: item.user.lastName,
       email: item.user.email,
       academicStatus: item.academicStatus as AcademicStatus,
+      careerId: item.careerId,
+      careerLocked: true,
     });
     setDialogOpen(true);
   };
@@ -313,6 +329,7 @@ export default function UsersPage() {
           }),
           studentsService.update(editStudentTarget.id, {
             academicStatus: studentEditForm.academicStatus,
+            careerId: studentEditForm.careerId,
           }),
         ]);
         showToast("Estudiante actualizado exitosamente");
@@ -376,6 +393,16 @@ export default function UsersPage() {
       loadTeachers();
     } catch {
       showToast("Error al eliminar docente", "error");
+    }
+  };
+
+  const handleApproveStudent = async (id: string) => {
+    try {
+      await studentsService.approve(id);
+      showToast("Estudiante aprobado y activado exitosamente");
+      loadStudents();
+    } catch {
+      showToast("Error al aprobar estudiante", "error");
     }
   };
 
@@ -451,6 +478,16 @@ export default function UsersPage() {
       label: "Acciones",
       render: (row) => (
         <>
+          {row.academicStatus === "PENDING" && (
+            <IconButton
+              size="small"
+              color="success"
+              onClick={() => handleApproveStudent(row.id)}
+              title="Aprobar y activar"
+            >
+              <CheckCircleIcon fontSize="small" />
+            </IconButton>
+          )}
           <IconButton size="small" onClick={() => openEditStudent(row)} title="Editar">
             <EditIcon fontSize="small" />
           </IconButton>
@@ -658,6 +695,39 @@ export default function UsersPage() {
                   ))}
                 </Select>
               </FormControl>
+              {/* Career — locked by default, unlockable on request */}
+              <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", mt: 0.5 }}>
+                <FormControl fullWidth margin="dense" disabled={studentEditForm.careerLocked}>
+                  <InputLabel>Carrera</InputLabel>
+                  <Select
+                    label="Carrera"
+                    value={studentEditForm.careerId}
+                    onChange={(e) =>
+                      setStudentEditForm({ ...studentEditForm, careerId: e.target.value })
+                    }
+                  >
+                    {careers.map((c) => (
+                      <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <IconButton
+                  sx={{ mt: 1.5 }}
+                  size="small"
+                  color={studentEditForm.careerLocked ? "default" : "warning"}
+                  title={studentEditForm.careerLocked ? "Desbloquear cambio de carrera" : "Bloquear"}
+                  onClick={() =>
+                    setStudentEditForm({ ...studentEditForm, careerLocked: !studentEditForm.careerLocked })
+                  }
+                >
+                  {studentEditForm.careerLocked ? <LockIcon /> : <LockOpenIcon />}
+                </IconButton>
+              </Box>
+              {!studentEditForm.careerLocked && (
+                <Typography variant="caption" color="warning.main" sx={{ mt: -1, display: "block" }}>
+                  El cambio de carrera afecta el historial académico del estudiante.
+                </Typography>
+              )}
             </>
           )}
 

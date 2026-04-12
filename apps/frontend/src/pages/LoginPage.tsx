@@ -13,7 +13,7 @@ import SchoolIcon from "@mui/icons-material/School";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import PersonIcon from "@mui/icons-material/Person";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../store/auth.context";
 
 type RoleOption = "ADMIN" | "TEACHER" | "STUDENT";
@@ -218,13 +218,11 @@ export default function LoginPage() {
 
           <Divider sx={{ my: 3 }} />
 
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            align="center"
-            display="block"
-          >
-            Sistema de Gestión Académica Institucional
+          <Typography variant="body2" color="text.secondary" align="center">
+            ¿Eres nuevo?{" "}
+            <Link to="/registro" style={{ color: "#6366f1", fontWeight: 600 }}>
+              Crear cuenta
+            </Link>
           </Typography>
         </CardContent>
       </Card>

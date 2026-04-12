@@ -70,6 +70,19 @@ class StudentsController {
     }
   };
 
+  approve = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const student = await studentsService.approve(req.params.id);
+      res.status(200).json(student);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   softDelete = async (
     req: Request,
     res: Response,

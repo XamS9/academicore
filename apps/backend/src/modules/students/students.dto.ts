@@ -12,6 +12,7 @@ export const UpdateStudentDto = z.object({
   careerId: z.string().uuid().optional(),
   academicStatus: z
     .enum([
+      "PENDING",
       "ACTIVE",
       "AT_RISK",
       "ELIGIBLE_FOR_GRADUATION",

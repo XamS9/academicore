@@ -5,6 +5,7 @@ import PrivateRoute from "./components/auth/PrivateRoute";
 import AppLayout from "./components/layout/AppLayout";
 
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import AcademicHistoryPage from "./pages/academic-history/AcademicHistoryPage";
 import CertificationsPage from "./pages/certifications/CertificationsPage";
@@ -41,6 +42,7 @@ export default function App() {
       <Routes>
         {/* Public — no auth, no layout */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/registro" element={<RegisterPage />} />
         <Route path="/verify/:code" element={<ValidateCertPage />} />
         <Route path="/verify" element={<ValidateCertPage />} />
 

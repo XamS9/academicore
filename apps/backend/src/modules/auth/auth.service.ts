@@ -1,9 +1,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
 import { env } from "../../config/env";
-import { LoginDto } from "./auth.dto";
+import { LoginDto, RegisterDto } from "./auth.dto";
 
 interface JwtPayload {
   sub: string;
@@ -73,6 +74,41 @@ class AuthService {
         userType: user.userType,
       },
     };
+  }
+
+  async register(dto: RegisterDto): Promise<{ message: string }> {
+    const existing = await prisma.user.findFirst({ where: { email: dto.email } });
+    if (existing) throw new HttpError(409, "Este correo ya está registrado");
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const career = await prisma.career.findFirst({ where: { id: dto.careerId } });
+    if (!career) throw new HttpError(404, "Carrera no encontrada");
+
+    const studentCode = `STU-${randomUUID().slice(0, 8).toUpperCase()}`;
+
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          email: dto.email,
+          passwordHash,
+          userType: "STUDENT",
+          isActive: false,
+        },
+      });
+      await tx.student.create({
+        data: {
+          userId: user.id,
+          studentCode,
+          careerId: dto.careerId,
+          academicStatus: "PENDING",
+        },
+      });
+    });
+
+    return { message: "Registro exitoso. Tu cuenta está pendiente de aprobación." };
   }
 
   async refresh(refreshToken: string): Promise<{ accessToken: string }> {

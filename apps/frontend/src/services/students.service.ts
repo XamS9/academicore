@@ -9,4 +9,6 @@ export const studentsService = {
   update: (id: string, data: unknown) =>
     api.patch(`/students/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/students/${id}`).then((r) => r.data),
+  approve: (id: string) =>
+    api.patch(`/students/${id}/approve`).then((r) => r.data),
 };

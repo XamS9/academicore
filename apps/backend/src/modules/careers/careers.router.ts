@@ -4,8 +4,8 @@ import { careersController } from "./careers.controller";
 
 export const careersRouter = Router();
 
-careersRouter.get("/", authenticate, careersController.findAll);
-careersRouter.get("/:id", authenticate, careersController.findById);
+careersRouter.get("/", careersController.findAll);
+careersRouter.get("/:id", careersController.findById);
 careersRouter.post(
   "/",
   authenticate,

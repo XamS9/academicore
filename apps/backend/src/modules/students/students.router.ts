@@ -23,6 +23,12 @@ studentsRouter.post(
   studentsController.create,
 );
 studentsRouter.patch(
+  "/:id/approve",
+  authenticate,
+  authorize("ADMIN"),
+  studentsController.approve,
+);
+studentsRouter.patch(
   "/:id",
   authenticate,
   authorize("ADMIN"),

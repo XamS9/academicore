@@ -23,6 +23,7 @@ enum UserType {
 }
 
 enum AcademicStatus {
+  PENDING
   ACTIVE
   AT_RISK
   ELIGIBLE_FOR_GRADUATION

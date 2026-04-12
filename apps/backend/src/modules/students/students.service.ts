@@ -3,23 +3,22 @@ import { HttpError } from "../../shared/http-error";
 import { CreateStudentDto, UpdateStudentDto } from "./students.dto";
 
 class StudentsService {
+  private readonly include = {
+    user: { select: { id: true, firstName: true, lastName: true, email: true, isActive: true } },
+    career: { select: { id: true, name: true } },
+  } as const;
+
   async findAll() {
     return prisma.student.findMany({
       where: { deletedAt: null },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        career: { select: { name: true } },
-      },
+      include: this.include,
     });
   }
 
   async findById(id: string) {
     const student = await prisma.student.findFirst({
       where: { id, deletedAt: null },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        career: { select: { name: true } },
-      },
+      include: this.include,
     });
     if (!student) throw new HttpError(404, "Student not found");
     return student;
@@ -28,10 +27,7 @@ class StudentsService {
   async findByUserId(userId: string) {
     const student = await prisma.student.findFirst({
       where: { userId, deletedAt: null },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true } },
-        career: { select: { name: true } },
-      },
+      include: this.include,
     });
     if (!student) throw new HttpError(404, "Student not found");
     return student;
@@ -56,6 +52,21 @@ class StudentsService {
       where: { id },
       data: dto,
     });
+  }
+
+  async approve(id: string) {
+    const student = await this.findById(id);
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: student.userId },
+        data: { isActive: true },
+      }),
+      prisma.student.update({
+        where: { id },
+        data: { academicStatus: "ACTIVE" },
+      }),
+    ]);
+    return this.findById(id);
   }
 
   async softDelete(id: string) {

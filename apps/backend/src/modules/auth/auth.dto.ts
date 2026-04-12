@@ -10,3 +10,12 @@ export const RefreshDto = z.object({
   refreshToken: z.string(),
 });
 export type RefreshDto = z.infer<typeof RefreshDto>;
+
+export const RegisterDto = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(6),
+  careerId: z.string().uuid(),
+});
+export type RegisterDto = z.infer<typeof RegisterDto>;
