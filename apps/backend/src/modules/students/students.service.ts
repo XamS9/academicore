@@ -56,16 +56,56 @@ class StudentsService {
 
   async approve(id: string) {
     const student = await this.findById(id);
-    await prisma.$transaction([
-      prisma.user.update({
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
         where: { id: student.userId },
         data: { isActive: true },
-      }),
-      prisma.student.update({
+      });
+      await tx.student.update({
         where: { id },
         data: { academicStatus: "ACTIVE" },
-      }),
-    ]);
+      });
+
+      // Auto-assign inscription fee if an active concept and active period exist
+      const [inscriptionFee, activePeriod] = await Promise.all([
+        tx.feeConcept.findFirst({
+          where: {
+            isActive: true,
+            name: { contains: "inscripci", mode: "insensitive" },
+          },
+        }),
+        tx.academicPeriod.findFirst({
+          where: { isActive: true },
+          orderBy: { startDate: "desc" },
+        }),
+      ]);
+
+      if (inscriptionFee && activePeriod) {
+        const alreadyAssigned = await tx.studentFee.findFirst({
+          where: {
+            studentId: id,
+            feeConceptId: inscriptionFee.id,
+            periodId: activePeriod.id,
+          },
+        });
+
+        if (!alreadyAssigned) {
+          const dueDate = new Date(activePeriod.startDate);
+          dueDate.setDate(dueDate.getDate() + 30);
+          await tx.studentFee.create({
+            data: {
+              studentId: id,
+              feeConceptId: inscriptionFee.id,
+              periodId: activePeriod.id,
+              amount: inscriptionFee.amount,
+              dueDate,
+            },
+          });
+        }
+      }
+    });
+
     return this.findById(id);
   }
 
