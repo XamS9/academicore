@@ -973,7 +973,7 @@ async function injectAuthAndNavigate(page, tokens, route) {
 // Only expand sidebar sections that are currently collapsed
 async function expandAllSidebarSections(page, role = "ADMIN") {
   const labelsByRole = {
-    ADMIN:   ["Usuarios", "Gestión Académica", "Enseñanza", "Sistema"],
+    ADMIN:   ["Gestión Académica", "Enseñanza", "Sistema"],
     STUDENT: ["Académico", "Mi Trayectoria"],
   };
   const labels = labelsByRole[role] ?? [];
