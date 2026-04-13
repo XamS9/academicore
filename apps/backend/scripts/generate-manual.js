@@ -854,27 +854,29 @@ const PAGES = {
     {
       route: "/certifications",
       label: "Mis Certificados",
-      desc: "Certificados digitales emitidos al estudiante. Permite descargar el PDF oficial, copiar el enlace de verificación pública y consultar los criterios de elegibilidad.",
+      desc: "Certificados digitales emitidos al estudiante. La pestaña principal lista los certificados con su estado, código de verificación y fecha de vencimiento. Incluye acciones por fila para abrir el portal de verificación pública y descargar el PDF oficial.",
       extras: [
         {
-          label: "Tab: Certificaciones Emitidas",
-          desc: "Lista de certificados emitidos con su estado (activo/revocado/vencido), código de verificación y acciones para abrir el portal público o copiar el enlace compartible.",
+          label: "Acciones de fila: Ver verificación y Descargar PDF",
+          desc: "Cada fila de certificado muestra dos botones en la columna Acciones: el ícono de ojo (Ver verificación) abre el portal público de verificación en una nueva pestaña, y el ícono de descarga genera y descarga el PDF oficial del certificado.",
           setup: async (page) => {
-            await clickTabByLabel(page, "Emitidas");
+            // Hover over the first certificate row to make action tooltips visible
+            await page.evaluate(() => {
+              const row = document.querySelector("tbody tr");
+              if (row) row.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+            });
             await delay(600);
-          },
-        },
-        {
-          label: "Tab: Certificado Digital",
-          desc: "Vista previa del certificado digital con navegación entre certificados, botón de descarga en PDF y enlace de verificación pública.",
-          setup: async (page) => {
-            await clickTabByLabel(page, "Digital");
-            await delay(800);
+            // Also trigger tooltip on the first action button
+            await page.evaluate(() => {
+              const btn = document.querySelector("tbody tr td:last-child button");
+              if (btn) btn.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+            });
+            await delay(500);
           },
         },
         {
           label: "Tab: Criterios de Certificación",
-          desc: "Tabla con los requisitos que debe cumplir el estudiante para ser elegible a cada tipo de certificado: calificación mínima, vigencia y descripción.",
+          desc: "Tabla con los requisitos para ser elegible a cada tipo de certificado: carrera, calificación mínima, vigencia en meses y descripción.",
           setup: async (page) => {
             await clickTabByLabel(page, "Criterios");
             await delay(600);
