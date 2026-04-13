@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { TopicsService } from "./topics.service";
-import { CreateTopicDto, UpdateTopicDto, ReorderTopicsDto, CloneTopicsDto } from "./topics.dto";
+import { CreateTopicDto, UpdateTopicDto, ReorderTopicsDto } from "./topics.dto";
 
 export class TopicsController {
   constructor(private service: TopicsService) {}
@@ -87,17 +87,4 @@ export class TopicsController {
     }
   };
 
-  cloneFromGroup = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const dto = CloneTopicsDto.parse(req.body);
-      const result = await this.service.cloneFromGroup(dto);
-      res.status(201).json(result);
-    } catch (err) {
-      next(err);
-    }
-  };
 }

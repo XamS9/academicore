@@ -12,8 +12,4 @@ export const topicsService = {
     api
       .patch(`/topics/group/${groupId}/reorder`, { orderedIds })
       .then((r) => r.data),
-  cloneFromGroup: (sourceGroupId: string, targetGroupId: string) =>
-    api
-      .post("/topics/clone", { sourceGroupId, targetGroupId })
-      .then((r) => r.data),
 };

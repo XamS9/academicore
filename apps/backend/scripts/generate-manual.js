@@ -350,7 +350,7 @@ const PAGES = {
     {
       route: "/contenido",
       label: "Contenido de Grupos",
-      desc: "Temas y materiales de aprendizaje organizados por grupo y semana del período. Los temas se agrupan bajo encabezados 'Semana N — DD mmm – DD mmm' con rango de fechas calculado automáticamente desde el inicio del período. Cada material muestra su fecha de publicación.",
+      desc: "Temas y materiales de aprendizaje organizados por grupo y semana del período. Los temas se agrupan bajo encabezados 'Semana N — DD mmm – DD mmm' con rango de fechas calculado automáticamente desde el inicio del período. Cada material muestra su fecha de publicación. Al crear un nuevo grupo para la misma materia, el contenido del grupo anterior se copia automáticamente.",
       setup: async (page) => {
         await selectFirstMuiOption(page, 0);
         await delay(800);
@@ -376,16 +376,6 @@ const PAGES = {
               const btn = document.querySelector('button[title="Editar tema"]');
               if (btn) btn.click();
             });
-            await delay(800);
-          },
-        },
-        {
-          label: "Diálogo: Copiar contenido de otro grupo",
-          desc: "El botón 'Copiar contenido' permite seleccionar un grupo origen para clonar todos sus temas y materiales al grupo actual. Los números de semana se conservan y los rangos de fechas se recalculan automáticamente según el período destino. Ideal para reutilizar el contenido de un semestre anterior.",
-          setup: async (page) => {
-            await selectFirstMuiOption(page, 0);
-            await delay(400);
-            await clickButtonByText(page, "Copiar contenido");
             await delay(800);
           },
         },

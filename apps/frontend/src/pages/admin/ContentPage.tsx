@@ -5,7 +5,6 @@ import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
@@ -28,7 +27,6 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import LinkIcon from "@mui/icons-material/Link";
 import DescriptionIcon from "@mui/icons-material/Description";
 import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import { useToast } from "../../hooks/useToast";
 import { useAuth } from "../../store/auth.context";
@@ -148,11 +146,6 @@ export default function ContentPage() {
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<ContentItem | null>(null);
   const [itemForm, setItemForm] = useState<ContentItemForm>(emptyItemForm);
-
-  // Clone dialog
-  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
-  const [cloneSourceGroup, setCloneSourceGroup] = useState("");
-  const [cloneLoading, setCloneLoading] = useState(false);
 
   const { toast, showToast, clearToast } = useToast();
 
@@ -294,24 +287,6 @@ export default function ContentPage() {
     }
   };
 
-  // ── Clone ───────────────────────────────────────────────
-  const handleClone = async () => {
-    if (!cloneSourceGroup || !selectedGroup) return;
-    setCloneLoading(true);
-    try {
-      const cloned = await topicsService.cloneFromGroup(cloneSourceGroup, selectedGroup);
-      setTopics(cloned);
-      showToast("Contenido copiado exitosamente");
-      setCloneDialogOpen(false);
-      setCloneSourceGroup("");
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      showToast(msg ?? "Error al copiar contenido", "error");
-    } finally {
-      setCloneLoading(false);
-    }
-  };
-
   // ── Grouping by week ────────────────────────────────────
   type WeekBucket = { weekNumber: number | null; topics: TopicItem[] };
 
@@ -333,24 +308,14 @@ export default function ContentPage() {
     <Box>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h5" fontWeight={700}>Contenido de Grupos</Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<ContentCopyIcon />}
-            disabled={!selectedGroup}
-            onClick={() => setCloneDialogOpen(true)}
-          >
-            Copiar contenido
-          </Button>
-          <Button
-            variant="contained"
-            onClick={openCreateTopic}
-            disabled={!selectedGroup}
-            startIcon={<AddIcon />}
-          >
-            Nuevo Tema
-          </Button>
-        </Box>
+        <Button
+          variant="contained"
+          onClick={openCreateTopic}
+          disabled={!selectedGroup}
+          startIcon={<AddIcon />}
+        >
+          Nuevo Tema
+        </Button>
       </Box>
 
       <TextField
@@ -591,42 +556,6 @@ export default function ContentPage() {
         <DialogActions>
           <Button onClick={() => setItemDialogOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSaveItem}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Clone Dialog */}
-      <Dialog open={cloneDialogOpen} onClose={() => { setCloneDialogOpen(false); setCloneSourceGroup(""); }} maxWidth="sm" fullWidth>
-        <DialogTitle>Copiar contenido de otro grupo</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Selecciona el grupo origen. Todos sus temas y materiales se copiarán al grupo actual manteniendo el orden de semanas. <strong>El contenido existente en el grupo destino será reemplazado.</strong>
-          </DialogContentText>
-          <TextField
-            select
-            label="Grupo origen"
-            value={cloneSourceGroup}
-            onChange={(e) => setCloneSourceGroup(e.target.value)}
-            fullWidth
-          >
-            <MenuItem value="">— Seleccione un grupo —</MenuItem>
-            {groups
-              .filter((g) => g.id !== selectedGroup)
-              .map((g) => (
-                <MenuItem key={g.id} value={g.id}>
-                  {g.subject.name} ({g.groupCode}) — {g.academicPeriod?.name}
-                </MenuItem>
-              ))}
-          </TextField>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setCloneDialogOpen(false); setCloneSourceGroup(""); }}>Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleClone}
-            disabled={!cloneSourceGroup || cloneLoading}
-          >
-            Copiar
-          </Button>
         </DialogActions>
       </Dialog>
 

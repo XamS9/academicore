@@ -419,13 +419,12 @@ Content is organized per **Group** (not per Subject), so each teacher customizes
 | Update | `PATCH /api/topics/:id` | ADMIN, TEACHER |
 | Delete | `DELETE /api/topics/:id` | ADMIN, TEACHER (cascades content items) |
 | Reorder | `PATCH /api/topics/group/:groupId/reorder` | ADMIN, TEACHER |
-| Clone from group | `POST /api/topics/clone` | ADMIN, TEACHER |
 
 Topics have a `sortOrder` (unique per group), optional description, and an optional `weekNumber` that maps the topic to a specific week of the academic period.
 
 **Week-based organization:** When `weekNumber` is set, the UI groups topics under a week header showing the calendar date range automatically computed from the period's `startDate` (Week N starts at `startDate + (N-1)*7 days`). No manual date entry is needed — dates update automatically when content is reused in a new period.
 
-**Content cloning across periods:** `POST /api/topics/clone` accepts `{ sourceGroupId, targetGroupId }`. It copies all topics (preserving `weekNumber`, `sortOrder`, title, description) and their content items into the target group, replacing any existing topics. This allows teachers to reuse a full semester's content structure for a new period — the week-based dates auto-derive from the new period's `startDate`.
+**Automatic content cloning on group creation:** When a new group is created (`POST /api/grupos`), the system automatically looks for the most recently created group for the same subject that has topics. If found, all its topics and content items are cloned into the new group, preserving `weekNumber`, `sortOrder`, title, description, and material content. The week-based dates auto-derive from the new period's `startDate`. No teacher action is required — the new group is ready to use immediately.
 
 ### Content Items (materials within a topic)
 
@@ -448,7 +447,7 @@ The UI shows each item's `createdAt` as "Publicado el DD MMM YYYY" for both teac
 - Topics and content items use `sortOrder` with a unique constraint per parent for ordering
 - Deleting a topic cascades to delete all its content items
 - Hard deletes (no soft delete — content is ephemeral per semester)
-- Clone replaces all existing topics in the target group atomically
+- Auto-clone on group creation replaces any pre-existing topics in the new group (new groups are empty, so this is always a fresh copy)
 
 ---
 

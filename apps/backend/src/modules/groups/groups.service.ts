@@ -64,9 +64,51 @@ class GroupsService {
   }
 
   async create(dto: CreateGroupDto) {
-    return prisma.group.create({
-      data: dto,
+    const newGroup = await prisma.group.create({ data: dto });
+
+    // Auto-clone content from the most recent previous group for the same subject
+    const previousGroup = await prisma.group.findFirst({
+      where: {
+        subjectId: dto.subjectId,
+        id: { not: newGroup.id },
+      },
+      include: {
+        topics: {
+          include: { contentItems: { orderBy: { sortOrder: "asc" } } },
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
+
+    if (previousGroup && previousGroup.topics.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        for (const topic of previousGroup.topics) {
+          const newTopic = await tx.topic.create({
+            data: {
+              groupId: newGroup.id,
+              title: topic.title,
+              description: topic.description,
+              sortOrder: topic.sortOrder,
+              weekNumber: topic.weekNumber,
+            },
+          });
+          for (const item of topic.contentItems) {
+            await tx.contentItem.create({
+              data: {
+                topicId: newTopic.id,
+                title: item.title,
+                type: item.type,
+                content: item.content,
+                sortOrder: item.sortOrder,
+              },
+            });
+          }
+        }
+      });
+    }
+
+    return newGroup;
   }
 
   async update(id: string, dto: UpdateGroupDto) {

@@ -32,9 +32,3 @@ topicsRouter.patch(
   authorize("ADMIN", "TEACHER"),
   controller.reorder,
 );
-topicsRouter.post(
-  "/clone",
-  authenticate,
-  authorize("ADMIN", "TEACHER"),
-  controller.cloneFromGroup,
-);
