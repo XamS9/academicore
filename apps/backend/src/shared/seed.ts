@@ -1049,56 +1049,61 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   // PRG201 — Programación Orientada a Objetos (2025-1)
   const topicPrg1 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 1 } },
-    update: {},
+    update: { weekNumber: 1 },
     create: {
       groupId: grpPrg201.id,
       title: "Introducción a POO",
       description:
         "Conceptos fundamentales de la programación orientada a objetos",
       sortOrder: 1,
+      weekNumber: 1,
     },
   });
   const topicPrg2 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 2 } },
-    update: {},
+    update: { weekNumber: 2 },
     create: {
       groupId: grpPrg201.id,
       title: "Clases y Objetos",
       description: "Definición de clases, atributos, métodos y constructores",
       sortOrder: 2,
+      weekNumber: 2,
     },
   });
   const topicPrg3 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 3 } },
-    update: {},
+    update: { weekNumber: 3 },
     create: {
       groupId: grpPrg201.id,
       title: "Herencia y Polimorfismo",
       description: "Herencia, clases abstractas, interfaces y polimorfismo",
       sortOrder: 3,
+      weekNumber: 3,
     },
   });
 
   // BD101 — Base de Datos (2025-1)
   const topicBd1 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpBd101.id, sortOrder: 1 } },
-    update: {},
+    update: { weekNumber: 1 },
     create: {
       groupId: grpBd101.id,
       title: "Modelo Relacional",
       description:
         "Fundamentos del modelo relacional: tablas, columnas, claves primarias y foráneas",
       sortOrder: 1,
+      weekNumber: 1,
     },
   });
   const topicBd2 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpBd101.id, sortOrder: 2 } },
-    update: {},
+    update: { weekNumber: 2 },
     create: {
       groupId: grpBd101.id,
       title: "SQL Básico",
       description: "SELECT, INSERT, UPDATE, DELETE y filtrado con WHERE",
       sortOrder: 2,
+      weekNumber: 2,
     },
   });
 
