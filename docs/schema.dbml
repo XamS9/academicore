@@ -55,7 +55,6 @@ Enum EnrollmentSubjectStatus {
 Enum CertificationType {
   DEGREE
   TRANSCRIPT
-  ENROLLMENT_PROOF
   COMPLETION
 }
 
@@ -116,6 +115,12 @@ Enum CalendarEventType {
   EXAM_WEEK
   DEADLINE
   OTHER
+}
+
+Enum GroupDeliveryMode {
+  ON_SITE
+  VIRTUAL
+  HYBRID
 }
 
 // ─── TABLES ─────────────────────────────────────────────────
@@ -222,9 +227,9 @@ Table academic_periods {
   name            varchar(50)  [not null]
   start_date      date         [not null]
   end_date        date         [not null]
-  enrollment_open boolean      [not null, default: false]
+  enrollment_open boolean      [not null, default: false, note: 'When status=GRADING must be false (enforced in application layer)']
   is_active       boolean      [not null, default: true]
-  status          PeriodStatus [not null, default: 'OPEN', note: 'Lifecycle: OPEN → GRADING → CLOSED']
+  status          PeriodStatus [not null, default: 'OPEN', note: 'Lifecycle: OPEN → GRADING → CLOSED; GRADING only after enrollment closed at end of cycle']
   created_at      timestamptz  [not null, default: `now()`]
   updated_at      timestamptz  [not null]
 }
@@ -241,12 +246,13 @@ Table classrooms {
 }
 
 Table groups {
-  id                 uuid        [pk, default: `gen_random_uuid()`]
-  subject_id         uuid        [not null, ref: > subjects.id]
-  academic_period_id uuid        [not null, ref: > academic_periods.id]
-  teacher_id         uuid        [not null, ref: > teachers.id]
-  group_code         varchar(20) [not null]
-  max_students       smallint    [not null]
+  id                 uuid              [pk, default: `gen_random_uuid()`]
+  subject_id         uuid              [not null, ref: > subjects.id]
+  academic_period_id uuid              [not null, ref: > academic_periods.id]
+  teacher_id         uuid              [not null, ref: > teachers.id]
+  group_code         varchar(20)       [not null, note: 'Auto: prefijo materia + secuencia por materia/período']
+  delivery_mode      GroupDeliveryMode [not null, default: `ON_SITE`, note: 'Presencial, virtual o mixto']
+  max_students       smallint          [not null]
   current_students   smallint    [not null, default: 0]
   is_active          boolean     [not null, default: true]
   created_at         timestamptz [not null, default: `now()`]

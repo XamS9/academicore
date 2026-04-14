@@ -125,8 +125,13 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 | Update | `PATCH /api/carreras/:id` | Any field |
 | Delete | `DELETE /api/carreras/:id` | Soft delete |
 | Toggle active | `PATCH /api/carreras/:id/toggle-active` | Enable/disable |
+| Add subject to plan | `POST /api/carreras/:id/subjects` | ADMIN — body: `subjectId`, `semesterNumber`, `isMandatory` |
+| Update plan row | `PATCH /api/carreras/:id/subjects/:subjectId` | ADMIN — `semesterNumber` / `isMandatory` |
+| Remove from plan | `DELETE /api/carreras/:id/subjects/:subjectId` | ADMIN |
 
 A career has many subjects via the `CareerSubject` bridge (semesterNumber, isMandatory).
+
+**Frontend:** On `/carreras`, the **plan de estudios** action (icono de libro) opens a dialog to list, add, and remove materias for that carrera. La pantalla `/materias` solo define catálogo global; el vínculo carrera↔materia se gestiona aquí.
 
 ---
 
@@ -163,6 +168,8 @@ A career has many subjects via the `CareerSubject` bridge (semesterNumber, isMan
 
 **Rules:** `enrollmentOpen` gates student enrollment. `isActive` marks the current semester.
 
+**Fase de calificación vs inscripciones:** Cuando `status = GRADING`, las inscripciones deben estar siempre cerradas (`enrollmentOpen = false`). La fase de calificación ocurre al **final** del ciclo; no puede activarse con inscripciones abiertas. Al pasar a `GRADING` (`start-grading`), el sistema cierra inscripciones automáticamente. No se permite abrir inscripciones ni alternarlas mientras el período está en `GRADING`; cualquier `PATCH` que intente `enrollmentOpen: true` en ese estado es rechazado, y si hubiera datos inconsistentes se corrige a cerrado al guardar.
+
 ---
 
 ## 8. Classroom Management
@@ -194,8 +201,8 @@ Classrooms are assigned to groups via the scheduling process (see Process 9).
 | Get | `GET /api/grupos/:id` | Includes subject, teacher, classrooms, period |
 | By teacher | `GET /api/grupos/teacher/:teacherId` | Teacher's groups |
 | Students in group | `GET /api/grupos/:id/students` | Enrolled students (status=ENROLLED) for grade entry |
-| Create | `POST /api/grupos` | subjectId, periodId, teacherId, groupCode, maxStudents |
-| Update | `PATCH /api/grupos/:id` | maxStudents, groupCode |
+| Create | `POST /api/grupos` | `subjectId`, `academicPeriodId`, `teacherId`, `maxStudents`, optional `groupCode` (vacío = auto: prefijo desde código/nombre de materia + secuencia por materia/período), optional `deliveryMode` (`ON_SITE` \| `VIRTUAL` \| `HYBRID`, default presencial) |
+| Update | `PATCH /api/grupos/:id` | `maxStudents`, optional `groupCode`, optional `deliveryMode` |
 | Toggle active | `PATCH /api/grupos/:id/toggle-active` | Enable/disable |
 
 ### Teacher Group Hub (Frontend UX)
@@ -216,13 +223,19 @@ The separate `/contenido`, `/evaluaciones`, and `/calificaciones` routes remain 
 
 | Step | Description |
 |------|-------------|
-| 1 | Admin submits classroomId, dayOfWeek (0-6), startTime, endTime for a group |
+| 1 | Admin submits `classroomId`, `dayOfWeek` (1=Lunes … 7=Domingo), `startTime`, `endTime` (`HH:mm`) for a group |
 | 2 | System checks for **room conflicts** (same classroom, same day, overlapping times) |
 | 3 | System checks for **teacher conflicts** (same teacher, same day, overlapping times) |
 | 4 | If conflict found: returns 409 with message |
 | 5 | If clear: creates `GroupClassroom` record |
 
 **Endpoint:** `POST /api/grupos/:id/classrooms`
+
+**Frontend:** On `/grupos`, **Aulas y horario** (icono de calendario) lists `GroupClassroom` slots and adds new ones. Grupos con modalidad **virtual** no requieren aula física; **mixto** puede combinar bloques presenciales y actividad en línea (la modalidad es informativa/reglamentaria).
+
+### Modalidad presencial / virtual
+
+Each `Group` has `deliveryMode`: **ON_SITE** (presencial), **VIRTUAL** (sin sede), **HYBRID** (mixto). No sustituye el horario en `group_classrooms` para aulas físicas; sirve para reglas de negocio y UX (p. ej. ocultar asignación de aula si es solo virtual).
 
 ---
 
@@ -292,10 +305,12 @@ Types: Examen, Practica, Proyecto, etc.
 
 | Operation | Endpoint | Notes |
 |-----------|----------|-------|
-| By evaluation | `GET /api/calificaciones/evaluation/:evaluationId` | All grades for one assessment |
-| By student+group | `GET /api/calificaciones/student/:studentId/group/:groupId` | Student grades in group |
-| Record | `POST /api/calificaciones` | Upsert (evaluationId, studentId, score) |
-| Bulk record | `POST /api/calificaciones/bulk` | Transactional array upsert |
+| By evaluation | `GET /api/grades/evaluation/:evaluationId` | All grades for one assessment |
+| My grades in group (current) | `GET /api/grades/me/group/:groupId` | STUDENT only; requires active `enrollment_subject.status = ENROLLED` |
+| My grades in group (historial) | `GET /api/grades/me/group/:groupId/history` | STUDENT only; any non-`DROPPED` enrollment for that group (e.g. COMPLETED/FAILED) — used by **Historial de calificaciones** |
+| By student+group | `GET /api/grades/student/:studentId/group/:groupId` | ADMIN/TEACHER unrestricted; STUDENT only if `ENROLLED` in group |
+| Record | `POST /api/grades` | Upsert (evaluationId, studentId, score) |
+| Bulk record | `POST /api/grades/bulk` | Transactional array upsert |
 
 **Rule:** Score stored as decimal(5,2). `gradedBy` captures the user who entered the grade.
 
@@ -336,10 +351,13 @@ Types: Examen, Practica, Proyecto, etc.
 **Actors:** ADMIN (issue/revoke/manage criteria), STUDENT (read own), PUBLIC (verify)
 
 ### Certification Types
-- **DEGREE** — career-specific, requires all mandatory subjects + GPA + credits
-- **TRANSCRIPT** — GPA-based
-- **ENROLLMENT_PROOF** — current enrollment
-- **COMPLETION** — generic completion
+- **DEGREE** — career-specific (criteria row with `careerId`): typically `requireAllMandatory`, `minGrade`, `minCredits`
+- **TRANSCRIPT** — historial / expediente; eligibility from criteria (GPA, credits)
+- **COMPLETION** — constancia de terminación; also the type used when **auto-issuing** after all mandatory career subjects are passed (see `grades.service` → `checkAndAutoIssueCertifications`)
+
+Enrollment status is **not** a certification type: inscripción vigente se consulta en **Mi inscripción** / datos de matrícula, no como certificado verificable.
+
+**Not implemented:** certificados ligados a un **conjunto arbitrario de materias** o a **una sola materia** definida al crear el criterio (habría que extender el modelo, p. ej. tabla de requisitos por materia o por lista de `subject_id`).
 
 ### Criteria Management
 
@@ -598,6 +616,10 @@ Targeted communication system with audience-based delivery.
 | Update | `PATCH /api/announcements/:id` | ADMIN, TEACHER |
 | Delete | `DELETE /api/announcements/:id` | ADMIN |
 
+**List pagination:** `GET /api/announcements` and `GET /api/announcements/my` accept optional query `page` (default `1`) and `pageSize` (default `20`, max `100`). Response shape: `{ data, total, page, pageSize }` (newest first by `publishedAt`).
+
+**Frontend:** `/anuncios` uses that pagination (table footer). Admin flows for **inscripciones** (período + diálogo estudiante/grupo), **contenido**, **evaluaciones** y **calificaciones** use searchable autocomplete pickers for período/grupo so large catalogues stay usable without rendering huge dropdowns.
+
 ### Audience Types
 
 | Audience | Target resolution |
@@ -769,9 +791,11 @@ OPEN  →  GRADING  →  CLOSED
 
 | Status | enrollmentOpen | Description |
 |--------|---------------|-------------|
-| OPEN | true/false | Running period; enrollment may be open or closed |
-| GRADING | false | Enrollment closed; teachers submitting final grades |
-| CLOSED | false | Immutable; all grades and records finalized |
+| OPEN | true or false | Ciclo en curso; las inscripciones pueden estar abiertas o cerradas según la ventana institucional |
+| GRADING | **always false** | Fase final del ciclo: inscripciones **cerradas** obligatoriamente; docentes cargan calificaciones finales |
+| CLOSED | false | Período cerrado; histórico inmutable |
+
+**Invariante:** `status = GRADING` y `enrollmentOpen = true` **nunca** pueden darse a la vez. El backend lo valida en `PATCH` y rechaza `toggle-enrollment` en fase `GRADING`.
 
 ### Phase 1 — Iniciar Calificación (OPEN → GRADING)
 
@@ -780,7 +804,7 @@ OPEN  →  GRADING  →  CLOSED
 | Step | Description |
 |------|-------------|
 | 1 | Admin clicks "Iniciar Calificación" button on a period row |
-| 2 | Sets `enrollmentOpen = false`, `status = GRADING` |
+| 2 | Sets `enrollmentOpen = false` (siempre), `status = GRADING` — cierra inscripciones aunque estuvieran abiertas |
 | 3 | Writes AuditLog entry (STATUS_CHANGE) |
 | 4 | Teachers see their groups but can no longer accept new students |
 
@@ -820,6 +844,7 @@ Body: `{ force: boolean }`
 
 **Rules:**
 - A period must be in GRADING status to be closed
+- While `status = GRADING`, `enrollmentOpen` must remain `false`; opening enrollments or toggling them in that phase is rejected by the API
 - Closed periods are immutable (update and toggle-enrollment endpoints reject changes)
 - `force=true` is required if any groups have incomplete grading
 - The existing DB trigger `fn_generate_academic_record` continues to handle individual grade-level record generation during GRADING phase; the close transaction only fills gaps for force-closed groups
