@@ -4,6 +4,8 @@ import { CreateTopicDto, UpdateTopicDto, ReorderTopicsDto } from "./topics.dto";
 import {
   assertStudentCanAccessTopic,
   assertStudentEnrolledInGroup,
+  assertStudentPaidInscriptionForGroup,
+  assertStudentPaidInscriptionForTopic,
   requireStudentId,
 } from "../../shared/student-access";
 
@@ -19,6 +21,7 @@ export class TopicsController {
       if (req.user!.userType === "STUDENT") {
         const studentId = await requireStudentId(req.user!);
         await assertStudentEnrolledInGroup(studentId, req.params.groupId);
+        await assertStudentPaidInscriptionForGroup(studentId, req.params.groupId);
       }
       const result = await this.service.findByGroup(req.params.groupId);
       res.json(result);
@@ -36,6 +39,7 @@ export class TopicsController {
       if (req.user!.userType === "STUDENT") {
         const studentId = await requireStudentId(req.user!);
         await assertStudentCanAccessTopic(studentId, req.params.id);
+        await assertStudentPaidInscriptionForTopic(studentId, req.params.id);
       }
       const result = await this.service.findById(req.params.id);
       res.json(result);

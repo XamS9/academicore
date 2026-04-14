@@ -39,20 +39,48 @@ const rolePresets: Record<
   },
 };
 
-const demoCredentials: Record<RoleOption, { email: string; password: string }> =
-  {
-    ADMIN: { email: "admin@academicore.com", password: "admin123" },
-    TEACHER: { email: "prof.garcia@academicore.com", password: "teacher123" },
-    STUDENT: { email: "ana.garcia@academicore.com", password: "student123" },
-  };
+const shouldUseE2EPrefill =
+  String(import.meta.env.VITE_E2E_PREFILL ?? "").toLowerCase() === "true";
+
+const prefillCredentials: Record<RoleOption, { email: string; password: string }> | null =
+  shouldUseE2EPrefill
+    ? {
+        ADMIN: {
+          email: "admin.e2e@academicore.com",
+          password: "AdminE2E#2026",
+        },
+        TEACHER: {
+          email: "teacher.e2e@academicore.com",
+          password: "TeacherE2E#2026",
+        },
+        STUDENT: {
+          email: "student.e2e@academicore.com",
+          password: "StudentE2E#2026",
+        },
+      }
+    : import.meta.env.DEV
+      ? {
+          ADMIN: { email: "admin@academicore.com", password: "admin123" },
+          TEACHER: {
+            email: "prof.garcia@academicore.com",
+            password: "teacher123",
+          },
+          STUDENT: {
+            email: "ana.garcia@academicore.com",
+            password: "student123",
+          },
+        }
+      : null;
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [selectedRole, setSelectedRole] = useState<RoleOption>("ADMIN");
-  const [email, setEmail] = useState(demoCredentials.ADMIN.email);
-  const [password, setPassword] = useState(demoCredentials.ADMIN.password);
+  const [email, setEmail] = useState(() => prefillCredentials?.ADMIN.email ?? "");
+  const [password, setPassword] = useState(
+    () => prefillCredentials?.ADMIN.password ?? "",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,8 +89,9 @@ export default function LoginPage() {
   }
 
   const handleRoleSelect = (role: RoleOption) => {
+    if (!prefillCredentials) return;
     setSelectedRole(role);
-    const creds = demoCredentials[role];
+    const creds = prefillCredentials[role];
     setEmail(creds.email);
     setPassword(creds.password);
     setError("");
@@ -134,8 +163,8 @@ export default function LoginPage() {
             </Typography>
           </Box>
 
-          {/* Role selector — dev only */}
-          {import.meta.env.DEV && (
+          {/* Role selector — available when prefill is enabled */}
+          {prefillCredentials && (
             <>
               <Typography
                 variant="caption"

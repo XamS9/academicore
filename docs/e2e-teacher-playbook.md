@@ -10,8 +10,8 @@ This guide validates all major `TEACHER` capabilities for a complete cycle using
 
 ## Preconditions
 
-1. Admin created/assigned at least one active-period group to `teacher.e2e`.
-2. Student is enrolled in that group.
+1. Tras `npm run prisma:seed`, `teacher.e2e` tiene el grupo **2026-1 · ETH101-E2E** (ética) con temas, materiales y evaluaciones demo; aparece en `Mis Grupos`.
+2. Para flujo alumno: el estudiante E2E se inscribe en un grupo ISC (p. ej. el mismo u otro) y paga la inscripción del período antes de ver contenido.
 3. Teacher can see the group in `Mis Grupos`.
 
 ## Full Teacher Step-by-Step
@@ -29,14 +29,17 @@ This guide validates all major `TEACHER` capabilities for a complete cycle using
 11. In `Calificaciones`, enter grades for enrolled student(s).
 12. Use bulk save path and verify persistence.
 13. Confirm graded data is reflected in evaluation and grade tabs.
-14. During `OPEN`, verify normal grading and content operations work.
-15. After admin moves period to `GRADING`, verify no new enrollments occur but grading remains available.
-16. Complete missing grades to drive group progress toward 100%.
-17. Validate student can view posted grades afterward.
+14. Verify with student that, before payment, course content/evaluations are blocked to them.
+15. After student payment, verify they can access content/evaluations and submit work.
+16. During `OPEN`, verify normal grading and content operations work.
+17. After admin moves period to `GRADING`, verify no new enrollments occur but grading remains available.
+18. Complete missing grades to drive group progress toward 100%.
+19. Validate student can view posted grades afterward.
 
 ## Expected Results Checklist
 
 - Teacher can manage content, evaluations, and grades for own groups.
+- Teacher-side visibility is unaffected, while student visibility is payment-gated.
 - Weight validation prevents invalid evaluation distributions.
 - Grade publication updates student visibility and academic progression.
 - Teacher permissions stay scoped to assigned groups.

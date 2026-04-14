@@ -41,6 +41,12 @@ interface AvailableGroup {
   maxStudents: number;
   currentStudents: number;
   prerequisitesMet: boolean;
+  groupClassrooms: Array<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    classroom: { name: string; building: string | null };
+  }>;
   subject: {
     id: string;
     name: string;
@@ -50,6 +56,22 @@ interface AvailableGroup {
   };
   teacher: { user: { firstName: string; lastName: string } };
 }
+
+const dayLabels: Record<number, string> = {
+  1: "Lun",
+  2: "Mar",
+  3: "Mié",
+  4: "Jue",
+  5: "Vie",
+  6: "Sáb",
+  7: "Dom",
+};
+
+const formatClock = (raw: string): string => {
+  if (!raw) return "--:--";
+  if (raw.includes("T")) return raw.slice(11, 16);
+  return raw.slice(0, 5);
+};
 
 interface EnrolledSubjectRow {
   id: string;
@@ -276,6 +298,42 @@ export default function StudentSelfEnrollPage() {
       key: "teacher",
       label: "Profesor",
       render: (r) => `${r.teacher.user.firstName} ${r.teacher.user.lastName}`,
+    },
+    {
+      key: "schedule",
+      label: "Horario",
+      render: (r) => {
+        if (!r.groupClassrooms?.length) return "Sin horario asignado";
+        return r.groupClassrooms
+          .slice()
+          .sort((a, b) =>
+            a.dayOfWeek !== b.dayOfWeek
+              ? a.dayOfWeek - b.dayOfWeek
+              : formatClock(a.startTime).localeCompare(formatClock(b.startTime)),
+          )
+          .map(
+            (gc) =>
+              `${dayLabels[gc.dayOfWeek] ?? `Día ${gc.dayOfWeek}`} ${formatClock(gc.startTime)}-${formatClock(gc.endTime)}`,
+          )
+          .join(" | ");
+      },
+    },
+    {
+      key: "classrooms",
+      label: "Aula(s)",
+      render: (r) => {
+        if (!r.groupClassrooms?.length) return "N/A";
+        const uniqueRooms = Array.from(
+          new Set(
+            r.groupClassrooms.map((gc) =>
+              gc.classroom.building
+                ? `${gc.classroom.name} (${gc.classroom.building})`
+                : gc.classroom.name,
+            ),
+          ),
+        );
+        return uniqueRooms.join(", ");
+      },
     },
     {
       key: "capacity",

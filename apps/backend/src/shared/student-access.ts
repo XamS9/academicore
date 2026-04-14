@@ -85,3 +85,68 @@ export async function assertStudentCanAccessTopic(
   if (!topic) throw new HttpError(404, "Tema no encontrado");
   await assertStudentEnrolledInGroup(studentId, topic.groupId);
 }
+
+/**
+ * Students must have paid the inscription fee for the academic period of the group
+ * before accessing course learning content (topics/evaluations/submissions).
+ */
+export async function assertStudentPaidInscriptionForGroup(
+  studentId: string,
+  groupId: string,
+): Promise<void> {
+  const enrollment = await prisma.enrollmentSubject.findFirst({
+    where: {
+      groupId,
+      status: "ENROLLED",
+      enrollment: { studentId },
+    },
+    select: {
+      enrollment: { select: { academicPeriodId: true } },
+    },
+  });
+  if (!enrollment) {
+    throw new HttpError(403, "No estás inscrito en este grupo");
+  }
+
+  const inscriptionFee = await prisma.studentFee.findFirst({
+    where: {
+      studentId,
+      periodId: enrollment.enrollment.academicPeriodId,
+      feeConcept: {
+        name: { contains: "inscripci", mode: "insensitive" },
+      },
+    },
+    select: { status: true },
+  });
+
+  if (!inscriptionFee || inscriptionFee.status !== "PAID") {
+    throw new HttpError(
+      403,
+      "Debes pagar la cuota de inscripción del período para acceder al contenido del curso",
+    );
+  }
+}
+
+export async function assertStudentPaidInscriptionForTopic(
+  studentId: string,
+  topicId: string,
+): Promise<void> {
+  const topic = await prisma.topic.findUnique({
+    where: { id: topicId },
+    select: { groupId: true },
+  });
+  if (!topic) throw new HttpError(404, "Tema no encontrado");
+  await assertStudentPaidInscriptionForGroup(studentId, topic.groupId);
+}
+
+export async function assertStudentPaidInscriptionForEvaluation(
+  studentId: string,
+  evaluationId: string,
+): Promise<void> {
+  const evaluation = await prisma.evaluation.findUnique({
+    where: { id: evaluationId },
+    select: { groupId: true },
+  });
+  if (!evaluation) throw new HttpError(404, "Evaluación no encontrada");
+  await assertStudentPaidInscriptionForGroup(studentId, evaluation.groupId);
+}

@@ -2,7 +2,8 @@
  * Academicore — Database seed
  *
  * Demo dataset covering major entities and enum values for QA: roles (ADMIN,
- * TEACHER, STUDENT), users (active/inactive), two teachers, many students
+ * TEACHER, STUDENT), users (active/inactive), two teachers + E2E trio (admin,
+ * teacher, student), many students
  * (every AcademicStatus), two active careers + one inactive career, active and
  * inactive subjects, prerequisites, periods (OPEN / GRADING / CLOSED),
  * groups (ON_SITE / VIRTUAL / HYBRID, active/inactive), enrollments (ACTIVE /
@@ -11,6 +12,11 @@
  * types/statuses, fee/payment states, calendar event types, announcements
  * (ALL / CAREER / GROUP), notifications (all NotificationType values), audit
  * actions, and system settings with signatures.
+ *
+ * E2E: `teacher.e2e` imparte `ETH101-E2E` (2026-1) con temas, materiales y
+ * evaluaciones; `student.e2e` tiene cargo de inscripción PENDIENTE para ese
+ * período (flujo pago → contenido). El resto de grupos 2026-1 incluyen temas
+ * donde aplica el dataset demo.
  *
  * Called automatically on startup when NODE_ENV !== 'production' and the DB
  * is empty. Can also be run manually via `npm run prisma:seed`.
@@ -280,7 +286,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
-  await prisma.teacher.upsert({
+  const teacherE2E = await prisma.teacher.upsert({
     where: { employeeCode: "DOC-E2E-001" },
     update: {
       userId: teacherE2EUser.id,
@@ -294,7 +300,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
-  await prisma.student.upsert({
+  const studentE2E = await prisma.student.upsert({
     where: { studentCode: "EST-E2E-001" },
     update: {
       userId: studentE2EUser.id,
@@ -1010,6 +1016,29 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
+  // Grupo dedicado E2E (2026-1): docente teacher.e2e — Ética; con cupo para inscripciones de prueba
+  const grpEth101E2E = await prisma.group.upsert({
+    where: {
+      subjectId_academicPeriodId_groupCode: {
+        subjectId: eth101.id,
+        academicPeriodId: period2025.id,
+        groupCode: "ETH101-E2E",
+      },
+    },
+    update: {
+      teacherId: teacherE2E.id,
+      isActive: true,
+    },
+    create: {
+      subjectId: eth101.id,
+      academicPeriodId: period2025.id,
+      teacherId: teacherE2E.id,
+      groupCode: "ETH101-E2E",
+      maxStudents: 45,
+      currentStudents: 0,
+    },
+  });
+
   // ── 11b. GROUP_CLASSROOMS (schedules) ─────────────────────────────────────────
   // Helper to build a time-only Date (Prisma @db.Time)
   const time = (h: number, m: number) =>
@@ -1082,6 +1111,13 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       dayOfWeek: 2,
       startTime: time(7, 0),
       endTime: time(8, 30),
+    },
+    {
+      groupId: grpEth101E2E.id,
+      classroomId: classroomB201.id,
+      dayOfWeek: 6,
+      startTime: time(10, 0),
+      endTime: time(12, 0),
     },
   ];
 
@@ -1524,6 +1560,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   const evals2025Red101 = await ensureEvals(grpRed101.id);
   await ensureEvals(grpPrg201B.id);
   await ensureEvals(grpADM110A.id);
+  await ensureEvals(grpEth101E2E.id);
 
   await prisma.studentSubmission.upsert({
     where: {
@@ -2669,6 +2706,221 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     });
   }
 
+  // RED101 — Redes (2026-1): presencial + virtual + híbrido (antes sin temas en seed)
+  const topicRedA1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpRed101.id, sortOrder: 1 } },
+    update: { weekNumber: 1 },
+    create: {
+      groupId: grpRed101.id,
+      title: "Modelos de red y capas",
+      description: "OSI, TCP/IP y encaminamiento básico",
+      sortOrder: 1,
+      weekNumber: 1,
+    },
+  });
+  const topicRedA2 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpRed101.id, sortOrder: 2 } },
+    update: { weekNumber: 2 },
+    create: {
+      groupId: grpRed101.id,
+      title: "Direccionamiento IP",
+      description: "IPv4, máscaras y subredes",
+      sortOrder: 2,
+      weekNumber: 2,
+    },
+  });
+  for (const item of [
+    {
+      topicId: topicRedA1.id,
+      title: "Resumen OSI vs TCP/IP",
+      type: "TEXT" as const,
+      content:
+        "El modelo OSI divide la comunicación en 7 capas; TCP/IP es el stack usado en Internet (4 capas lógicas).",
+      sortOrder: 1,
+    },
+    {
+      topicId: topicRedA1.id,
+      title: "RFC y estándares IETF",
+      type: "LINK" as const,
+      content: "https://www.ietf.org/standards/",
+      sortOrder: 2,
+    },
+    {
+      topicId: topicRedA2.id,
+      title: "Calculadora de subred (referencia)",
+      type: "LINK" as const,
+      content: "https://www.subnet-calculator.com/",
+      sortOrder: 1,
+    },
+  ]) {
+    await prisma.contentItem.upsert({
+      where: {
+        topicId_sortOrder: { topicId: item.topicId, sortOrder: item.sortOrder },
+      },
+      update: {},
+      create: item,
+    });
+  }
+
+  const topicRedV1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpRed101V.id, sortOrder: 1 } },
+    update: { weekNumber: 1 },
+    create: {
+      groupId: grpRed101V.id,
+      title: "Actividad en línea — redes",
+      description: "Sección virtual (sin aula física)",
+      sortOrder: 1,
+      weekNumber: 1,
+    },
+  });
+  await prisma.contentItem.upsert({
+    where: {
+      topicId_sortOrder: { topicId: topicRedV1.id, sortOrder: 1 },
+    },
+    update: {},
+    create: {
+      topicId: topicRedV1.id,
+      title: "Bienvenida al grupo virtual",
+      type: "TEXT",
+      content:
+        "Este grupo es 100% en línea. Revisa el foro y los enlaces de cada semana.",
+      sortOrder: 1,
+    },
+  });
+
+  const topicRedH1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpRed101H.id, sortOrder: 1 } },
+    update: { weekNumber: 1 },
+    create: {
+      groupId: grpRed101H.id,
+      title: "Combinación presencial / remoto",
+      description: "Normas del grupo mixto",
+      sortOrder: 1,
+      weekNumber: 1,
+    },
+  });
+  await prisma.contentItem.upsert({
+    where: {
+      topicId_sortOrder: { topicId: topicRedH1.id, sortOrder: 1 },
+    },
+    update: {},
+    create: {
+      topicId: topicRedH1.id,
+      title: "Calendario de sesiones",
+      type: "TEXT",
+      content:
+        "Las sesiones presenciales usan el aula asignada; las actividades en línea se publican por semana.",
+      sortOrder: 1,
+    },
+  });
+
+  // PRG201-B — misma materia que PRG201-A; contenido demo para la segunda sección
+  const topicPrgB1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpPrg201B.id, sortOrder: 1 } },
+    update: { weekNumber: 1 },
+    create: {
+      groupId: grpPrg201B.id,
+      title: "Introducción a POO (sección B)",
+      description: "Mismo programa que PRG201-A; material de apoyo",
+      sortOrder: 1,
+      weekNumber: 1,
+    },
+  });
+  const topicPrgB2 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpPrg201B.id, sortOrder: 2 } },
+    update: { weekNumber: 2 },
+    create: {
+      groupId: grpPrg201B.id,
+      title: "Práctica guiada",
+      description: "Ejercicios para laboratorio",
+      sortOrder: 2,
+      weekNumber: 2,
+    },
+  });
+  for (const item of [
+    {
+      topicId: topicPrgB1.id,
+      title: "Notas de la sección B",
+      type: "TEXT" as const,
+      content:
+        "Esta sección comparte el plan de la materia con PRG201-A. Usa estos temas como guía semanal.",
+      sortOrder: 1,
+    },
+    {
+      topicId: topicPrgB2.id,
+      title: "Proyecto semanal",
+      type: "TEXT" as const,
+      content:
+        "Implementa una jerarquía simple de clases (ej. Figura → Rectángulo/Círculo) y súbelo al espacio indicado por el docente.",
+      sortOrder: 1,
+    },
+  ]) {
+    await prisma.contentItem.upsert({
+      where: {
+        topicId_sortOrder: { topicId: item.topicId, sortOrder: item.sortOrder },
+      },
+      update: {},
+      create: item,
+    });
+  }
+
+  // ETH101-E2E — grupo del docente E2E (ética profesional, 2026-1)
+  const topicEthE2E1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpEth101E2E.id, sortOrder: 1 } },
+    update: { weekNumber: 1 },
+    create: {
+      groupId: grpEth101E2E.id,
+      title: "Fundamentos y código de ética",
+      description: "Valores, principios y marcos institucionales",
+      sortOrder: 1,
+      weekNumber: 1,
+    },
+  });
+  const topicEthE2E2 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpEth101E2E.id, sortOrder: 2 } },
+    update: { weekNumber: 2 },
+    create: {
+      groupId: grpEth101E2E.id,
+      title: "Ética en el ejercicio profesional",
+      description: "Casos y responsabilidad social",
+      sortOrder: 2,
+      weekNumber: 2,
+    },
+  });
+  for (const item of [
+    {
+      topicId: topicEthE2E1.id,
+      title: "Lectura: definición de ética aplicada",
+      type: "TEXT" as const,
+      content:
+        "La ética profesional orienta la conducta en el trabajo: integridad, transparencia y respeto a la normativa.",
+      sortOrder: 1,
+    },
+    {
+      topicId: topicEthE2E1.id,
+      title: "Código ético (referencia)",
+      type: "LINK" as const,
+      content: "https://www.un.org/en/about-us/ethics-office",
+      sortOrder: 2,
+    },
+    {
+      topicId: topicEthE2E2.id,
+      title: "Foro: dilemas en TI",
+      type: "TEXT" as const,
+      content:
+        "Analiza un caso de uso de datos personales: identifica riesgos y medidas de mitigación.",
+      sortOrder: 1,
+    },
+  ]) {
+    await prisma.contentItem.upsert({
+      where: {
+        topicId_sortOrder: { topicId: item.topicId, sortOrder: item.sortOrder },
+      },
+      update: {},
+      create: item,
+    });
+  }
+
   const topicAdm1 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpADM110A.id, sortOrder: 1 } },
     update: { weekNumber: 1 },
@@ -2808,6 +3060,27 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       periodId: period2025.id,
       amount: 800,
       dueDate: new Date("2026-03-01"),
+      status: "PENDING",
+    },
+  });
+
+  await prisma.studentFee.upsert({
+    where: { id: "550e8400-e29b-41d4-a716-4466554400e2" },
+    update: {
+      studentId: studentE2E.id,
+      periodId: period2025.id,
+      feeConceptId: feeInscripcion.id,
+      amount: 5000,
+      dueDate: new Date("2026-02-15"),
+      status: "PENDING",
+    },
+    create: {
+      id: "550e8400-e29b-41d4-a716-4466554400e2",
+      studentId: studentE2E.id,
+      feeConceptId: feeInscripcion.id,
+      periodId: period2025.id,
+      amount: 5000,
+      dueDate: new Date("2026-02-15"),
       status: "PENDING",
     },
   });
@@ -3194,6 +3467,11 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   console.log("   Admin:    admin@academicore.com          / admin123");
   console.log("   Teacher:  prof.garcia@academicore.com   / teacher123");
   console.log("   Student:  ana.garcia@academicore.com    / student123");
+  console.log("");
+  console.log("   E2E accounts (passwords with symbols as seeded):");
+  console.log("   Admin:    admin.e2e@academicore.com    / AdminE2E#2026");
+  console.log("   Teacher:  teacher.e2e@academicore.com   / TeacherE2E#2026  → grupo ETH101-E2E (2026-1), temas + evaluaciones");
+  console.log("   Student:  student.e2e@academicore.com   / StudentE2E#2026  → inscripción ISC sin materias; cargo inscripción PENDIENTE 2026-1");
   console.log("");
   console.log("   More demo students (password student123):");
   console.log("   · Estados académicos: luis.pendiente@, maria.riesgo@, pedro.elegible@,");

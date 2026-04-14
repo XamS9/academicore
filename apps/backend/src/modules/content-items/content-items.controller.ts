@@ -6,6 +6,7 @@ import {
 } from "./content-items.dto";
 import {
   assertStudentCanAccessTopic,
+  assertStudentPaidInscriptionForTopic,
   requireStudentId,
 } from "../../shared/student-access";
 
@@ -21,6 +22,7 @@ export class ContentItemsController {
       if (req.user!.userType === "STUDENT") {
         const studentId = await requireStudentId(req.user!);
         await assertStudentCanAccessTopic(studentId, req.params.topicId);
+        await assertStudentPaidInscriptionForTopic(studentId, req.params.topicId);
       }
       const result = await this.service.findByTopic(req.params.topicId);
       res.json(result);
@@ -39,6 +41,7 @@ export class ContentItemsController {
         const studentId = await requireStudentId(req.user!);
         const item = await this.service.findById(req.params.id);
         await assertStudentCanAccessTopic(studentId, item.topicId);
+        await assertStudentPaidInscriptionForTopic(studentId, item.topicId);
         res.json(item);
         return;
       }

@@ -423,7 +423,7 @@ Append-only log capturing changes across the system.
 
 ## 15. Course Content Management
 
-**Actors:** ADMIN (full CRUD on all groups), TEACHER (CRUD on own groups), STUDENT (read-only on enrolled groups)
+**Actors:** ADMIN (full CRUD on all groups), TEACHER (CRUD on own groups), STUDENT (read-only on enrolled groups with paid inscription fee)
 
 Content is organized per **Group** (not per Subject), so each teacher customizes their own section's materials.
 
@@ -466,6 +466,7 @@ The UI shows each item's `createdAt` as "Publicado el DD MMM YYYY" for both teac
 - Deleting a topic cascades to delete all its content items
 - Hard deletes (no soft delete — content is ephemeral per semester)
 - Auto-clone on group creation replaces any pre-existing topics in the new group (new groups are empty, so this is always a fresh copy)
+- Student access to topics/content/evaluations/submissions for a group requires `ENROLLED` status **and** the period's inscription fee in `PAID` status. If unpaid, API returns 403 and content remains locked.
 
 ---
 

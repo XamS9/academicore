@@ -4,7 +4,11 @@ import {
   CreateStudentSubmissionSchema,
   UpdateStudentSubmissionSchema,
 } from "./student-submissions.dto";
-import { assertStudentResourceAccess, requireStudentId } from "../../shared/student-access";
+import {
+  assertStudentPaidInscriptionForEvaluation,
+  assertStudentResourceAccess,
+  requireStudentId,
+} from "../../shared/student-access";
 import { HttpError } from "../../shared/http-error";
 
 export class StudentSubmissionsController {
@@ -23,7 +27,19 @@ export class StudentSubmissionsController {
     try {
       const studentId = await requireStudentId(req.user!);
       const data = await this.service.findByStudent(studentId);
-      res.json(data);
+      const gated = [];
+      for (const row of data) {
+        try {
+          await assertStudentPaidInscriptionForEvaluation(
+            studentId,
+            row.evaluationId,
+          );
+          gated.push(row);
+        } catch {
+          // Hidden until inscription fee is paid for the corresponding period/group.
+        }
+      }
+      res.json(gated);
     } catch (err) {
       next(err);
     }
@@ -49,6 +65,10 @@ export class StudentSubmissionsController {
           throw new HttpError(403, "Solo puedes entregar como tú mismo");
         }
         studentId = own;
+        await assertStudentPaidInscriptionForEvaluation(
+          studentId,
+          parsed.evaluationId,
+        );
       } else if (!studentId) {
         throw new HttpError(400, "studentId es requerido");
       }

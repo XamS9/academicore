@@ -210,6 +210,11 @@ export class EnrollmentsService {
         teacher: {
           include: { user: { select: { firstName: true, lastName: true } } },
         },
+        groupClassrooms: {
+          include: {
+            classroom: { select: { name: true, building: true } },
+          },
+        },
       },
     });
 
