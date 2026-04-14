@@ -81,7 +81,14 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   ]);
 
   // ── 2. USERS ────────────────────────────────────────────────────────────────
-  const [adminUser, teacherUser, studentUser] = await Promise.all([
+  const [
+    adminUser,
+    teacherUser,
+    studentUser,
+    adminE2EUser,
+    teacherE2EUser,
+    studentE2EUser,
+  ] = await Promise.all([
     prisma.user.upsert({
       where: { email: "admin@academicore.com" },
       update: {},
@@ -115,6 +122,51 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         passwordHash: await hash("student123"),
       },
     }),
+    prisma.user.upsert({
+      where: { email: "admin.e2e@academicore.com" },
+      update: {
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        userType: "ADMIN",
+        firstName: "Admin",
+        lastName: "E2E",
+        email: "admin.e2e@academicore.com",
+        passwordHash: await hash("AdminE2E#2026"),
+        isActive: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "teacher.e2e@academicore.com" },
+      update: {
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        userType: "TEACHER",
+        firstName: "Teacher",
+        lastName: "E2E",
+        email: "teacher.e2e@academicore.com",
+        passwordHash: await hash("TeacherE2E#2026"),
+        isActive: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "student.e2e@academicore.com" },
+      update: {
+        isActive: true,
+        deletedAt: null,
+      },
+      create: {
+        userType: "STUDENT",
+        firstName: "Student",
+        lastName: "E2E",
+        email: "student.e2e@academicore.com",
+        passwordHash: await hash("StudentE2E#2026"),
+        isActive: true,
+      },
+    }),
   ]);
 
   // ── 3. USER_ROLES ────────────────────────────────────────────────────────────
@@ -137,6 +189,27 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       },
       update: {},
       create: { userId: studentUser.id, roleId: studentRole.id },
+    }),
+    prisma.userRole.upsert({
+      where: {
+        userId_roleId: { userId: adminE2EUser.id, roleId: adminRole.id },
+      },
+      update: {},
+      create: { userId: adminE2EUser.id, roleId: adminRole.id },
+    }),
+    prisma.userRole.upsert({
+      where: {
+        userId_roleId: { userId: teacherE2EUser.id, roleId: teacherRole.id },
+      },
+      update: {},
+      create: { userId: teacherE2EUser.id, roleId: teacherRole.id },
+    }),
+    prisma.userRole.upsert({
+      where: {
+        userId_roleId: { userId: studentE2EUser.id, roleId: studentRole.id },
+      },
+      update: {},
+      create: { userId: studentE2EUser.id, roleId: studentRole.id },
     }),
   ]);
 
@@ -204,6 +277,38 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       careerId: career.id,
       academicStatus: "ACTIVE",
       enrollmentDate: new Date("2021-08-16"),
+    },
+  });
+
+  await prisma.teacher.upsert({
+    where: { employeeCode: "DOC-E2E-001" },
+    update: {
+      userId: teacherE2EUser.id,
+      department: "Ciencias Computacionales",
+      deletedAt: null,
+    },
+    create: {
+      userId: teacherE2EUser.id,
+      employeeCode: "DOC-E2E-001",
+      department: "Ciencias Computacionales",
+    },
+  });
+
+  await prisma.student.upsert({
+    where: { studentCode: "EST-E2E-001" },
+    update: {
+      userId: studentE2EUser.id,
+      careerId: career.id,
+      academicStatus: "ACTIVE",
+      enrollmentDate: new Date("2026-01-15"),
+      deletedAt: null,
+    },
+    create: {
+      userId: studentE2EUser.id,
+      studentCode: "EST-E2E-001",
+      careerId: career.id,
+      academicStatus: "ACTIVE",
+      enrollmentDate: new Date("2026-01-15"),
     },
   });
 
