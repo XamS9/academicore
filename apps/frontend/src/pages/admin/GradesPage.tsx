@@ -3,7 +3,6 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import Table from "@mui/material/Table";
@@ -20,6 +19,7 @@ import { groupsService } from "../../services/groups.service";
 import { evaluationsService } from "../../services/evaluations.service";
 import { gradesService } from "../../services/grades.service";
 import { teachersService } from "../../services/teachers.service";
+import { GroupAutocomplete } from "../../components/ui/ScalablePickers";
 
 interface GroupOption {
   id: string;
@@ -174,21 +174,13 @@ export default function GradesPage() {
         )}
       </Box>
 
-      <TextField
-        select
-        label="Grupo"
+      <GroupAutocomplete
+        options={groups}
         value={selectedGroup}
-        onChange={(e) => setSelectedGroup(e.target.value)}
-        fullWidth
+        onChange={setSelectedGroup}
+        label="Grupo"
         sx={{ mb: 3 }}
-      >
-        <MenuItem value="">— Seleccione un grupo —</MenuItem>
-        {groups.map((g) => (
-          <MenuItem key={g.id} value={g.id}>
-            {g.subject.name} ({g.groupCode}) — {g.academicPeriod?.name}
-          </MenuItem>
-        ))}
-      </TextField>
+      />
 
       {loading ? (
         <Box className="flex justify-center py-8">

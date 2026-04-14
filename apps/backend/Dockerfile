@@ -54,10 +54,11 @@ COPY --from=builder /app/apps/backend/prisma.config.ts ./apps/backend/prisma.con
 WORKDIR /app/apps/backend
 RUN DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder npx prisma generate
 
-# Copy entrypoint script
-COPY apps/backend/docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
+# Copy entrypoint script (must be LF line endings; CRLF breaks shebang on Linux)
+COPY apps/backend/docker-entrypoint.sh /app/apps/backend/docker-entrypoint.sh
+RUN chmod +x /app/apps/backend/docker-entrypoint.sh
 
 EXPOSE 3000
 
-ENTRYPOINT ["./docker-entrypoint.sh"]
+# Invoke via /bin/sh so a bad shebang/CRLF cannot make the kernel fail with "not found"
+ENTRYPOINT ["/bin/sh", "/app/apps/backend/docker-entrypoint.sh"]

@@ -23,7 +23,6 @@ import type { CertificationStatus, CertificationType } from "../../types";
 
 const certTypeLabels: Record<CertificationType, string> = {
   TRANSCRIPT: "Historial Académico",
-  ENROLLMENT_PROOF: "Comprobante de Inscripción",
   DEGREE: "Título Profesional",
   COMPLETION: "Certificado de Terminación",
 };

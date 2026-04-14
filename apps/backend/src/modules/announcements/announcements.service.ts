@@ -1,55 +1,73 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
 import { notificationsService } from "../notifications/notifications.service";
 import type {
+  AnnouncementListQuery,
   CreateAnnouncementInput,
   UpdateAnnouncementInput,
 } from "./announcements.dto";
 
+const authorInclude = {
+  author: { select: { id: true, firstName: true, lastName: true } },
+} as const;
+
 export class AnnouncementsService {
-  async findAll() {
-    return prisma.announcement.findMany({
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { publishedAt: "desc" },
-    });
+  private async findManyPaginated(
+    where: Prisma.AnnouncementWhereInput | undefined,
+    q: AnnouncementListQuery,
+  ) {
+    const skip = (q.page - 1) * q.pageSize;
+    const [data, total] = await Promise.all([
+      prisma.announcement.findMany({
+        where,
+        include: authorInclude,
+        orderBy: { publishedAt: "desc" },
+        skip,
+        take: q.pageSize,
+      }),
+      prisma.announcement.count({ where }),
+    ]);
+    return { data, total, page: q.page, pageSize: q.pageSize };
+  }
+
+  async findAll(q: AnnouncementListQuery) {
+    return this.findManyPaginated(undefined, q);
   }
 
   async findById(id: string) {
     const announcement = await prisma.announcement.findUnique({
       where: { id },
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true } },
-      },
+      include: authorInclude,
     });
     if (!announcement) throw new HttpError(404, "Anuncio no encontrado");
     return announcement;
   }
 
   /**
-   * Returns announcements relevant to the calling user.
+   * Returns announcements relevant to the calling user (paginated).
    * - ALL audience: everyone sees them
    * - CAREER: students in that career
    * - GROUP: students enrolled in that group
    * Teachers see ALL + their own authored announcements
+   * Admins use the same dataset as `findAll`
    */
-  async findMy(userId: string, userType: string) {
-    if (userType === "ADMIN") return this.findAll();
-
-    if (userType === "TEACHER") {
-      return prisma.announcement.findMany({
-        where: {
-          OR: [{ audience: "ALL" }, { authorId: userId }],
-        },
-        include: {
-          author: { select: { id: true, firstName: true, lastName: true } },
-        },
-        orderBy: { publishedAt: "desc" },
-      });
+  async findMy(
+    userId: string,
+    userType: string,
+    q: AnnouncementListQuery,
+  ) {
+    if (userType === "ADMIN") {
+      return this.findAll(q);
     }
 
-    // STUDENT — resolve career and enrolled groups
+    if (userType === "TEACHER") {
+      return this.findManyPaginated(
+        { OR: [{ audience: "ALL" }, { authorId: userId }] },
+        q,
+      );
+    }
+
     const student = await prisma.student.findFirst({
       where: { userId, deletedAt: null },
       select: {
@@ -72,23 +90,20 @@ export class AnnouncementsService {
         e.enrollmentSubjects.map((es) => es.groupId),
       ) ?? [];
 
-    return prisma.announcement.findMany({
-      where: {
-        OR: [
-          { audience: "ALL" },
-          ...(careerId
-            ? [{ audience: "CAREER" as const, targetId: careerId }]
-            : []),
-          ...(groupIds.length > 0
-            ? [{ audience: "GROUP" as const, targetId: { in: groupIds } }]
-            : []),
-        ],
-      },
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true } },
-      },
-      orderBy: { publishedAt: "desc" },
-    });
+    const orConditions: Prisma.AnnouncementWhereInput[] = [
+      { audience: "ALL" },
+    ];
+    if (careerId) {
+      orConditions.push({ audience: "CAREER", targetId: careerId });
+    }
+    if (groupIds.length > 0) {
+      orConditions.push({
+        audience: "GROUP",
+        targetId: { in: groupIds },
+      });
+    }
+
+    return this.findManyPaginated({ OR: orConditions }, q);
   }
 
   async create(authorId: string, data: CreateAnnouncementInput) {
@@ -101,12 +116,9 @@ export class AnnouncementsService {
 
     const announcement = await prisma.announcement.create({
       data: { ...data, authorId },
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true } },
-      },
+      include: authorInclude,
     });
 
-    // Fan-out notifications
     const userIds = await this.resolveTargetUserIds(
       data.audience,
       data.targetId,
@@ -129,9 +141,7 @@ export class AnnouncementsService {
     return prisma.announcement.update({
       where: { id },
       data,
-      include: {
-        author: { select: { id: true, firstName: true, lastName: true } },
-      },
+      include: authorInclude,
     });
   }
 

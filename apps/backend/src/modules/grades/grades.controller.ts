@@ -4,6 +4,7 @@ import { UpsertGradeDto, BulkUpsertGradesDto } from "./grades.dto";
 import {
   assertStudentEnrolledInGroup,
   assertStudentResourceAccess,
+  assertStudentTookGroup,
   requireStudentId,
 } from "../../shared/student-access";
 
@@ -38,6 +39,25 @@ export class GradesController {
     try {
       const studentId = await requireStudentId(req.user!);
       await assertStudentEnrolledInGroup(studentId, req.params.groupId);
+      const result = await this.service.findByStudentAndGroup(
+        studentId,
+        req.params.groupId,
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /** Same payload as findMineByGroup, but allows COMPLETED/FAILED (any non-DROPPED) enrollment. */
+  findMineByGroupHistory = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const studentId = await requireStudentId(req.user!);
+      await assertStudentTookGroup(studentId, req.params.groupId);
       const result = await this.service.findByStudentAndGroup(
         studentId,
         req.params.groupId,

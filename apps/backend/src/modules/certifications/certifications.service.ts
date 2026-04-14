@@ -6,11 +6,7 @@ import { notificationsService } from "../notifications/notifications.service";
 interface IssueCertificationDto {
   studentId: string;
   careerId?: string;
-  certificationType:
-    | "DEGREE"
-    | "TRANSCRIPT"
-    | "ENROLLMENT_PROOF"
-    | "COMPLETION";
+  certificationType: "DEGREE" | "TRANSCRIPT" | "COMPLETION";
 }
 
 interface RevokeCertificationDto {
@@ -18,11 +14,7 @@ interface RevokeCertificationDto {
 }
 
 interface CreateCriteriaDto {
-  certificationType:
-    | "DEGREE"
-    | "TRANSCRIPT"
-    | "ENROLLMENT_PROOF"
-    | "COMPLETION";
+  certificationType: "DEGREE" | "TRANSCRIPT" | "COMPLETION";
   careerId?: string;
   minGrade: number;
   validityMonths: number;
@@ -211,7 +203,6 @@ export class CertificationsService {
       const typeLabels: Record<string, string> = {
         DEGREE: "Título",
         TRANSCRIPT: "Historial académico",
-        ENROLLMENT_PROOF: "Constancia de inscripción",
         COMPLETION: "Certificado de finalización",
       };
       await notificationsService.create({

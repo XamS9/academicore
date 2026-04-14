@@ -1,3 +1,4 @@
+import { allocateUniqueSubjectCode } from "../../shared/entity-code.util";
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
 import { CreateSubjectDto, UpdateSubjectDto } from "./subjects.dto";
@@ -31,9 +32,24 @@ class SubjectsService {
   }
 
   async create(dto: CreateSubjectDto) {
+    const { code: rawCode, ...rest } = dto;
+    const trimmed = rawCode?.trim();
+    const code =
+      trimmed && trimmed.length > 0
+        ? trimmed
+        : await allocateUniqueSubjectCode(dto.name);
     return prisma.subject.create({
-      data: dto,
+      data: { ...rest, code },
     });
+  }
+
+  async suggestCode(name: string) {
+    const trimmed = name.trim();
+    if (trimmed.length < 1) {
+      throw new HttpError(400, "Nombre requerido para sugerir código");
+    }
+    const code = await allocateUniqueSubjectCode(trimmed);
+    return { code };
   }
 
   async update(id: string, dto: UpdateSubjectDto) {

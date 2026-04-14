@@ -91,7 +91,6 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 const certTypeLabels: Record<CertificationType, string> = {
   TRANSCRIPT: "Historial Académico",
-  ENROLLMENT_PROOF: "Comprobante de Inscripción",
   DEGREE: "Título Profesional",
   COMPLETION: "Certificado de Terminación",
 };
@@ -175,6 +174,18 @@ function CriteriasTab({ canEdit }: { canEdit: boolean }) {
 
   return (
     <Box>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        Aquí se definen las reglas de elegibilidad (promedio mínimo, créditos,
+        materias obligatorias de la carrera). Al emitir con{" "}
+        <code>POST /api/certifications/issue</code>, el backend valida al
+        estudiante contra el criterio que coincida con el{" "}
+        <strong>tipo</strong> y la <strong>carrera</strong> (o un criterio
+        global sin carrera). La única emisión automática actual es{" "}
+        <strong>COMPLETION</strong> cuando se aprueban todas las materias
+        obligatorias de la carrera al guardar calificaciones. Certificados por
+        un conjunto fijo de materias o por materia individual no están
+        modelados todavía.
+      </Alert>
       <Box className="flex items-center justify-between mb-3">
         <Typography variant="h6" fontWeight={600}>
           Criterios de Certificación

@@ -18,11 +18,7 @@ export type EnrollmentSubjectStatus =
   | "COMPLETED"
   | "FAILED";
 
-export type CertificationType =
-  | "DEGREE"
-  | "TRANSCRIPT"
-  | "ENROLLMENT_PROOF"
-  | "COMPLETION";
+export type CertificationType = "DEGREE" | "TRANSCRIPT" | "COMPLETION";
 
 export type CertificationStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
 

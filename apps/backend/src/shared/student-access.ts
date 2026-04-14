@@ -54,6 +54,26 @@ export async function assertStudentEnrolledInGroup(
   }
 }
 
+/**
+ * Student completed or is taking this group (any enrollment_subject status except DROPPED).
+ * Used to read grades for closed/completed enrollments (historial).
+ */
+export async function assertStudentTookGroup(
+  studentId: string,
+  groupId: string,
+): Promise<void> {
+  const row = await prisma.enrollmentSubject.findFirst({
+    where: {
+      groupId,
+      status: { not: "DROPPED" },
+      enrollment: { studentId },
+    },
+  });
+  if (!row) {
+    throw new HttpError(403, "No tienes registro de cursar este grupo");
+  }
+}
+
 export async function assertStudentCanAccessTopic(
   studentId: string,
   topicId: string,

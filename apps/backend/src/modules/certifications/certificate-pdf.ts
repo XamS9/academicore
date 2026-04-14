@@ -6,7 +6,6 @@ import { systemSettingsService } from "../system-settings/system-settings.servic
 
 const certTypeLabels: Record<string, string> = {
   TRANSCRIPT: "Historial Académico",
-  ENROLLMENT_PROOF: "Comprobante de Inscripción",
   DEGREE: "Título Profesional",
   COMPLETION: "Certificado de Terminación",
 };

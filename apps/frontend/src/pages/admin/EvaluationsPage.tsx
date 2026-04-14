@@ -20,6 +20,7 @@ import { groupsService } from "../../services/groups.service";
 import { evaluationsService } from "../../services/evaluations.service";
 import { evaluationTypesService } from "../../services/evaluation-types.service";
 import { teachersService } from "../../services/teachers.service";
+import { GroupAutocomplete } from "../../components/ui/ScalablePickers";
 
 interface EvalType {
   id: string;
@@ -222,21 +223,13 @@ export default function EvaluationsPage() {
         </Button>
       </Box>
 
-      <TextField
-        select
-        label="Seleccionar Grupo"
+      <GroupAutocomplete
+        options={groups}
         value={selectedGroup}
-        onChange={(e) => setSelectedGroup(e.target.value)}
-        fullWidth
+        onChange={setSelectedGroup}
+        label="Seleccionar grupo"
         sx={{ mb: 3 }}
-      >
-        <MenuItem value="">— Seleccione un grupo —</MenuItem>
-        {groups.map((g) => (
-          <MenuItem key={g.id} value={g.id}>
-            {g.subject.name} ({g.groupCode}) — {g.academicPeriod?.name}
-          </MenuItem>
-        ))}
-      </TextField>
+      />
 
       <DataTable
         columns={columns}

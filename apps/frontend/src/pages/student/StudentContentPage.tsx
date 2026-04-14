@@ -12,6 +12,7 @@ import Tab from "@mui/material/Tab";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
@@ -46,6 +47,7 @@ import {
   studentSubmissionsService,
   type StudentSubmissionWithEval,
 } from "../../services/student-submissions.service";
+import { getApiErrorMessage } from "../../services/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,6 +166,8 @@ export default function StudentContentPage() {
   const [form, setForm] = useState<SubmissionForm>(emptyForm());
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [submissionDeleteTarget, setSubmissionDeleteTarget] =
+    useState<StudentSubmissionWithEval | null>(null);
 
   // ─── Load cards ─────────────────────────────────────────────────────────────
 
@@ -299,12 +303,14 @@ export default function StudentContentPage() {
     setPendingFile(null);
   };
 
-  const handleDelete = async (submissionId: string) => {
-    if (!window.confirm("¿Eliminar esta entrega?")) return;
+  const confirmDeleteSubmission = async () => {
+    if (!submissionDeleteTarget) return;
+    const submissionId = submissionDeleteTarget.id;
     try {
       await studentSubmissionsService.delete(submissionId);
       const updated = submissions.filter((s) => s.id !== submissionId);
       setSubmissions(updated);
+      setSubmissionDeleteTarget(null);
       // Recalculate pending count for current card
       if (selectedCard) {
         setCards((prev) =>
@@ -376,10 +382,10 @@ export default function StudentContentPage() {
       }
       closeDialog();
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Error al guardar entrega";
-      showToast(msg, "error");
+      showToast(
+        getApiErrorMessage(err, "Error al guardar entrega"),
+        "error",
+      );
     }
   };
 
@@ -697,7 +703,7 @@ export default function StudentContentPage() {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDelete(sub.id)}
+                          onClick={() => setSubmissionDeleteTarget(sub)}
                           title="Eliminar entrega"
                         >
                           <DeleteIcon fontSize="small" />
@@ -878,6 +884,35 @@ export default function StudentContentPage() {
             startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : undefined}
           >
             {uploading ? "Subiendo…" : editingSubmissionId ? "Guardar" : "Publicar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!submissionDeleteTarget}
+        onClose={() => setSubmissionDeleteTarget(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Eliminar entrega</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Eliminar la entrega{" "}
+            <strong>{submissionDeleteTarget?.title}</strong> para la evaluación{" "}
+            <strong>{submissionDeleteTarget?.evaluation.name}</strong>? Esta
+            acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSubmissionDeleteTarget(null)}>
+            Cancelar
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={confirmDeleteSubmission}
+          >
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

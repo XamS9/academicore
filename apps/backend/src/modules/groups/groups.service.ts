@@ -5,6 +5,7 @@ import {
   UpdateGroupDto,
   AssignClassroomDto,
 } from "./groups.dto";
+import { allocateNextGroupCode } from "./group-code.util";
 
 class GroupsService {
   async findAll(periodId?: string) {
@@ -30,6 +31,19 @@ class GroupsService {
     });
     if (!group) throw new HttpError(404, "Group not found");
     return group;
+  }
+
+  async previewGroupCode(subjectId: string, academicPeriodId: string) {
+    const subject = await prisma.subject.findFirst({
+      where: { id: subjectId, deletedAt: null },
+    });
+    if (!subject) throw new HttpError(404, "Materia no encontrada");
+    const code = await allocateNextGroupCode(
+      subjectId,
+      academicPeriodId,
+      subject,
+    );
+    return { code };
   }
 
   async findByTeacher(teacherId: string) {
@@ -64,7 +78,39 @@ class GroupsService {
   }
 
   async create(dto: CreateGroupDto) {
-    const newGroup = await prisma.group.create({ data: dto });
+    const subject = await prisma.subject.findFirst({
+      where: { id: dto.subjectId, deletedAt: null },
+    });
+    if (!subject) throw new HttpError(404, "Materia no encontrada");
+
+    const rawCode = dto.groupCode?.trim();
+    let groupCode: string;
+    if (rawCode && rawCode.length > 0) {
+      groupCode = rawCode;
+    } else {
+      try {
+        groupCode = await allocateNextGroupCode(
+          dto.subjectId,
+          dto.academicPeriodId,
+          subject,
+        );
+      } catch {
+        throw new HttpError(500, "No se pudo generar el código del grupo");
+      }
+    }
+
+    const deliveryMode = dto.deliveryMode ?? "ON_SITE";
+
+    const newGroup = await prisma.group.create({
+      data: {
+        subjectId: dto.subjectId,
+        academicPeriodId: dto.academicPeriodId,
+        teacherId: dto.teacherId,
+        groupCode,
+        maxStudents: dto.maxStudents,
+        deliveryMode,
+      },
+    });
 
     // Auto-clone content from the most recent previous group for the same subject
     const previousGroup = await prisma.group.findFirst({

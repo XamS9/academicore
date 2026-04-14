@@ -14,3 +14,11 @@ export const UpdateAnnouncementDto = z.object({
 
 export type CreateAnnouncementInput = z.infer<typeof CreateAnnouncementDto>;
 export type UpdateAnnouncementInput = z.infer<typeof UpdateAnnouncementDto>;
+
+/** Query params for `GET /announcements` and `GET /announcements/my`. */
+export const AnnouncementListQueryDto = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export type AnnouncementListQuery = z.infer<typeof AnnouncementListQueryDto>;

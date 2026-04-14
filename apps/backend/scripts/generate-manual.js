@@ -22,9 +22,9 @@ const BACKEND_URL = "http://localhost:3000";
 const SEED_VERIFICATION_CODE = "00000000-seed-cert-0000-000000000001";
 
 const CREDENTIALS = {
-  ADMIN:   { email: "admin@academicore.mx",       password: "admin123" },
-  TEACHER: { email: "prof.garcia@academicore.mx", password: "teacher123" },
-  STUDENT: { email: "ana.garcia@academicore.mx",  password: "student123" },
+  ADMIN:   { email: "admin@academicore.com",       password: "admin123" },
+  TEACHER: { email: "prof.garcia@academicore.com", password: "teacher123" },
+  STUDENT: { email: "ana.garcia@academicore.com",  password: "student123" },
 };
 
 // Helper used inside `extras.setup` closures

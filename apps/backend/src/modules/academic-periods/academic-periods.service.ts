@@ -39,20 +39,38 @@ class AcademicPeriodsService {
     if (period.status === "CLOSED") {
       throw new HttpError(400, "No se puede modificar un período cerrado");
     }
+
+    if (period.status === "GRADING" && dto.enrollmentOpen === true) {
+      throw new HttpError(
+        400,
+        "No se pueden abrir inscripciones durante la fase de calificación. La calificación final se aplica al final del ciclo, con inscripciones cerradas.",
+      );
+    }
+
+    const data: {
+      name?: string;
+      startDate?: Date;
+      endDate?: Date;
+      enrollmentOpen?: boolean;
+    } = {
+      ...(dto.name !== undefined ? { name: dto.name } : {}),
+      ...(dto.startDate !== undefined
+        ? { startDate: new Date(dto.startDate) }
+        : {}),
+      ...(dto.endDate !== undefined
+        ? { endDate: new Date(dto.endDate) }
+        : {}),
+    };
+
+    if (period.status === "GRADING") {
+      data.enrollmentOpen = false;
+    } else if (dto.enrollmentOpen !== undefined) {
+      data.enrollmentOpen = dto.enrollmentOpen;
+    }
+
     return prisma.academicPeriod.update({
       where: { id },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.startDate !== undefined
-          ? { startDate: new Date(dto.startDate) }
-          : {}),
-        ...(dto.endDate !== undefined
-          ? { endDate: new Date(dto.endDate) }
-          : {}),
-        ...(dto.enrollmentOpen !== undefined
-          ? { enrollmentOpen: dto.enrollmentOpen }
-          : {}),
-      },
+      data,
     });
   }
 
@@ -60,6 +78,12 @@ class AcademicPeriodsService {
     const period = await this.findById(id);
     if (period.status === "CLOSED") {
       throw new HttpError(400, "El período está cerrado");
+    }
+    if (period.status === "GRADING") {
+      throw new HttpError(
+        400,
+        "No se puede cambiar el estado de inscripciones en fase de calificación. Las inscripciones permanecen cerradas hasta cerrar el período.",
+      );
     }
     return prisma.academicPeriod.update({
       where: { id },
@@ -161,6 +185,7 @@ class AcademicPeriodsService {
 
   /**
    * OPEN → GRADING: closes enrollment, begins grading phase.
+   * Invariant: GRADING and enrollmentOpen=true never coexist (calificación solo al final del ciclo).
    */
   async startGrading(id: string, adminUserId: string) {
     const period = await this.findById(id);

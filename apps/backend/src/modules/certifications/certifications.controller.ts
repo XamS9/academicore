@@ -9,23 +9,13 @@ import { prisma } from "../../shared/prisma.client";
 const IssueCertDto = z.object({
   studentId: z.string().uuid(),
   careerId: z.string().uuid().optional(),
-  certificationType: z.enum([
-    "DEGREE",
-    "TRANSCRIPT",
-    "ENROLLMENT_PROOF",
-    "COMPLETION",
-  ]),
+  certificationType: z.enum(["DEGREE", "TRANSCRIPT", "COMPLETION"]),
 });
 
 const RevokeCertDto = z.object({ reason: z.string().min(1).max(500) });
 
 const CreateCriteriaDto = z.object({
-  certificationType: z.enum([
-    "DEGREE",
-    "TRANSCRIPT",
-    "ENROLLMENT_PROOF",
-    "COMPLETION",
-  ]),
+  certificationType: z.enum(["DEGREE", "TRANSCRIPT", "COMPLETION"]),
   careerId: z.string().uuid().optional(),
   minGrade: z.number().min(0).max(100).default(60),
   validityMonths: z.number().int().min(1),

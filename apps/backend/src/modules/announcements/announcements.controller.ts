@@ -1,19 +1,21 @@
 import { Request, Response, NextFunction } from "express";
 import { announcementsService } from "./announcements.service";
 import {
+  AnnouncementListQueryDto,
   CreateAnnouncementDto,
   UpdateAnnouncementDto,
 } from "./announcements.dto";
 
 class AnnouncementsController {
   findAll = async (
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const announcements = await announcementsService.findAll();
-      res.json(announcements);
+      const q = AnnouncementListQueryDto.parse(req.query);
+      const result = await announcementsService.findAll(q);
+      res.json(result);
     } catch (err) {
       next(err);
     }
@@ -25,11 +27,13 @@ class AnnouncementsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const announcements = await announcementsService.findMy(
+      const q = AnnouncementListQueryDto.parse(req.query);
+      const result = await announcementsService.findMy(
         req.user!.sub,
         req.user!.userType,
+        q,
       );
-      res.json(announcements);
+      res.json(result);
     } catch (err) {
       next(err);
     }

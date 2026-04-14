@@ -93,7 +93,7 @@ export default function StudentGradesHistoryPage() {
         const gradeResults = await Promise.all(
           allGroups.map((g) =>
             gradesService
-              .getMineByGroup(g.groupId)
+              .getMineByGroupHistory(g.groupId)
               .then((gs: GradeItem[]) => ({ groupId: g.groupId, grades: gs }))
               .catch(() => ({ groupId: g.groupId, grades: [] as GradeItem[] })),
           ),

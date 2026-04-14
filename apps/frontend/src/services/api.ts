@@ -1,5 +1,20 @@
 import axios from "axios";
 
+/**
+ * Reads the user-facing message from an Axios error body.
+ * `HttpError` from the API is serialized as `{ error: string }`; some paths may use `message`.
+ */
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  const ax = err as { response?: { data?: unknown } };
+  const data = ax.response?.data;
+  if (data && typeof data === "object" && data !== null) {
+    const o = data as Record<string, unknown>;
+    if (typeof o.error === "string" && o.error.trim()) return o.error;
+    if (typeof o.message === "string" && o.message.trim()) return o.message;
+  }
+  return fallback;
+}
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "/api",
   headers: { "Content-Type": "application/json" },

@@ -1,10 +1,19 @@
 import { Router } from "express";
-import { authenticate, authorize } from "../../middleware/auth.middleware";
+import {
+  authenticate,
+  authorize,
+} from "../../middleware/auth.middleware";
 import { subjectsController } from "./subjects.controller";
 
 export const subjectsRouter = Router();
 
 subjectsRouter.get("/", authenticate, subjectsController.findAll);
+subjectsRouter.get(
+  "/suggest-code",
+  authenticate,
+  authorize("ADMIN"),
+  subjectsController.suggestCode,
+);
 subjectsRouter.get("/:id", authenticate, subjectsController.findById);
 subjectsRouter.post(
   "/",

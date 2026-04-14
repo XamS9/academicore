@@ -17,7 +17,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import SchoolIcon from "@mui/icons-material/School";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { careersService } from "../services/careers.service";
-import { api } from "../services/api";
+import { api, getApiErrorMessage } from "../services/api";
 
 interface Career {
   id: string;
@@ -107,10 +107,9 @@ export default function RegisterPage() {
       });
       setDone(true);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Error al registrarse. Intenta de nuevo.";
-      setError(msg);
+      setError(
+        getApiErrorMessage(err, "Error al registrarse. Intenta de nuevo."),
+      );
     } finally {
       setSubmitting(false);
     }

@@ -4,6 +4,7 @@ import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -16,6 +17,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
+import { getApiErrorMessage } from "../../services/api";
 import { subjectsService } from "../../services/subjects.service";
 
 interface SubjectItem {
@@ -42,6 +44,8 @@ export default function SubjectsPage() {
     code: "",
     credits: 1,
   });
+  const [codeUserEdited, setCodeUserEdited] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SubjectItem | null>(null);
   const { toast, showToast, clearToast } = useToast();
 
   const load = async () => {
@@ -60,8 +64,37 @@ export default function SubjectsPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (editTarget || !dialogOpen || codeUserEdited) return;
+    const n = form.name.trim();
+    if (n.length < 2) return;
+    const h = setTimeout(() => {
+      subjectsService
+        .suggestCode(n)
+        .then(({ code }) => setForm((f) => ({ ...f, code })))
+        .catch(() => {});
+    }, 1500);
+    return () => clearTimeout(h);
+  }, [form.name, dialogOpen, editTarget, codeUserEdited]);
+
+  const refreshSubjectCodeSuggestion = async () => {
+    const n = form.name.trim();
+    if (n.length < 2) {
+      showToast("Escriba al menos 2 caracteres en el nombre", "error");
+      return;
+    }
+    try {
+      const { code } = await subjectsService.suggestCode(n);
+      setForm((f) => ({ ...f, code }));
+      setCodeUserEdited(false);
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al sugerir código"), "error");
+    }
+  };
+
   const openCreate = () => {
     setEditTarget(null);
+    setCodeUserEdited(false);
     setForm({ name: "", code: "", credits: 1 });
     setDialogOpen(true);
   };
@@ -78,21 +111,27 @@ export default function SubjectsPage() {
         await subjectsService.update(editTarget.id, form);
         showToast("Materia actualizada exitosamente");
       } else {
-        await subjectsService.create(form);
+        const trimmedCode = form.code.trim();
+        await subjectsService.create({
+          name: form.name,
+          credits: form.credits,
+          ...(trimmedCode.length > 0 ? { code: trimmedCode } : {}),
+        });
         showToast("Materia creada exitosamente");
       }
       setDialogOpen(false);
       load();
-    } catch {
-      showToast("Error al guardar materia", "error");
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al guardar materia"), "error");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Está seguro de eliminar esta materia?")) return;
+  const confirmDeleteSubject = async () => {
+    if (!deleteTarget) return;
     try {
-      await subjectsService.delete(id);
+      await subjectsService.delete(deleteTarget.id);
       showToast("Materia eliminada exitosamente");
+      setDeleteTarget(null);
       load();
     } catch {
       showToast("Error al eliminar materia", "error");
@@ -134,7 +173,7 @@ export default function SubjectsPage() {
           <IconButton
             size="small"
             color="error"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => setDeleteTarget(row)}
             title="Eliminar"
           >
             <DeleteIcon fontSize="small" />
@@ -181,13 +220,34 @@ export default function SubjectsPage() {
             fullWidth
             margin="dense"
           />
-          <TextField
-            label="Código"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value })}
-            fullWidth
-            margin="dense"
-          />
+          <Box>
+            <TextField
+              label="Código"
+              value={form.code}
+              onChange={(e) => {
+                setCodeUserEdited(true);
+                setForm({ ...form, code: e.target.value });
+              }}
+              fullWidth
+              margin="dense"
+              disabled={!!editTarget}
+              helperText={
+                editTarget
+                  ? "El código no se puede cambiar desde aquí."
+                  : "Sugerencia automática según el nombre (puede editarla). Vacío al guardar = el servidor asigna uno."
+              }
+            />
+            {!editTarget && (
+              <Button
+                size="small"
+                variant="text"
+                onClick={refreshSubjectCodeSuggestion}
+                sx={{ mt: 0.5 }}
+              >
+                Actualizar sugerencia de código
+              </Button>
+            )}
+          </Box>
           <TextField
             label="Créditos"
             type="number"
@@ -207,6 +267,34 @@ export default function SubjectsPage() {
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSave}>
             Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Eliminar materia</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro de eliminar la materia{" "}
+            <strong>
+              {deleteTarget?.code} — {deleteTarget?.name}
+            </strong>
+            ? Esta acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={confirmDeleteSubject}
+          >
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

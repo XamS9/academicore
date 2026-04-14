@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const CreateSubjectDto = z.object({
   name: z.string().min(1).max(200),
-  code: z.string().min(1).max(20),
+  /** Omit or empty: generated from name + sequence (same algorithm as GET suggest-code). */
+  code: z.string().max(20).optional(),
   credits: z.number().int().min(1),
 });
 export type CreateSubjectDto = z.infer<typeof CreateSubjectDto>;

@@ -15,6 +15,10 @@ import Alert from "@mui/material/Alert";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { paymentsService } from "../../services/payments.service";
+import {
+  feeStatusChipColor,
+  feeStatusLabel,
+} from "../../lib/fee-status";
 
 interface StudentFee {
   id: string;
@@ -24,22 +28,6 @@ interface StudentFee {
   feeConcept: { name: string };
   period: { name: string };
 }
-
-const statusLabels: Record<string, string> = {
-  PENDING: "Pendiente",
-  PAID: "Pagado",
-  OVERDUE: "Vencido",
-  CANCELLED: "Cancelado",
-};
-const statusColors: Record<
-  string,
-  "warning" | "success" | "error" | "default"
-> = {
-  PENDING: "warning",
-  PAID: "success",
-  OVERDUE: "error",
-  CANCELLED: "default",
-};
 
 export default function StudentPaymentsPage() {
   const [fees, setFees] = useState<StudentFee[]>([]);
@@ -97,8 +85,8 @@ export default function StudentPaymentsPage() {
       label: "Estado",
       render: (r) => (
         <Chip
-          label={statusLabels[r.status] ?? r.status}
-          color={statusColors[r.status] ?? "default"}
+          label={feeStatusLabel(r.status)}
+          color={feeStatusChipColor(r.status)}
           size="small"
         />
       ),

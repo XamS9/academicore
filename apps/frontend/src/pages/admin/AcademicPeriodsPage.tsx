@@ -36,7 +36,7 @@ import WarningIcon from "@mui/icons-material/Warning";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { academicPeriodsService } from "../../services/academic-periods.service";
-import { api } from "../../services/api";
+import { api, getApiErrorMessage } from "../../services/api";
 
 type PeriodStatus = "OPEN" | "GRADING" | "CLOSED";
 
@@ -162,8 +162,8 @@ export default function AcademicPeriodsPage() {
       }
       setDialogOpen(false);
       load();
-    } catch {
-      showToast("Error al guardar período", "error");
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al guardar período"), "error");
     }
   };
 
@@ -174,8 +174,11 @@ export default function AcademicPeriodsPage() {
         `Inscripciones ${item.enrollmentOpen ? "cerradas" : "abiertas"} exitosamente`
       );
       load();
-    } catch {
-      showToast("Error al cambiar estado de inscripciones", "error");
+    } catch (err: unknown) {
+      showToast(
+        getApiErrorMessage(err, "Error al cambiar estado de inscripciones"),
+        "error",
+      );
     }
   };
 
@@ -185,7 +188,10 @@ export default function AcademicPeriodsPage() {
       showToast(`Período "${item.name}" pasó a fase de calificación`);
       load();
     } catch (err: any) {
-      showToast(err?.response?.data?.message ?? "Error al iniciar calificación", "error");
+      showToast(
+        getApiErrorMessage(err, "Error al iniciar calificación"),
+        "error",
+      );
     }
   };
 
@@ -224,7 +230,10 @@ export default function AcademicPeriodsPage() {
       setDrawerOpen(false);
       load();
     } catch (err: any) {
-      showToast(err?.response?.data?.message ?? "Error al cerrar período", "error");
+      showToast(
+        getApiErrorMessage(err, "Error al cerrar período"),
+        "error",
+      );
     } finally {
       setClosing(false);
     }
@@ -363,11 +372,18 @@ export default function AcademicPeriodsPage() {
             control={
               <Switch
                 checked={form.enrollmentOpen}
+                disabled={editTarget?.status === "GRADING"}
                 onChange={(e) => setForm({ ...form, enrollmentOpen: e.target.checked })}
               />
             }
             label="Inscripciones abiertas"
           />
+          {editTarget?.status === "GRADING" && (
+            <Typography variant="caption" color="text.secondary" display="block">
+              En fase de calificación las inscripciones permanecen cerradas hasta cerrar el
+              período.
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>

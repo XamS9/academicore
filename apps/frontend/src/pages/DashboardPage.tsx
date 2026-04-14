@@ -179,7 +179,7 @@ async function loadStudentWidgets() {
   const [enrollments, allSubmissions, announcements] = await Promise.all([
     enrollmentsService.getMine() as Promise<EnrollmentItem[]>,
     studentSubmissionsService.getMine(),
-    announcementsService.getMy() as Promise<RecentAnnouncement[]>,
+    announcementsService.getMy({ page: 1, pageSize: 5 }),
   ]);
 
   const activeGroups = enrollments
@@ -226,7 +226,10 @@ async function loadStudentWidgets() {
     })
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
-  return { upcoming, announcements: announcements.slice(0, 5) };
+  return {
+    upcoming,
+    announcements: announcements.data as RecentAnnouncement[],
+  };
 }
 
 interface TeacherGroupWidget {

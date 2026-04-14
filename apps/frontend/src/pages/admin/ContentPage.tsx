@@ -34,6 +34,7 @@ import { groupsService } from "../../services/groups.service";
 import { teachersService } from "../../services/teachers.service";
 import { topicsService } from "../../services/topics.service";
 import { contentItemsService } from "../../services/content-items.service";
+import { GroupAutocomplete } from "../../components/ui/ScalablePickers";
 
 interface ContentItem {
   id: string;
@@ -318,21 +319,13 @@ export default function ContentPage() {
         </Button>
       </Box>
 
-      <TextField
-        select
-        label="Seleccionar Grupo"
+      <GroupAutocomplete
+        options={groups}
         value={selectedGroup}
-        onChange={(e) => setSelectedGroup(e.target.value)}
-        fullWidth
+        onChange={setSelectedGroup}
+        label="Seleccionar grupo"
         sx={{ mb: 3 }}
-      >
-        <MenuItem value="">— Seleccione un grupo —</MenuItem>
-        {groups.map((g) => (
-          <MenuItem key={g.id} value={g.id}>
-            {g.subject.name} ({g.groupCode}) — {g.academicPeriod?.name}
-          </MenuItem>
-        ))}
-      </TextField>
+      />
 
       {loading && <Typography color="text.secondary">Cargando...</Typography>}
 

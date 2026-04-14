@@ -8,6 +8,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
+import TablePagination from "@mui/material/TablePagination";
 import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
 import Snackbar from "@mui/material/Snackbar";
@@ -21,6 +22,11 @@ import { useAuth } from "../../store/auth.context";
 import { announcementsService } from "../../services/announcements.service";
 import { careersService } from "../../services/careers.service";
 import { groupsService } from "../../services/groups.service";
+import {
+  CareerAutocomplete,
+  GroupAutocomplete,
+  type GroupPickerOption,
+} from "../../components/ui/ScalablePickers";
 
 interface Announcement {
   id: string;
@@ -46,45 +52,67 @@ export default function AnnouncementsPage() {
   const isTeacher = currentUser?.role === "TEACHER";
   const canManage = isAdmin || isTeacher;
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [careers, setCareers] = useState<{ id: string; name: string }[]>([]);
-  const [groups, setGroups] = useState<
-    { id: string; groupCode: string; subject: { name: string } }[]
-  >([]);
+  const [groups, setGroups] = useState<GroupPickerOption[]>([]);
+  /** Bumps list refetch when mutating without changing page (e.g. delete). */
+  const [listVersion, setListVersion] = useState(0);
   const { toast, showToast, clearToast } = useToast();
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      // Students see only their relevant announcements; admins/teachers see all
-      setAnnouncements(
-        canManage
-          ? await announcementsService.getAll()
-          : await announcementsService.getMy(),
-      );
-    } catch {
-      showToast("Error al cargar anuncios", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!canManage) return;
+    careersService
+      .getAll()
+      .then(setCareers)
+      .catch(() => {});
+    groupsService
+      .getAll()
+      .then((list) => setGroups(list as GroupPickerOption[]))
+      .catch(() => {});
+  }, [canManage]);
 
   useEffect(() => {
-    load();
-    if (canManage) {
-      careersService
-        .getAll()
-        .then(setCareers)
-        .catch(() => {});
-      groupsService
-        .getAll()
-        .then(setGroups)
-        .catch(() => {});
-    }
-  }, []);
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      try {
+        const res = canManage
+          ? await announcementsService.getAll({
+              page: page + 1,
+              pageSize: rowsPerPage,
+            })
+          : await announcementsService.getMy({
+              page: page + 1,
+              pageSize: rowsPerPage,
+            });
+        if (cancelled) return;
+        if (
+          res.data.length === 0 &&
+          res.total > 0 &&
+          page > 0
+        ) {
+          setPage((p) => p - 1);
+          return;
+        }
+        setAnnouncements(res.data as Announcement[]);
+        setTotal(res.total);
+      } catch {
+        if (!cancelled) showToast("Error al cargar anuncios", "error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [page, rowsPerPage, canManage, listVersion]);
 
   const handleOpen = (a?: Announcement) => {
     if (a) {
@@ -114,12 +142,13 @@ export default function AnnouncementsPage() {
           body: form.body,
         });
         showToast("Anuncio actualizado");
+        setListVersion((v) => v + 1);
       } else {
         await announcementsService.create(payload);
         showToast("Anuncio publicado");
+        setPage(0);
       }
       setOpen(false);
-      load();
     } catch {
       showToast("Error al guardar anuncio", "error");
     }
@@ -129,7 +158,11 @@ export default function AnnouncementsPage() {
     try {
       await announcementsService.delete(id);
       showToast("Anuncio eliminado");
-      load();
+      if (announcements.length <= 1 && page > 0) {
+        setPage((p) => p - 1);
+      } else {
+        setListVersion((v) => v + 1);
+      }
     } catch {
       showToast("Error al eliminar anuncio", "error");
     }
@@ -200,6 +233,23 @@ export default function AnnouncementsPage() {
         getRowKey={(r) => r.id}
       />
 
+      <TablePagination
+        component="div"
+        count={total}
+        page={page}
+        onPageChange={(_, newPage) => setPage(newPage)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => {
+          setRowsPerPage(parseInt(e.target.value, 10));
+          setPage(0);
+        }}
+        rowsPerPageOptions={[10, 20, 50]}
+        labelRowsPerPage="Filas por página"
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`
+        }
+      />
+
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
@@ -245,40 +295,19 @@ export default function AnnouncementsPage() {
                 ))}
               </TextField>
               {form.audience === "CAREER" && (
-                <TextField
-                  select
-                  label="Carrera"
+                <CareerAutocomplete
+                  options={careers}
                   value={form.targetId}
-                  onChange={(e) =>
-                    setForm({ ...form, targetId: e.target.value })
-                  }
-                  fullWidth
-                  margin="dense"
-                >
-                  {careers.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  onChange={(targetId) => setForm({ ...form, targetId })}
+                />
               )}
               {form.audience === "GROUP" && (
-                <TextField
-                  select
-                  label="Grupo"
+                <GroupAutocomplete
+                  options={groups}
                   value={form.targetId}
-                  onChange={(e) =>
-                    setForm({ ...form, targetId: e.target.value })
-                  }
-                  fullWidth
-                  margin="dense"
-                >
-                  {groups.map((g) => (
-                    <MenuItem key={g.id} value={g.id}>
-                      {g.subject.name} ({g.groupCode})
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  onChange={(targetId) => setForm({ ...form, targetId })}
+                  label="Grupo destino"
+                />
               )}
             </>
           )}

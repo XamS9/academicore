@@ -48,7 +48,6 @@ enum EnrollmentSubjectStatus {
 enum CertificationType {
   DEGREE
   TRANSCRIPT
-  ENROLLMENT_PROOF
   COMPLETION
 }
 
@@ -109,6 +108,12 @@ enum CalendarEventType {
   EXAM_WEEK
   DEADLINE
   OTHER
+}
+
+enum GroupDeliveryMode {
+  ON_SITE
+  VIRTUAL
+  HYBRID
 }
 
 enum PeriodStatus {
@@ -350,16 +355,17 @@ model Classroom {
 // ─────────────────────────────────────────────
 
 model Group {
-  id               String   @id @default(uuid()) @db.Uuid
-  subjectId        String   @map("subject_id") @db.Uuid
-  academicPeriodId String   @map("academic_period_id") @db.Uuid
-  teacherId        String   @map("teacher_id") @db.Uuid
-  groupCode        String   @map("group_code") @db.VarChar(20)
-  maxStudents      Int      @map("max_students") @db.SmallInt
-  currentStudents  Int      @default(0) @map("current_students") @db.SmallInt
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String             @id @default(uuid()) @db.Uuid
+  subjectId        String             @map("subject_id") @db.Uuid
+  academicPeriodId String             @map("academic_period_id") @db.Uuid
+  teacherId        String             @map("teacher_id") @db.Uuid
+  groupCode        String             @map("group_code") @db.VarChar(20)
+  deliveryMode     GroupDeliveryMode  @default(ON_SITE) @map("delivery_mode")
+  maxStudents      Int                @map("max_students") @db.SmallInt
+  currentStudents  Int                @default(0) @map("current_students") @db.SmallInt
+  isActive         Boolean            @default(true) @map("is_active")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   subject            Subject             @relation(fields: [subjectId], references: [id])
   academicPeriod     AcademicPeriod      @relation(fields: [academicPeriodId], references: [id])

@@ -14,7 +14,6 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import SchoolIcon from "@mui/icons-material/School";
 import { useToast } from "../../hooks/useToast";
-import { useAuth } from "../../store/auth.context";
 import { studentsService } from "../../services/students.service";
 import { academicRecordsService } from "../../services/academic-records.service";
 import { api } from "../../services/api";
@@ -48,7 +47,6 @@ interface PassedSubject {
 }
 
 export default function StudentCareerPage() {
-  const { currentUser } = useAuth();
   const [career, setCareer] = useState<Career | null>(null);
   const [passedMap, setPassedMap] = useState<Map<string, PassedSubject>>(new Map());
   const [loading, setLoading] = useState(true);

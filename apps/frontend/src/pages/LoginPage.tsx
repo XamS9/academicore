@@ -41,9 +41,9 @@ const rolePresets: Record<
 
 const demoCredentials: Record<RoleOption, { email: string; password: string }> =
   {
-    ADMIN: { email: "admin@academicore.mx", password: "admin123" },
-    TEACHER: { email: "prof.garcia@academicore.mx", password: "teacher123" },
-    STUDENT: { email: "ana.garcia@academicore.mx", password: "student123" },
+    ADMIN: { email: "admin@academicore.com", password: "admin123" },
+    TEACHER: { email: "prof.garcia@academicore.com", password: "teacher123" },
+    STUDENT: { email: "ana.garcia@academicore.com", password: "student123" },
   };
 
 export default function LoginPage() {

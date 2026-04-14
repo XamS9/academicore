@@ -4,6 +4,7 @@ import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -197,6 +198,12 @@ export default function UsersPage() {
     userType: "ADMIN",
   });
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    kind: "student" | "teacher";
+    id: string;
+    name: string;
+  } | null>(null);
+
   // ─── Loaders ───────────────────────────────────────────────────────────────
 
   const loadUsers = async () => {
@@ -374,25 +381,26 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteStudent = async (id: string) => {
-    if (!window.confirm("¿Está seguro de eliminar este estudiante?")) return;
+  const confirmDeletePerson = async () => {
+    if (!deleteConfirm) return;
     try {
-      await studentsService.delete(id);
-      showToast("Estudiante eliminado exitosamente");
-      loadStudents();
+      if (deleteConfirm.kind === "student") {
+        await studentsService.delete(deleteConfirm.id);
+        showToast("Estudiante eliminado exitosamente");
+        loadStudents();
+      } else {
+        await teachersService.delete(deleteConfirm.id);
+        showToast("Docente eliminado exitosamente");
+        loadTeachers();
+      }
+      setDeleteConfirm(null);
     } catch {
-      showToast("Error al eliminar estudiante", "error");
-    }
-  };
-
-  const handleDeleteTeacher = async (id: string) => {
-    if (!window.confirm("¿Está seguro de eliminar este docente?")) return;
-    try {
-      await teachersService.delete(id);
-      showToast("Docente eliminado exitosamente");
-      loadTeachers();
-    } catch {
-      showToast("Error al eliminar docente", "error");
+      showToast(
+        deleteConfirm.kind === "student"
+          ? "Error al eliminar estudiante"
+          : "Error al eliminar docente",
+        "error",
+      );
     }
   };
 
@@ -491,7 +499,18 @@ export default function UsersPage() {
           <IconButton size="small" onClick={() => openEditStudent(row)} title="Editar">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => handleDeleteStudent(row.id)} title="Eliminar">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() =>
+              setDeleteConfirm({
+                kind: "student",
+                id: row.id,
+                name: `${row.user.firstName} ${row.user.lastName}`,
+              })
+            }
+            title="Eliminar"
+          >
             <DeleteIcon fontSize="small" />
           </IconButton>
         </>
@@ -512,7 +531,18 @@ export default function UsersPage() {
           <IconButton size="small" onClick={() => openEditTeacher(row)} title="Editar">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => handleDeleteTeacher(row.id)} title="Eliminar">
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() =>
+              setDeleteConfirm({
+                kind: "teacher",
+                id: row.id,
+                name: `${row.user.firstName} ${row.user.lastName}`,
+              })
+            }
+            title="Eliminar"
+          >
             <DeleteIcon fontSize="small" />
           </IconButton>
         </>
@@ -778,6 +808,36 @@ export default function UsersPage() {
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSave}>
             {isEditing ? "Guardar" : "Crear"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {deleteConfirm?.kind === "teacher"
+            ? "Eliminar docente"
+            : "Eliminar estudiante"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Está seguro de eliminar a{" "}
+            <strong>{deleteConfirm?.name}</strong>? Esta acción no se puede
+            deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={confirmDeletePerson}
+          >
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>

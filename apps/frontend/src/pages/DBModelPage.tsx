@@ -123,9 +123,9 @@ const dbCategories: DBCategory[] = [
     tables: [
       {
         name: "groups",
-        columns: 8,
+        columns: 9,
         pkType: "SERIAL",
-        relationships: "FK → subjects, teachers, periods; 1:N enrollments",
+        relationships: "FK → subjects, teachers, periods; delivery_mode; 1:N enrollments",
       },
       {
         name: "group_classrooms",
@@ -218,7 +218,7 @@ const enums = [
   },
   {
     name: "CertificationType",
-    values: ["DEGREE", "TRANSCRIPT", "ENROLLMENT_PROOF", "COMPLETION"],
+    values: ["DEGREE", "TRANSCRIPT", "COMPLETION"],
   },
   { name: "CertificationStatus", values: ["ACTIVE", "REVOKED", "EXPIRED"] },
   {

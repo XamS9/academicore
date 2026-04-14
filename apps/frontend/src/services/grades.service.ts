@@ -6,6 +6,9 @@ export const gradesService = {
     api.get(`/grades/evaluation/${evaluationId}`).then((r) => r.data),
   getMineByGroup: (groupId: string) =>
     api.get(`/grades/me/group/${groupId}`).then((r) => r.data),
+  /** Past/completed enrollments (COMPLETED/FAILED); not limited to status=ENROLLED. */
+  getMineByGroupHistory: (groupId: string) =>
+    api.get(`/grades/me/group/${groupId}/history`).then((r) => r.data),
   getByStudentAndGroup: (studentId: string, groupId: string) =>
     api
       .get(`/grades/student/${studentId}/group/${groupId}`)

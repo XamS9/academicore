@@ -1,15 +1,21 @@
 /**
  * Academicore — Database seed
  *
- * Creates a full demo dataset: roles, users (1 per role), career, subjects,
- * academic periods, classroom, groups, enrollment, evaluations, grades,
- * academic records, certification criteria, a sample certification, and
- * audit log entries.
+ * Demo dataset covering major entities and enum values for QA: roles (ADMIN,
+ * TEACHER, STUDENT), users (active/inactive), two teachers, many students
+ * (every AcademicStatus), two active careers + one inactive career, active and
+ * inactive subjects, prerequisites, periods (OPEN / GRADING / CLOSED),
+ * groups (ON_SITE / VIRTUAL / HYBRID, active/inactive), enrollments (ACTIVE /
+ * CLOSED / CANCELLED), enrollment subjects (ENROLLED / DROPPED / COMPLETED /
+ * FAILED), evaluations, grades, submissions, academic records, certification
+ * types/statuses, fee/payment states, calendar event types, announcements
+ * (ALL / CAREER / GROUP), notifications (all NotificationType values), audit
+ * actions, and system settings with signatures.
  *
  * Called automatically on startup when NODE_ENV !== 'production' and the DB
  * is empty. Can also be run manually via `npm run prisma:seed`.
  *
- * All grades are on a 0–10 scale.
+ * Grades use the same 0–100 scale as the rest of the app.
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -77,35 +83,35 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   // ── 2. USERS ────────────────────────────────────────────────────────────────
   const [adminUser, teacherUser, studentUser] = await Promise.all([
     prisma.user.upsert({
-      where: { email: "admin@academicore.mx" },
+      where: { email: "admin@academicore.com" },
       update: {},
       create: {
         userType: "ADMIN",
         firstName: "Carlos",
         lastName: "Administrador",
-        email: "admin@academicore.mx",
+        email: "admin@academicore.com",
         passwordHash: await hash("admin123"),
       },
     }),
     prisma.user.upsert({
-      where: { email: "prof.garcia@academicore.mx" },
+      where: { email: "prof.garcia@academicore.com" },
       update: {},
       create: {
         userType: "TEACHER",
         firstName: "Roberto",
         lastName: "García",
-        email: "prof.garcia@academicore.mx",
+        email: "prof.garcia@academicore.com",
         passwordHash: await hash("teacher123"),
       },
     }),
     prisma.user.upsert({
-      where: { email: "ana.garcia@academicore.mx" },
+      where: { email: "ana.garcia@academicore.com" },
       update: {},
       create: {
         userType: "STUDENT",
         firstName: "Ana",
         lastName: "García",
-        email: "ana.garcia@academicore.mx",
+        email: "ana.garcia@academicore.com",
         passwordHash: await hash("student123"),
       },
     }),
@@ -134,21 +140,48 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // ── 4. CAREER ────────────────────────────────────────────────────────────────
+  // ── 4. CAREERS ───────────────────────────────────────────────────────────────
   const career = await prisma.career.upsert({
     where: { code: "ISC" },
-    update: {},
+    update: { isActive: true },
     create: {
       name: "Ingeniería en Sistemas Computacionales",
       code: "ISC",
       totalSemesters: 9,
+      isActive: true,
+    },
+  });
+
+  const careerAdm = await prisma.career.upsert({
+    where: { code: "LAE" },
+    update: { isActive: true },
+    create: {
+      name: "Licenciatura En Administración (demo)",
+      code: "LAE",
+      totalSemesters: 8,
+      isActive: true,
+    },
+  });
+
+  const careerArc = await prisma.career.upsert({
+    where: { code: "ARC" },
+    update: {},
+    create: {
+      name: "Carrera archivada (inactiva)",
+      code: "ARC",
+      totalSemesters: 6,
+      isActive: false,
     },
   });
 
   // ── 5. TEACHER & STUDENT SUB-TYPES ───────────────────────────────────────────
   const teacher = await prisma.teacher.upsert({
-    where: { userId: teacherUser.id },
-    update: {},
+    where: { employeeCode: "DOC-001" },
+    update: {
+      userId: teacherUser.id,
+      department: "Ciencias Computacionales",
+      deletedAt: null,
+    },
     create: {
       userId: teacherUser.id,
       employeeCode: "DOC-001",
@@ -157,8 +190,14 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   });
 
   const student = await prisma.student.upsert({
-    where: { userId: studentUser.id },
-    update: {},
+    where: { studentCode: "EST-2021-001" },
+    update: {
+      userId: studentUser.id,
+      careerId: career.id,
+      academicStatus: "ACTIVE",
+      enrollmentDate: new Date("2021-08-16"),
+      deletedAt: null,
+    },
     create: {
       userId: studentUser.id,
       studentCode: "EST-2021-001",
@@ -168,21 +207,239 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
+  const teacher2User = await prisma.user.upsert({
+    where: { email: "prof.lopez@academicore.com" },
+    update: {},
+    create: {
+      userType: "TEACHER",
+      firstName: "Laura",
+      lastName: "López",
+      email: "prof.lopez@academicore.com",
+      passwordHash: await hash("teacher123"),
+    },
+  });
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: { userId: teacher2User.id, roleId: teacherRole.id },
+    },
+    update: {},
+    create: { userId: teacher2User.id, roleId: teacherRole.id },
+  });
+  const teacher2 = await prisma.teacher.upsert({
+    where: { employeeCode: "DOC-002" },
+    update: {
+      userId: teacher2User.id,
+      department: "Matemáticas",
+      deletedAt: null,
+    },
+    create: {
+      userId: teacher2User.id,
+      employeeCode: "DOC-002",
+      department: "Matemáticas",
+    },
+  });
+
+  const inactiveStudentUser = await prisma.user.upsert({
+    where: { email: "inactivo.est@academicore.com" },
+    update: { isActive: false },
+    create: {
+      userType: "STUDENT",
+      firstName: "Usuario",
+      lastName: "Inactivo",
+      email: "inactivo.est@academicore.com",
+      passwordHash: await hash("student123"),
+      isActive: false,
+    },
+  });
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: inactiveStudentUser.id,
+        roleId: studentRole.id,
+      },
+    },
+    update: {},
+    create: { userId: inactiveStudentUser.id, roleId: studentRole.id },
+  });
+  await prisma.student.upsert({
+    where: { studentCode: "EST-INACTIVE-01" },
+    update: {
+      userId: inactiveStudentUser.id,
+      careerId: career.id,
+      academicStatus: "WITHDRAWN",
+      deletedAt: null,
+    },
+    create: {
+      userId: inactiveStudentUser.id,
+      studentCode: "EST-INACTIVE-01",
+      careerId: career.id,
+      academicStatus: "WITHDRAWN",
+      enrollmentDate: new Date("2020-08-16"),
+    },
+  });
+
+  type AcademicStatusT =
+    | "PENDING"
+    | "ACTIVE"
+    | "AT_RISK"
+    | "ELIGIBLE_FOR_GRADUATION"
+    | "SUSPENDED"
+    | "GRADUATED"
+    | "WITHDRAWN";
+
+  const extraStudentSeeds: Array<{
+    email: string;
+    firstName: string;
+    lastName: string;
+    studentCode: string;
+    careerId: string;
+    academicStatus: AcademicStatusT;
+  }> = [
+    {
+      email: "luis.pendiente@academicore.com",
+      firstName: "Luis",
+      lastName: "Pendiente",
+      studentCode: "EST-2024-PEND",
+      careerId: career.id,
+      academicStatus: "PENDING",
+    },
+    {
+      email: "maria.riesgo@academicore.com",
+      firstName: "María",
+      lastName: "EnRiesgo",
+      studentCode: "EST-2023-RISK",
+      careerId: career.id,
+      academicStatus: "AT_RISK",
+    },
+    {
+      email: "pedro.elegible@academicore.com",
+      firstName: "Pedro",
+      lastName: "Elegible",
+      studentCode: "EST-2022-ELIG",
+      careerId: career.id,
+      academicStatus: "ELIGIBLE_FOR_GRADUATION",
+    },
+    {
+      email: "laura.suspendida@academicore.com",
+      firstName: "Laura",
+      lastName: "Suspendida",
+      studentCode: "EST-2022-SUSP",
+      careerId: career.id,
+      academicStatus: "SUSPENDED",
+    },
+    {
+      email: "jorge.graduado@academicore.com",
+      firstName: "Jorge",
+      lastName: "Graduado",
+      studentCode: "EST-2019-GRAD",
+      careerId: career.id,
+      academicStatus: "GRADUATED",
+    },
+    {
+      email: "carla.retirada@academicore.com",
+      firstName: "Carla",
+      lastName: "Retirada",
+      studentCode: "EST-2021-WDR",
+      careerId: career.id,
+      academicStatus: "WITHDRAWN",
+    },
+    {
+      email: "diana.baja@academicore.com",
+      firstName: "Diana",
+      lastName: "ConBaja",
+      studentCode: "EST-2026-DROP",
+      careerId: career.id,
+      academicStatus: "ACTIVE",
+    },
+    {
+      email: "enrique.cancel@academicore.com",
+      firstName: "Enrique",
+      lastName: "Cancelado",
+      studentCode: "EST-2026-CAN",
+      careerId: careerAdm.id,
+      academicStatus: "ACTIVE",
+    },
+    {
+      email: "sofia.adm@academicore.com",
+      firstName: "Sofía",
+      lastName: "Administración",
+      studentCode: "EST-LAE-001",
+      careerId: careerAdm.id,
+      academicStatus: "ACTIVE",
+    },
+  ];
+
+  const extraStudents: { userId: string; id: string; email: string }[] = [];
+  for (const es of extraStudentSeeds) {
+    const u = await prisma.user.upsert({
+      where: { email: es.email },
+      update: {},
+      create: {
+        userType: "STUDENT",
+        firstName: es.firstName,
+        lastName: es.lastName,
+        email: es.email,
+        passwordHash: await hash("student123"),
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: u.id, roleId: studentRole.id } },
+      update: {},
+      create: { userId: u.id, roleId: studentRole.id },
+    });
+    const st = await prisma.student.upsert({
+      where: { studentCode: es.studentCode },
+      update: {
+        userId: u.id,
+        academicStatus: es.academicStatus,
+        careerId: es.careerId,
+        deletedAt: null,
+      },
+      create: {
+        userId: u.id,
+        studentCode: es.studentCode,
+        careerId: es.careerId,
+        academicStatus: es.academicStatus,
+        enrollmentDate: new Date("2023-08-16"),
+      },
+    });
+    extraStudents.push({ userId: u.id, id: st.id, email: es.email });
+  }
+
+  const studentDiana = extraStudents.find((s) => s.email === "diana.baja@academicore.com")!;
+  const studentEnrique = extraStudents.find((s) => s.email === "enrique.cancel@academicore.com")!;
+  const studentSofia = extraStudents.find((s) => s.email === "sofia.adm@academicore.com")!;
+  const studentMaria = extraStudents.find((s) => s.email === "maria.riesgo@academicore.com")!;
+  const studentJorge = extraStudents.find((s) => s.email === "jorge.graduado@academicore.com")!;
+  const studentPedro = extraStudents.find(
+    (s) => s.email === "pedro.elegible@academicore.com",
+  )!;
+
   // ── 6. SUBJECTS ──────────────────────────────────────────────────────────────
-  const [mat101, mat102, prg101, prg201, bd101, red101] = await Promise.all([
+  const [
+    mat101,
+    mat102,
+    prg101,
+    prg201,
+    bd101,
+    red101,
+    eth101,
+    mat099,
+    adm110,
+  ] = await Promise.all([
     prisma.subject.upsert({
       where: { code: "MAT101" },
-      update: {},
+      update: { isActive: true },
       create: { name: "Cálculo Diferencial", code: "MAT101", credits: 6 },
     }),
     prisma.subject.upsert({
       where: { code: "MAT102" },
-      update: {},
+      update: { isActive: true },
       create: { name: "Álgebra Lineal", code: "MAT102", credits: 5 },
     }),
     prisma.subject.upsert({
       where: { code: "PRG101" },
-      update: {},
+      update: { isActive: true },
       create: {
         name: "Fundamentos de Programación",
         code: "PRG101",
@@ -191,7 +448,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
     prisma.subject.upsert({
       where: { code: "PRG201" },
-      update: {},
+      update: { isActive: true },
       create: {
         name: "Programación Orientada a Objetos",
         code: "PRG201",
@@ -200,13 +457,41 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
     prisma.subject.upsert({
       where: { code: "BD101" },
-      update: {},
+      update: { isActive: true },
       create: { name: "Base de Datos", code: "BD101", credits: 6 },
     }),
     prisma.subject.upsert({
       where: { code: "RED101" },
-      update: {},
+      update: { isActive: true },
       create: { name: "Redes de Computadoras", code: "RED101", credits: 5 },
+    }),
+    prisma.subject.upsert({
+      where: { code: "ETH101" },
+      update: { isActive: true },
+      create: {
+        name: "Ética Profesional",
+        code: "ETH101",
+        credits: 3,
+      },
+    }),
+    prisma.subject.upsert({
+      where: { code: "MAT099" },
+      update: { isActive: false },
+      create: {
+        name: "Materia descontinuada (demo inactiva)",
+        code: "MAT099",
+        credits: 1,
+        isActive: false,
+      },
+    }),
+    prisma.subject.upsert({
+      where: { code: "ADM110" },
+      update: { isActive: true },
+      create: {
+        name: "Introducción a la Administración",
+        code: "ADM110",
+        credits: 4,
+      },
     }),
   ]);
 
@@ -230,6 +515,38 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     });
   }
 
+  await prisma.careerSubject.upsert({
+    where: {
+      careerId_subjectId: { careerId: career.id, subjectId: eth101.id },
+    },
+    update: { isMandatory: false },
+    create: {
+      careerId: career.id,
+      subjectId: eth101.id,
+      semesterNumber: 1,
+      isMandatory: false,
+    },
+  });
+
+  for (const [subj, sem, mand] of [
+    [adm110, 1, true],
+    [eth101, 1, true],
+    [mat101, 2, true],
+  ] as const) {
+    await prisma.careerSubject.upsert({
+      where: {
+        careerId_subjectId: { careerId: careerAdm.id, subjectId: subj.id },
+      },
+      update: {},
+      create: {
+        careerId: careerAdm.id,
+        subjectId: subj.id,
+        semesterNumber: sem,
+        isMandatory: mand,
+      },
+    });
+  }
+
   // ── 7b. SUBJECT PREREQUISITES ─────────────────────────────────────────────────
   // PRG201 (POO) requires PRG101 (Fundamentos de Programación)
   // BD101 (Base de Datos) requires MAT101 (Cálculo Diferencial)
@@ -249,7 +566,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   }
 
   // ── 8. CLASSROOMS ───────────────────────────────────────────────────────────
-  const [classroomA101, classroomB201] = await Promise.all([
+  const [classroomA101, classroomB201, _classroomInactive] = await Promise.all([
     prisma.classroom.upsert({
       where: { id: "00000000-0000-0000-0000-000000000010" },
       update: {},
@@ -270,32 +587,80 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         capacity: 25,
       },
     }),
+    prisma.classroom.upsert({
+      where: { id: "00000000-0000-0000-0000-000000000012" },
+      update: { isActive: false },
+      create: {
+        id: "00000000-0000-0000-0000-000000000012",
+        name: "Aula C-999 (inactiva)",
+        building: "Edificio C",
+        capacity: 20,
+        isActive: false,
+      },
+    }),
   ]);
 
   // ── 9. ACADEMIC PERIODS ──────────────────────────────────────────────────────
-  const period2024 = await prisma.academicPeriod.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000002" },
-    update: {},
+  const period2023 = await prisma.academicPeriod.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000014" },
+    update: {
+      status: "CLOSED",
+      enrollmentOpen: false,
+      isActive: false,
+      name: "2024-2",
+      startDate: new Date("2024-08-12"),
+      endDate: new Date("2024-12-20"),
+    },
     create: {
-      id: "00000000-0000-0000-0000-000000000002",
+      id: "00000000-0000-0000-0000-000000000014",
       name: "2024-2",
       startDate: new Date("2024-08-12"),
       endDate: new Date("2024-12-20"),
       enrollmentOpen: false,
       isActive: false,
+      status: "CLOSED",
+    },
+  });
+
+  const period2024 = await prisma.academicPeriod.upsert({
+    where: { id: "00000000-0000-0000-0000-000000000002" },
+    update: {
+      status: "GRADING",
+      enrollmentOpen: false,
+      isActive: false,
+      name: "2025-2",
+      startDate: new Date("2025-08-11"),
+      endDate: new Date("2025-12-19"),
+    },
+    create: {
+      id: "00000000-0000-0000-0000-000000000002",
+      name: "2025-2",
+      startDate: new Date("2025-08-11"),
+      endDate: new Date("2025-12-19"),
+      enrollmentOpen: false,
+      isActive: false,
+      status: "GRADING",
     },
   });
 
   const period2025 = await prisma.academicPeriod.upsert({
     where: { id: "00000000-0000-0000-0000-000000000001" },
-    update: {},
-    create: {
-      id: "00000000-0000-0000-0000-000000000001",
-      name: "2025-1",
-      startDate: new Date("2025-01-20"),
-      endDate: new Date("2025-06-15"),
+    update: {
+      status: "OPEN",
       enrollmentOpen: true,
       isActive: true,
+      name: "2026-1",
+      startDate: new Date("2026-01-20"),
+      endDate: new Date("2026-06-15"),
+    },
+    create: {
+      id: "00000000-0000-0000-0000-000000000001",
+      name: "2026-1",
+      startDate: new Date("2026-01-20"),
+      endDate: new Date("2026-06-15"),
+      enrollmentOpen: true,
+      isActive: true,
+      status: "OPEN",
     },
   });
 
@@ -319,7 +684,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   ]);
 
   // ── 11. GROUPS ───────────────────────────────────────────────────────────────
-  // Period 2024-2 — 3 groups
+  // Period 2025-2 (grading) — 3 groups
   const [grpMat101, grpMat102, grpPrg101] = await Promise.all([
     prisma.group.upsert({
       where: {
@@ -377,7 +742,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // Period 2025-1 — 3 groups
+  // Period 2026-1 (current) — 3 groups + extra sections / modalidades
   const [grpPrg201, grpBd101, grpRed101] = await Promise.all([
     prisma.group.upsert({
       where: {
@@ -435,6 +800,111 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
+  const [
+    grpRed101V,
+    grpRed101H,
+    grpBd101Inactive,
+    grpPrg201B,
+    grpADM110A,
+  ] = await Promise.all([
+    prisma.group.upsert({
+      where: {
+        subjectId_academicPeriodId_groupCode: {
+          subjectId: red101.id,
+          academicPeriodId: period2025.id,
+          groupCode: "RED101-V",
+        },
+      },
+      update: { deliveryMode: "VIRTUAL", isActive: true },
+      create: {
+        subjectId: red101.id,
+        academicPeriodId: period2025.id,
+        teacherId: teacher2.id,
+        groupCode: "RED101-V",
+        deliveryMode: "VIRTUAL",
+        maxStudents: 40,
+        currentStudents: 0,
+      },
+    }),
+    prisma.group.upsert({
+      where: {
+        subjectId_academicPeriodId_groupCode: {
+          subjectId: red101.id,
+          academicPeriodId: period2025.id,
+          groupCode: "RED101-H",
+        },
+      },
+      update: { deliveryMode: "HYBRID" },
+      create: {
+        subjectId: red101.id,
+        academicPeriodId: period2025.id,
+        teacherId: teacher.id,
+        groupCode: "RED101-H",
+        deliveryMode: "HYBRID",
+        maxStudents: 25,
+        currentStudents: 0,
+      },
+    }),
+    prisma.group.upsert({
+      where: {
+        subjectId_academicPeriodId_groupCode: {
+          subjectId: bd101.id,
+          academicPeriodId: period2025.id,
+          groupCode: "BD101-Z",
+        },
+      },
+      update: { isActive: false },
+      create: {
+        subjectId: bd101.id,
+        academicPeriodId: period2025.id,
+        teacherId: teacher2.id,
+        groupCode: "BD101-Z",
+        deliveryMode: "ON_SITE",
+        maxStudents: 30,
+        currentStudents: 0,
+        isActive: false,
+      },
+    }),
+    prisma.group.upsert({
+      where: {
+        subjectId_academicPeriodId_groupCode: {
+          subjectId: prg201.id,
+          academicPeriodId: period2025.id,
+          groupCode: "PRG201-B",
+        },
+      },
+      update: {},
+      create: {
+        subjectId: prg201.id,
+        academicPeriodId: period2025.id,
+        teacherId: teacher2.id,
+        groupCode: "PRG201-B",
+        deliveryMode: "ON_SITE",
+        maxStudents: 30,
+        currentStudents: 1,
+      },
+    }),
+    prisma.group.upsert({
+      where: {
+        subjectId_academicPeriodId_groupCode: {
+          subjectId: adm110.id,
+          academicPeriodId: period2025.id,
+          groupCode: "ADM110-A",
+        },
+      },
+      update: {},
+      create: {
+        subjectId: adm110.id,
+        academicPeriodId: period2025.id,
+        teacherId: teacher2.id,
+        groupCode: "ADM110-A",
+        deliveryMode: "ON_SITE",
+        maxStudents: 35,
+        currentStudents: 1,
+      },
+    }),
+  ]);
+
   // ── 11b. GROUP_CLASSROOMS (schedules) ─────────────────────────────────────────
   // Helper to build a time-only Date (Prisma @db.Time)
   const time = (h: number, m: number) =>
@@ -443,7 +913,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     );
 
   const schedules = [
-    // 2024-2 groups
+    // 2025-2 (grading) groups
     {
       groupId: grpMat101.id,
       classroomId: classroomA101.id,
@@ -465,7 +935,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       startTime: time(10, 0),
       endTime: time(12, 0),
     },
-    // 2025-1 groups
+    // 2026-1 (current) groups
     {
       groupId: grpPrg201.id,
       classroomId: classroomB201.id,
@@ -486,6 +956,27 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       dayOfWeek: 4,
       startTime: time(8, 0),
       endTime: time(10, 0),
+    },
+    {
+      groupId: grpRed101H.id,
+      classroomId: classroomA101.id,
+      dayOfWeek: 5,
+      startTime: time(8, 0),
+      endTime: time(10, 0),
+    },
+    {
+      groupId: grpPrg201B.id,
+      classroomId: classroomA101.id,
+      dayOfWeek: 3,
+      startTime: time(14, 0),
+      endTime: time(16, 0),
+    },
+    {
+      groupId: grpADM110A.id,
+      classroomId: classroomA101.id,
+      dayOfWeek: 2,
+      startTime: time(7, 0),
+      endTime: time(8, 30),
     },
   ];
 
@@ -534,8 +1025,98 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
+  const enrollMaria2025 = await prisma.enrollment.upsert({
+    where: {
+      studentId_academicPeriodId: {
+        studentId: studentMaria.id,
+        academicPeriodId: period2025.id,
+      },
+    },
+    update: {},
+    create: {
+      studentId: studentMaria.id,
+      academicPeriodId: period2025.id,
+      status: "ACTIVE",
+    },
+  });
+
+  const enrollDiana2025 = await prisma.enrollment.upsert({
+    where: {
+      studentId_academicPeriodId: {
+        studentId: studentDiana.id,
+        academicPeriodId: period2025.id,
+      },
+    },
+    update: {},
+    create: {
+      studentId: studentDiana.id,
+      academicPeriodId: period2025.id,
+      status: "ACTIVE",
+    },
+  });
+
+  const enrollEnrique2025 = await prisma.enrollment.upsert({
+    where: {
+      studentId_academicPeriodId: {
+        studentId: studentEnrique.id,
+        academicPeriodId: period2025.id,
+      },
+    },
+    update: { status: "CANCELLED" },
+    create: {
+      studentId: studentEnrique.id,
+      academicPeriodId: period2025.id,
+      status: "CANCELLED",
+    },
+  });
+
+  const enrollSofia2025 = await prisma.enrollment.upsert({
+    where: {
+      studentId_academicPeriodId: {
+        studentId: studentSofia.id,
+        academicPeriodId: period2025.id,
+      },
+    },
+    update: {},
+    create: {
+      studentId: studentSofia.id,
+      academicPeriodId: period2025.id,
+      status: "ACTIVE",
+    },
+  });
+
+  const enrollmentPedro2024 = await prisma.enrollment.upsert({
+    where: {
+      studentId_academicPeriodId: {
+        studentId: studentPedro.id,
+        academicPeriodId: period2024.id,
+      },
+    },
+    update: { status: "CLOSED" },
+    create: {
+      studentId: studentPedro.id,
+      academicPeriodId: period2024.id,
+      status: "CLOSED",
+    },
+  });
+
+  const enrollmentPedro2025 = await prisma.enrollment.upsert({
+    where: {
+      studentId_academicPeriodId: {
+        studentId: studentPedro.id,
+        academicPeriodId: period2025.id,
+      },
+    },
+    update: { status: "CLOSED" },
+    create: {
+      studentId: studentPedro.id,
+      academicPeriodId: period2025.id,
+      status: "CLOSED",
+    },
+  });
+
   // ── 13. ENROLLMENT_SUBJECTS ──────────────────────────────────────────────────
-  // 2024-2 subjects — all completed
+  // 2025-2 subjects — all completed
   await Promise.all([
     prisma.enrollmentSubject.upsert({
       where: {
@@ -581,7 +1162,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // 2025-1 subjects — active
+  // 2026-1 subjects — active
   await Promise.all([
     prisma.enrollmentSubject.upsert({
       where: {
@@ -627,6 +1208,183 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
+  // Pedro Elegible — ISC: all mandatory subjects completed with passing grades
+  // (matches ELIGIBLE_FOR_GRADUATION / trigger logic: every mandatory career subject passed)
+  await Promise.all([
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollmentPedro2024.id,
+          groupId: grpMat101.id,
+        },
+      },
+      update: { status: "COMPLETED" },
+      create: {
+        enrollmentId: enrollmentPedro2024.id,
+        groupId: grpMat101.id,
+        status: "COMPLETED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollmentPedro2024.id,
+          groupId: grpMat102.id,
+        },
+      },
+      update: { status: "COMPLETED" },
+      create: {
+        enrollmentId: enrollmentPedro2024.id,
+        groupId: grpMat102.id,
+        status: "COMPLETED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollmentPedro2024.id,
+          groupId: grpPrg101.id,
+        },
+      },
+      update: { status: "COMPLETED" },
+      create: {
+        enrollmentId: enrollmentPedro2024.id,
+        groupId: grpPrg101.id,
+        status: "COMPLETED",
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollmentPedro2025.id,
+          groupId: grpPrg201.id,
+        },
+      },
+      update: { status: "COMPLETED" },
+      create: {
+        enrollmentId: enrollmentPedro2025.id,
+        groupId: grpPrg201.id,
+        status: "COMPLETED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollmentPedro2025.id,
+          groupId: grpBd101.id,
+        },
+      },
+      update: { status: "COMPLETED" },
+      create: {
+        enrollmentId: enrollmentPedro2025.id,
+        groupId: grpBd101.id,
+        status: "COMPLETED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollmentPedro2025.id,
+          groupId: grpRed101.id,
+        },
+      },
+      update: { status: "COMPLETED" },
+      create: {
+        enrollmentId: enrollmentPedro2025.id,
+        groupId: grpRed101.id,
+        status: "COMPLETED",
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollMaria2025.id,
+          groupId: grpPrg201B.id,
+        },
+      },
+      update: {},
+      create: {
+        enrollmentId: enrollMaria2025.id,
+        groupId: grpPrg201B.id,
+        status: "ENROLLED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollDiana2025.id,
+          groupId: grpBd101.id,
+        },
+      },
+      update: {},
+      create: {
+        enrollmentId: enrollDiana2025.id,
+        groupId: grpBd101.id,
+        status: "DROPPED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollDiana2025.id,
+          groupId: grpRed101.id,
+        },
+      },
+      update: {},
+      create: {
+        enrollmentId: enrollDiana2025.id,
+        groupId: grpRed101.id,
+        status: "ENROLLED",
+      },
+    }),
+    prisma.enrollmentSubject.upsert({
+      where: {
+        enrollmentId_groupId: {
+          enrollmentId: enrollSofia2025.id,
+          groupId: grpADM110A.id,
+        },
+      },
+      update: {},
+      create: {
+        enrollmentId: enrollSofia2025.id,
+        groupId: grpADM110A.id,
+        status: "ENROLLED",
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.group.update({
+      where: { id: grpMat101.id },
+      data: { currentStudents: 2 },
+    }),
+    prisma.group.update({
+      where: { id: grpMat102.id },
+      data: { currentStudents: 2 },
+    }),
+    prisma.group.update({
+      where: { id: grpPrg101.id },
+      data: { currentStudents: 2 },
+    }),
+    prisma.group.update({
+      where: { id: grpPrg201.id },
+      data: { currentStudents: 2 },
+    }),
+    prisma.group.update({
+      where: { id: grpBd101.id },
+      data: { currentStudents: 2 },
+    }),
+    prisma.group.update({
+      where: { id: grpRed101.id },
+      data: { currentStudents: 3 },
+    }),
+  ]);
+
   // ── 14. EVALUATIONS (3 per group, weights sum to 100) ────────────────────────
   // Helper: find existing evaluation by group+name or create it
   const findOrCreateEval = async (
@@ -657,9 +1415,30 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   const evals2024Mat102 = await ensureEvals(grpMat102.id);
   const evals2024Prg101 = await ensureEvals(grpPrg101.id);
   const evals2025Bd101 = await ensureEvals(grpBd101.id);
+  const evals2025Prg201 = await ensureEvals(grpPrg201.id);
+  const evals2025Red101 = await ensureEvals(grpRed101.id);
+  await ensureEvals(grpPrg201B.id);
+  await ensureEvals(grpADM110A.id);
+
+  await prisma.studentSubmission.upsert({
+    where: {
+      studentId_evaluationId: {
+        studentId: student.id,
+        evaluationId: evals2025Prg201.practice.id,
+      },
+    },
+    update: {},
+    create: {
+      studentId: student.id,
+      evaluationId: evals2025Prg201.practice.id,
+      title: "Entrega demo — enlace",
+      type: "LINK",
+      content: "https://example.com/entregas/seed-demo",
+    },
+  });
 
   // ── 15. GRADES (0–100 scale) ──────────────────────────────────────────────────
-  // 2024-2 · MAT101 (Cálculo Diferencial) → avg 80 → PASSED
+  // 2025-2 · MAT101 (Cálculo Diferencial) → avg 80 → PASSED
   await Promise.all([
     prisma.grade.upsert({
       where: {
@@ -708,7 +1487,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // 2024-2 · MAT102 (Álgebra Lineal) → avg 54.5 → FAILED
+  // 2025-2 · MAT102 (Álgebra Lineal) → avg 54.5 → FAILED
   await Promise.all([
     prisma.grade.upsert({
       where: {
@@ -757,7 +1536,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // 2024-2 · PRG101 (Fundamentos de Programación) → avg 90.9 → PASSED
+  // 2025-2 · PRG101 (Fundamentos de Programación) → avg 90.9 → PASSED
   await Promise.all([
     prisma.grade.upsert({
       where: {
@@ -806,7 +1585,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
-  // 2025-1 · BD101 (Base de Datos) → avg 77.7 → PASSED
+  // 2026-1 · BD101 (Base de Datos) → avg 77.7 → PASSED
   await Promise.all([
     prisma.grade.upsert({
       where: {
@@ -850,6 +1629,388 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         evaluationId: evals2025Bd101.project.id,
         studentId: student.id,
         score: 75,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+
+  // 2026-1 · PRG201 (Programación II) → weighted avg 85.0 → PASSED
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Prg201.exam.id,
+          studentId: student.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Prg201.exam.id,
+        studentId: student.id,
+        score: 85,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Prg201.practice.id,
+          studentId: student.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Prg201.practice.id,
+        studentId: student.id,
+        score: 82,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Prg201.project.id,
+          studentId: student.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Prg201.project.id,
+        studentId: student.id,
+        score: 88,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+
+  // 2026-1 · RED101 (Redes) → weighted avg 72.3 → PASSED
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Red101.exam.id,
+          studentId: student.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Red101.exam.id,
+        studentId: student.id,
+        score: 72,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Red101.practice.id,
+          studentId: student.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Red101.practice.id,
+        studentId: student.id,
+        score: 70,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Red101.project.id,
+          studentId: student.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Red101.project.id,
+        studentId: student.id,
+        score: 75,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+
+  // Pedro Elegible — strong record on all 6 mandatory ISC subjects (all passed)
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Mat101.exam.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Mat101.exam.id,
+        studentId: studentPedro.id,
+        score: 88,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Mat101.practice.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Mat101.practice.id,
+        studentId: studentPedro.id,
+        score: 90,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Mat101.project.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Mat101.project.id,
+        studentId: studentPedro.id,
+        score: 85,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Mat102.exam.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Mat102.exam.id,
+        studentId: studentPedro.id,
+        score: 72,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Mat102.practice.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Mat102.practice.id,
+        studentId: studentPedro.id,
+        score: 75,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Mat102.project.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Mat102.project.id,
+        studentId: studentPedro.id,
+        score: 78,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Prg101.exam.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Prg101.exam.id,
+        studentId: studentPedro.id,
+        score: 92,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Prg101.practice.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Prg101.practice.id,
+        studentId: studentPedro.id,
+        score: 90,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2024Prg101.project.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2024Prg101.project.id,
+        studentId: studentPedro.id,
+        score: 95,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Prg201.exam.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Prg201.exam.id,
+        studentId: studentPedro.id,
+        score: 88,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Prg201.practice.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Prg201.practice.id,
+        studentId: studentPedro.id,
+        score: 86,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Prg201.project.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Prg201.project.id,
+        studentId: studentPedro.id,
+        score: 90,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Bd101.exam.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Bd101.exam.id,
+        studentId: studentPedro.id,
+        score: 80,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Bd101.practice.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Bd101.practice.id,
+        studentId: studentPedro.id,
+        score: 82,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Bd101.project.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Bd101.project.id,
+        studentId: studentPedro.id,
+        score: 85,
+        gradedBy: teacherUser.id,
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Red101.exam.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Red101.exam.id,
+        studentId: studentPedro.id,
+        score: 75,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Red101.practice.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Red101.practice.id,
+        studentId: studentPedro.id,
+        score: 78,
+        gradedBy: teacherUser.id,
+      },
+    }),
+    prisma.grade.upsert({
+      where: {
+        evaluationId_studentId: {
+          evaluationId: evals2025Red101.project.id,
+          studentId: studentPedro.id,
+        },
+      },
+      update: {},
+      create: {
+        evaluationId: evals2025Red101.project.id,
+        studentId: studentPedro.id,
+        score: 80,
         gradedBy: teacherUser.id,
       },
     }),
@@ -914,6 +2075,121 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         attemptNumber: 1,
       },
     }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: student.id, groupId: grpPrg201.id },
+      },
+      update: {},
+      create: {
+        studentId: student.id,
+        groupId: grpPrg201.id,
+        academicPeriodId: period2025.id,
+        finalGrade: 85.0,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: student.id, groupId: grpRed101.id },
+      },
+      update: {},
+      create: {
+        studentId: student.id,
+        groupId: grpRed101.id,
+        academicPeriodId: period2025.id,
+        finalGrade: 72.3,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: studentPedro.id, groupId: grpMat101.id },
+      },
+      update: {},
+      create: {
+        studentId: studentPedro.id,
+        groupId: grpMat101.id,
+        academicPeriodId: period2024.id,
+        finalGrade: 87.7,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: studentPedro.id, groupId: grpMat102.id },
+      },
+      update: {},
+      create: {
+        studentId: studentPedro.id,
+        groupId: grpMat102.id,
+        academicPeriodId: period2024.id,
+        finalGrade: 74.7,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: studentPedro.id, groupId: grpPrg101.id },
+      },
+      update: {},
+      create: {
+        studentId: studentPedro.id,
+        groupId: grpPrg101.id,
+        academicPeriodId: period2024.id,
+        finalGrade: 92.3,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: studentPedro.id, groupId: grpPrg201.id },
+      },
+      update: {},
+      create: {
+        studentId: studentPedro.id,
+        groupId: grpPrg201.id,
+        academicPeriodId: period2025.id,
+        finalGrade: 88.0,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: studentPedro.id, groupId: grpBd101.id },
+      },
+      update: {},
+      create: {
+        studentId: studentPedro.id,
+        groupId: grpBd101.id,
+        academicPeriodId: period2025.id,
+        finalGrade: 82.1,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
+    prisma.academicRecord.upsert({
+      where: {
+        studentId_groupId: { studentId: studentPedro.id, groupId: grpRed101.id },
+      },
+      update: {},
+      create: {
+        studentId: studentPedro.id,
+        groupId: grpRed101.id,
+        academicPeriodId: period2025.id,
+        finalGrade: 77.4,
+        passed: true,
+        attemptNumber: 1,
+      },
+    }),
   ]);
 
   // ── 17. CERTIFICATION CRITERIA ───────────────────────────────────────────────
@@ -937,6 +2213,24 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
           "Título de licenciatura — promedio mínimo 70, todas las materias obligatorias aprobadas",
       },
     }),
+    prisma.certificationCriteria.upsert({
+      where: {
+        certificationType_careerId: {
+          certificationType: "COMPLETION",
+          careerId: career.id,
+        },
+      },
+      update: {},
+      create: {
+        certificationType: "COMPLETION",
+        careerId: career.id,
+        minGrade: 60,
+        validityMonths: 24,
+        minCredits: 120,
+        requireAllMandatory: false,
+        description: "Constancia de terminación de estudios (demo)",
+      },
+    }),
   ]);
 
   // Criteria with null careerId — upsert doesn't support null in composite keys, use findFirst + create
@@ -948,10 +2242,10 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       description: "Historial académico oficial",
     },
     {
-      certificationType: "ENROLLMENT_PROOF" as const,
-      minGrade: 0.0,
-      validityMonths: 6,
-      description: "Constancia de inscripción vigente",
+      certificationType: "COMPLETION" as const,
+      minGrade: 60,
+      validityMonths: 12,
+      description: "Finalización de programa (criterio global)",
     },
   ]) {
     const exists = await prisma.certificationCriteria.findFirst({
@@ -972,7 +2266,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       JSON.stringify({
         studentId: student.id,
         type: "TRANSCRIPT",
-        issuedAt: "2025-01-20",
+        issuedAt: "2026-01-20",
       }),
     )
     .digest("hex");
@@ -988,8 +2282,59 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       verificationCode,
       documentHash,
       issuedBy: adminUser.id,
-      issuedAt: new Date("2025-01-20"),
-      expiresAt: new Date("2026-01-20"),
+      issuedAt: new Date("2026-01-20"),
+      expiresAt: new Date("2027-01-20"),
+    },
+  });
+
+  const hashCert = (payload: unknown) =>
+    crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+
+  await prisma.certification.upsert({
+    where: { verificationCode: "00000000-seed-cert-0000-000000000002" },
+    update: {},
+    create: {
+      studentId: student.id,
+      careerId: career.id,
+      certificationType: "DEGREE",
+      status: "ACTIVE",
+      verificationCode: "00000000-seed-cert-0000-000000000002",
+      documentHash: hashCert({ kind: "DEGREE", studentId: student.id }),
+      issuedBy: adminUser.id,
+      issuedAt: new Date("2024-06-01"),
+    },
+  });
+
+  await prisma.certification.upsert({
+    where: { verificationCode: "00000000-seed-cert-0000-000000000003" },
+    update: {},
+    create: {
+      studentId: student.id,
+      careerId: career.id,
+      certificationType: "TRANSCRIPT",
+      status: "REVOKED",
+      verificationCode: "00000000-seed-cert-0000-000000000003",
+      documentHash: hashCert({ kind: "REVOKED", studentId: student.id }),
+      issuedBy: adminUser.id,
+      issuedAt: new Date("2023-01-10"),
+      revokedAt: new Date("2023-06-01"),
+      revokedReason: "Demo: historial sustituido por versión corregida",
+    },
+  });
+
+  await prisma.certification.upsert({
+    where: { verificationCode: "00000000-seed-cert-0000-000000000004" },
+    update: {},
+    create: {
+      studentId: student.id,
+      careerId: null,
+      certificationType: "COMPLETION",
+      status: "EXPIRED",
+      verificationCode: "00000000-seed-cert-0000-000000000004",
+      documentHash: hashCert({ kind: "EXPIRED", studentId: student.id }),
+      issuedBy: adminUser.id,
+      issuedAt: new Date("2018-01-15"),
+      expiresAt: new Date("2019-01-15"),
     },
   });
 
@@ -1014,14 +2359,14 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       entityId: enrollment2025.id,
       action: "ENROLLED" as const,
       performedBy: adminUser.id,
-      newValues: { period: "2025-1", student: "EST-2021-001" },
+      newValues: { period: "2026-1", student: "EST-2021-001" },
     },
     {
       entityType: "enrollment",
       entityId: enrollment2024.id,
       action: "ENROLLED" as const,
       performedBy: adminUser.id,
-      newValues: { period: "2024-2", student: "EST-2021-001" },
+      newValues: { period: "2025-2", student: "EST-2021-001" },
     },
     {
       entityType: "certification",
@@ -1037,6 +2382,27 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       performedBy: adminUser.id,
       newValues: { status: "ACTIVE" },
     },
+    {
+      entityType: "enrollment",
+      entityId: enrollEnrique2025.id,
+      action: "STATUS_CHANGE" as const,
+      performedBy: adminUser.id,
+      newValues: { status: "CANCELLED", studentCode: "EST-2026-CAN" },
+    },
+    {
+      entityType: "certification",
+      entityId: student.id,
+      action: "REVOKED" as const,
+      performedBy: adminUser.id,
+      newValues: { verificationCode: "00000000-seed-cert-0000-000000000003" },
+    },
+    {
+      entityType: "user",
+      entityId: inactiveStudentUser.id,
+      action: "UPDATED" as const,
+      performedBy: adminUser.id,
+      newValues: { isActive: false },
+    },
   ];
 
   for (const entry of auditEntries) {
@@ -1046,7 +2412,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   }
 
   // ── 20. TOPICS & CONTENT ITEMS ───────────────────────────────────────────
-  // PRG201 — Programación Orientada a Objetos (2025-1)
+  // PRG201 — Programación Orientada a Objetos (2026-1)
   const topicPrg1 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpPrg201.id, sortOrder: 1 } },
     update: { weekNumber: 1 },
@@ -1082,7 +2448,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
-  // BD101 — Base de Datos (2025-1)
+  // BD101 — Base de Datos (2026-1)
   const topicBd1 = await prisma.topic.upsert({
     where: { groupId_sortOrder: { groupId: grpBd101.id, sortOrder: 1 } },
     update: { weekNumber: 1 },
@@ -1198,6 +2564,32 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     });
   }
 
+  const topicAdm1 = await prisma.topic.upsert({
+    where: { groupId_sortOrder: { groupId: grpADM110A.id, sortOrder: 1 } },
+    update: { weekNumber: 1 },
+    create: {
+      groupId: grpADM110A.id,
+      title: "Introducción a la administración",
+      description: "Contenido demo para carrera LAE",
+      sortOrder: 1,
+      weekNumber: 1,
+    },
+  });
+  await prisma.contentItem.upsert({
+    where: {
+      topicId_sortOrder: { topicId: topicAdm1.id, sortOrder: 1 },
+    },
+    update: {},
+    create: {
+      topicId: topicAdm1.id,
+      title: "Lectura: funciones del administrador",
+      type: "TEXT",
+      content:
+        "Planificación, organización, dirección y control como pilares básicos.",
+      sortOrder: 1,
+    },
+  });
+
   // ── 21. SYSTEM SETTINGS ───────────────────────────────────────────────────
   const existingSettings = await prisma.systemSettings.findFirst();
   if (!existingSettings) {
@@ -1264,31 +2656,53 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
   ]);
 
+  await prisma.feeConcept.upsert({
+    where: { id: "00000000-0000-0000-0000-fee000000099" },
+    update: { isActive: false },
+    create: {
+      id: "00000000-0000-0000-0000-fee000000099",
+      name: "Concepto de cobro archivado (demo)",
+      amount: 1,
+      description: "Ya no se asigna a estudiantes",
+      isActive: false,
+    },
+  });
+
   // ── 23. STUDENT FEES ─────────────────────────────────────────────────────
   const studentFeeInscripcion = await prisma.studentFee.upsert({
     where: { id: "550e8400-e29b-41d4-a716-446655440000" },
-    update: {},
+    update: {
+      periodId: period2025.id,
+      dueDate: new Date("2026-02-15"),
+      amount: 5000,
+      status: "PAID",
+    },
     create: {
       id: "550e8400-e29b-41d4-a716-446655440000",
       studentId: student.id,
       feeConceptId: feeInscripcion.id,
       periodId: period2025.id,
       amount: 5000,
-      dueDate: new Date("2025-02-15"),
+      dueDate: new Date("2026-02-15"),
       status: "PAID",
     },
   });
 
   const studentFeeLab = await prisma.studentFee.upsert({
     where: { id: "550e8400-e29b-41d4-a716-446655440001" },
-    update: {},
+    update: {
+      periodId: period2025.id,
+      dueDate: new Date("2026-03-01"),
+      amount: 800,
+      status: "PENDING",
+    },
     create: {
       id: "550e8400-e29b-41d4-a716-446655440001",
       studentId: student.id,
       feeConceptId: feeLaboratorio.id,
       periodId: period2025.id,
       amount: 800,
-      dueDate: new Date("2025-03-01"),
+      dueDate: new Date("2026-03-01"),
       status: "PENDING",
     },
   });
@@ -1296,13 +2710,228 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   // ── 24. SAMPLE PAYMENT ───────────────────────────────────────────────────
   await prisma.payment.upsert({
     where: { referenceCode: "PAY-SEED0001" },
-    update: {},
+    update: { paidAt: new Date("2026-01-22") },
     create: {
       studentFeeId: studentFeeInscripcion.id,
       amount: 5000,
       method: "CARD",
       referenceCode: "PAY-SEED0001",
-      paidAt: new Date("2025-01-22"),
+      paidAt: new Date("2026-01-22"),
+    },
+  });
+
+  await prisma.studentFee.upsert({
+    where: { id: "550e8400-e29b-41d4-a716-446655440010" },
+    update: {
+      periodId: period2025.id,
+      dueDate: new Date("2026-02-01"),
+      status: "OVERDUE",
+    },
+    create: {
+      id: "550e8400-e29b-41d4-a716-446655440010",
+      studentId: student.id,
+      feeConceptId: feeCredencial.id,
+      periodId: period2025.id,
+      amount: 150,
+      dueDate: new Date("2026-02-01"),
+      status: "OVERDUE",
+    },
+  });
+
+  await prisma.studentFee.upsert({
+    where: { id: "550e8400-e29b-41d4-a716-446655440011" },
+    update: {
+      periodId: period2025.id,
+      dueDate: new Date("2026-04-01"),
+      status: "CANCELLED",
+    },
+    create: {
+      id: "550e8400-e29b-41d4-a716-446655440011",
+      studentId: studentMaria.id,
+      feeConceptId: feeCredencial.id,
+      periodId: period2025.id,
+      amount: 150,
+      dueDate: new Date("2026-04-01"),
+      status: "CANCELLED",
+    },
+  });
+
+  const studentFeePaidCash = await prisma.studentFee.upsert({
+    where: { id: "550e8400-e29b-41d4-a716-446655440012" },
+    update: {
+      periodId: period2025.id,
+      dueDate: new Date("2026-01-18"),
+      status: "PAID",
+    },
+    create: {
+      id: "550e8400-e29b-41d4-a716-446655440012",
+      studentId: student.id,
+      feeConceptId: feeLaboratorio.id,
+      periodId: period2025.id,
+      amount: 400,
+      dueDate: new Date("2026-01-18"),
+      status: "PAID",
+    },
+  });
+
+  const studentFeePaidTransfer = await prisma.studentFee.upsert({
+    where: { id: "550e8400-e29b-41d4-a716-446655440013" },
+    update: {
+      periodId: period2024.id,
+      dueDate: new Date("2025-08-20"),
+      status: "PAID",
+    },
+    create: {
+      id: "550e8400-e29b-41d4-a716-446655440013",
+      studentId: studentJorge.id,
+      feeConceptId: feeInscripcion.id,
+      periodId: period2024.id,
+      amount: 5000,
+      dueDate: new Date("2025-08-20"),
+      status: "PAID",
+    },
+  });
+
+  await prisma.payment.upsert({
+    where: { referenceCode: "PAY-SEED-CASH1" },
+    update: { paidAt: new Date("2026-01-19") },
+    create: {
+      studentFeeId: studentFeePaidCash.id,
+      amount: 400,
+      method: "CASH",
+      referenceCode: "PAY-SEED-CASH1",
+      paidAt: new Date("2026-01-19"),
+    },
+  });
+
+  await prisma.payment.upsert({
+    where: { referenceCode: "PAY-SEED-TFR1" },
+    update: { paidAt: new Date("2025-08-18") },
+    create: {
+      studentFeeId: studentFeePaidTransfer.id,
+      amount: 5000,
+      method: "TRANSFER",
+      referenceCode: "PAY-SEED-TFR1",
+      paidAt: new Date("2025-08-18"),
+    },
+  });
+
+  // Pedro Elegible — cargos y pagos por los dos ciclos en que cursó (2025-2 y 2026-1)
+  const pedroFeeIns2024 = await prisma.studentFee.upsert({
+    where: { id: "770e8400-e29b-41d4-a716-446655440001" },
+    update: {
+      periodId: period2024.id,
+      status: "PAID",
+      amount: 5000,
+      dueDate: new Date("2025-08-25"),
+    },
+    create: {
+      id: "770e8400-e29b-41d4-a716-446655440001",
+      studentId: studentPedro.id,
+      feeConceptId: feeInscripcion.id,
+      periodId: period2024.id,
+      amount: 5000,
+      dueDate: new Date("2025-08-25"),
+      status: "PAID",
+    },
+  });
+  const pedroFeeLab2024 = await prisma.studentFee.upsert({
+    where: { id: "770e8400-e29b-41d4-a716-446655440002" },
+    update: {
+      periodId: period2024.id,
+      status: "PAID",
+      amount: 800,
+      dueDate: new Date("2025-09-10"),
+    },
+    create: {
+      id: "770e8400-e29b-41d4-a716-446655440002",
+      studentId: studentPedro.id,
+      feeConceptId: feeLaboratorio.id,
+      periodId: period2024.id,
+      amount: 800,
+      dueDate: new Date("2025-09-10"),
+      status: "PAID",
+    },
+  });
+  const pedroFeeIns2025 = await prisma.studentFee.upsert({
+    where: { id: "770e8400-e29b-41d4-a716-446655440003" },
+    update: {
+      periodId: period2025.id,
+      status: "PAID",
+      amount: 5000,
+      dueDate: new Date("2026-02-10"),
+    },
+    create: {
+      id: "770e8400-e29b-41d4-a716-446655440003",
+      studentId: studentPedro.id,
+      feeConceptId: feeInscripcion.id,
+      periodId: period2025.id,
+      amount: 5000,
+      dueDate: new Date("2026-02-10"),
+      status: "PAID",
+    },
+  });
+  const pedroFeeLab2025 = await prisma.studentFee.upsert({
+    where: { id: "770e8400-e29b-41d4-a716-446655440004" },
+    update: {
+      periodId: period2025.id,
+      status: "PAID",
+      amount: 800,
+      dueDate: new Date("2026-02-28"),
+    },
+    create: {
+      id: "770e8400-e29b-41d4-a716-446655440004",
+      studentId: studentPedro.id,
+      feeConceptId: feeLaboratorio.id,
+      periodId: period2025.id,
+      amount: 800,
+      dueDate: new Date("2026-02-28"),
+      status: "PAID",
+    },
+  });
+
+  await prisma.payment.upsert({
+    where: { referenceCode: "PAY-PEDRO-25-2-INS" },
+    update: { paidAt: new Date("2025-08-20") },
+    create: {
+      studentFeeId: pedroFeeIns2024.id,
+      amount: 5000,
+      method: "TRANSFER",
+      referenceCode: "PAY-PEDRO-25-2-INS",
+      paidAt: new Date("2025-08-20"),
+    },
+  });
+  await prisma.payment.upsert({
+    where: { referenceCode: "PAY-PEDRO-25-2-LAB" },
+    update: { paidAt: new Date("2025-09-05") },
+    create: {
+      studentFeeId: pedroFeeLab2024.id,
+      amount: 800,
+      method: "CASH",
+      referenceCode: "PAY-PEDRO-25-2-LAB",
+      paidAt: new Date("2025-09-05"),
+    },
+  });
+  await prisma.payment.upsert({
+    where: { referenceCode: "PAY-PEDRO-26-1-INS" },
+    update: { paidAt: new Date("2026-01-25") },
+    create: {
+      studentFeeId: pedroFeeIns2025.id,
+      amount: 5000,
+      method: "CARD",
+      referenceCode: "PAY-PEDRO-26-1-INS",
+      paidAt: new Date("2026-01-25"),
+    },
+  });
+  await prisma.payment.upsert({
+    where: { referenceCode: "PAY-PEDRO-26-1-LAB" },
+    update: { paidAt: new Date("2026-02-15") },
+    create: {
+      studentFeeId: pedroFeeLab2025.id,
+      amount: 800,
+      method: "TRANSFER",
+      referenceCode: "PAY-PEDRO-26-1-LAB",
+      paidAt: new Date("2026-02-15"),
     },
   });
 
@@ -1311,10 +2940,10 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     {
       id: "550e8400-e29b-41d4-a716-446655440002",
       title: "Inicio de clases",
-      description: "Inicio del período 2025-1",
+      description: "Inicio del período 2026-1",
       eventType: "OTHER" as const,
-      startDate: new Date("2025-01-20"),
-      endDate: new Date("2025-01-20"),
+      startDate: new Date("2026-01-20"),
+      endDate: new Date("2026-01-20"),
       periodId: period2025.id,
     },
     {
@@ -1322,30 +2951,40 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       title: "Semana de exámenes parciales",
       description: "Primera evaluación parcial",
       eventType: "EXAM_WEEK" as const,
-      startDate: new Date("2025-03-17"),
-      endDate: new Date("2025-03-21"),
+      startDate: new Date("2026-03-17"),
+      endDate: new Date("2026-03-21"),
       periodId: period2025.id,
     },
     {
       id: "550e8400-e29b-41d4-a716-446655440004",
       title: "Día festivo — Batalla de Puebla",
       eventType: "HOLIDAY" as const,
-      startDate: new Date("2025-05-05"),
-      endDate: new Date("2025-05-05"),
+      startDate: new Date("2026-05-05"),
+      endDate: new Date("2026-05-05"),
     },
     {
       id: "550e8400-e29b-41d4-a716-446655440005",
       title: "Entrega de proyectos finales",
       description: "Fecha límite para proyectos finales",
       eventType: "DEADLINE" as const,
-      startDate: new Date("2025-06-06"),
-      endDate: new Date("2025-06-06"),
+      startDate: new Date("2026-06-06"),
+      endDate: new Date("2026-06-06"),
       periodId: period2025.id,
     },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440009",
+      title: "Cierre 2024-2",
+      description: "Período cerrado (histórico)",
+      eventType: "OTHER" as const,
+      startDate: new Date("2024-12-20"),
+      endDate: new Date("2024-12-20"),
+      periodId: period2023.id,
+    },
   ]) {
+    const { id, ...fields } = evt;
     await prisma.calendarEvent.upsert({
-      where: { id: evt.id },
-      update: {},
+      where: { id },
+      update: fields,
       create: evt,
     });
   }
@@ -1355,7 +2994,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     {
       id: "550e8400-e29b-41d4-a716-446655440006",
       authorId: adminUser.id,
-      title: "Bienvenida al semestre 2025-1",
+      title: "Bienvenida al semestre 2026-1",
       body: "Damos la bienvenida a todos los estudiantes al nuevo semestre. Les recordamos revisar sus horarios y cumplir con los pagos pendientes.",
       audience: "ALL" as const,
     },
@@ -1367,10 +3006,19 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       audience: "GROUP" as const,
       targetId: grpPrg201.id,
     },
+    {
+      id: "550e8400-e29b-41d4-a716-446655440008",
+      authorId: adminUser.id,
+      title: "Aviso carrera ISC — trámites",
+      body: "Estudiantes de Ingeniería en Sistemas: convocatoria de servicio social publicada en secretaría.",
+      audience: "CAREER" as const,
+      targetId: career.id,
+    },
   ]) {
+    const { id, ...fields } = ann;
     await prisma.announcement.upsert({
-      where: { id: ann.id },
-      update: {},
+      where: { id },
+      update: fields,
       create: ann,
     });
   }
@@ -1381,7 +3029,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       userId: studentUser.id,
       title: "Inscripción confirmada",
       message:
-        "Tu inscripción al período 2025-1 ha sido registrada exitosamente.",
+        "Tu inscripción al período 2026-1 ha sido registrada exitosamente.",
       type: "ENROLLMENT_CONFIRMED" as const,
       relatedEntity: "enrollment",
       relatedEntityId: enrollment2025.id,
@@ -1396,8 +3044,34 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     {
       userId: studentUser.id,
       title: "Nuevo anuncio",
-      message: "Bienvenida al semestre 2025-1",
+      message: "Bienvenida al semestre 2026-1",
       type: "ANNOUNCEMENT" as const,
+    },
+    {
+      userId: studentUser.id,
+      title: "Calificación publicada",
+      message: "Se registró calificación en Base de Datos (Examen Parcial).",
+      type: "GRADE_POSTED" as const,
+      relatedEntity: "grade",
+      relatedEntityId: student.id,
+    },
+    {
+      userId: studentUser.id,
+      title: "Certificación emitida",
+      message: "Historial académico disponible para descarga.",
+      type: "CERTIFICATION_ISSUED" as const,
+    },
+    {
+      userId: studentUser.id,
+      title: "Pago pendiente",
+      message: "Tienes un adeudo de credencial vencido. Regulariza en tesorería.",
+      type: "PAYMENT_DUE" as const,
+    },
+    {
+      userId: studentUser.id,
+      title: "Recordatorio general",
+      message: "Revisa el calendario académico en el portal.",
+      type: "GENERAL" as const,
     },
   ]) {
     const exists = await prisma.notification.findFirst({
@@ -1412,11 +3086,22 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   console.log("✅  Seed complete");
   console.log("");
   console.log("   Demo credentials:");
-  console.log("   Admin:    admin@academicore.mx          / admin123");
-  console.log("   Teacher:  prof.garcia@academicore.mx   / teacher123");
-  console.log("   Student:  ana.garcia@academicore.mx    / student123");
+  console.log("   Admin:    admin@academicore.com          / admin123");
+  console.log("   Teacher:  prof.garcia@academicore.com   / teacher123");
+  console.log("   Student:  ana.garcia@academicore.com    / student123");
+  console.log("");
+  console.log("   More demo students (password student123):");
+  console.log("   · Estados académicos: luis.pendiente@, maria.riesgo@, pedro.elegible@,");
+  console.log("     (pedro.elegible@ tiene historial completo ISC + apto para graduación),");
+  console.log("     laura.suspendida@, jorge.graduado@, carla.retirada@, diana.baja@,");
+  console.log("     enrique.cancel@ (inscripción CANCELADA), sofia.adm@ (carrera LAE),");
+  console.log("     inactivo.est@ (usuario inactivo)");
+  console.log("   Second teacher: prof.lopez@academicore.com / teacher123");
   console.log("");
   console.log(
-    "   Verification code (public): 00000000-seed-cert-0000-000000000001",
+    "   Verification codes (público): 00000000-seed-cert-0000-000000000001 (activa),",
+  );
+  console.log(
+    "   …000002 título, …000003 revocada, …000004 vencida",
   );
 }

@@ -1,10 +1,15 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { subjectsService } from "./subjects.service";
 import {
   CreateSubjectDto,
   UpdateSubjectDto,
   AddPrerequisiteDto,
 } from "./subjects.dto";
+
+const SuggestSubjectCodeQuery = z.object({
+  name: z.string().min(1).max(200),
+});
 
 class SubjectsController {
   findAll = async (
@@ -28,6 +33,20 @@ class SubjectsController {
     try {
       const subject = await subjectsService.findById(req.params.id);
       res.status(200).json(subject);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  suggestCode = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const q = SuggestSubjectCodeQuery.parse(req.query);
+      const result = await subjectsService.suggestCode(q.name);
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

@@ -6,6 +6,12 @@ export const groupsRouter = Router();
 
 groupsRouter.get("/", authenticate, groupsController.findAll);
 groupsRouter.get(
+  "/preview-group-code",
+  authenticate,
+  authorize("ADMIN"),
+  groupsController.previewGroupCode,
+);
+groupsRouter.get(
   "/teacher/:teacherId",
   authenticate,
   groupsController.findByTeacher,

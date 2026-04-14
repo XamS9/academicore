@@ -1,10 +1,16 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { groupsService } from "./groups.service";
 import {
   CreateGroupDto,
   UpdateGroupDto,
   AssignClassroomDto,
 } from "./groups.dto";
+
+const PreviewGroupCodeQuery = z.object({
+  subjectId: z.string().uuid(),
+  academicPeriodId: z.string().uuid(),
+});
 
 class GroupsController {
   findAll = async (
@@ -42,6 +48,23 @@ class GroupsController {
     try {
       const groups = await groupsService.findByTeacher(req.params.teacherId);
       res.status(200).json(groups);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  previewGroupCode = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const q = PreviewGroupCodeQuery.parse(req.query);
+      const result = await groupsService.previewGroupCode(
+        q.subjectId,
+        q.academicPeriodId,
+      );
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

@@ -6,17 +6,21 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
-import MenuItem from "@mui/material/MenuItem";
 import Chip from "@mui/material/Chip";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
+import { getApiErrorMessage } from "../../services/api";
 import { enrollmentsService } from "../../services/enrollments.service";
 import { studentsService } from "../../services/students.service";
 import { groupsService } from "../../services/groups.service";
 import { academicPeriodsService } from "../../services/academic-periods.service";
+import {
+  GroupAutocomplete,
+  PeriodAutocomplete,
+  StudentAutocomplete,
+} from "../../components/ui/ScalablePickers";
 
 interface PeriodOption {
   id: string;
@@ -76,6 +80,7 @@ export default function EnrollmentsPage() {
     groupId: "",
     periodId: "",
   });
+  const [enrollmentListVersion, setEnrollmentListVersion] = useState(0);
   const { toast, showToast, clearToast } = useToast();
 
   useEffect(() => {
@@ -102,7 +107,7 @@ export default function EnrollmentsPage() {
       }
     };
     load();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, enrollmentListVersion]);
 
   const openEnroll = async () => {
     try {
@@ -124,12 +129,9 @@ export default function EnrollmentsPage() {
       await enrollmentsService.enroll(form);
       showToast("Estudiante inscrito exitosamente");
       setDialogOpen(false);
-      setSelectedPeriod((prev) => prev); // trigger reload
+      setEnrollmentListVersion((v) => v + 1);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Error al inscribir";
-      showToast(msg, "error");
+      showToast(getApiErrorMessage(err, "Error al inscribir"), "error");
     }
   };
 
@@ -181,21 +183,13 @@ export default function EnrollmentsPage() {
         </Button>
       </Box>
 
-      <TextField
-        select
-        label="Período Académico"
+      <PeriodAutocomplete
+        options={periods}
         value={selectedPeriod}
-        onChange={(e) => setSelectedPeriod(e.target.value)}
-        fullWidth
+        onChange={setSelectedPeriod}
+        label="Período académico"
         sx={{ mb: 3 }}
-      >
-        <MenuItem value="">— Seleccione un período —</MenuItem>
-        {periods.map((p) => (
-          <MenuItem key={p.id} value={p.id}>
-            {p.name}
-          </MenuItem>
-        ))}
-      </TextField>
+      />
 
       <DataTable
         columns={columns}
@@ -212,34 +206,17 @@ export default function EnrollmentsPage() {
       >
         <DialogTitle>Inscribir Estudiante</DialogTitle>
         <DialogContent className="flex flex-col gap-4 pt-4">
-          <TextField
-            select
-            label="Estudiante"
+          <StudentAutocomplete
+            options={students}
             value={form.studentId}
-            onChange={(e) => setForm({ ...form, studentId: e.target.value })}
-            fullWidth
-            margin="dense"
-          >
-            {students.map((s) => (
-              <MenuItem key={s.id} value={s.id}>
-                {s.studentCode} — {s.user.firstName} {s.user.lastName}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Grupo"
+            onChange={(studentId) => setForm({ ...form, studentId })}
+          />
+          <GroupAutocomplete
+            options={groups}
             value={form.groupId}
-            onChange={(e) => setForm({ ...form, groupId: e.target.value })}
-            fullWidth
-            margin="dense"
-          >
-            {groups.map((g) => (
-              <MenuItem key={g.id} value={g.id}>
-                {g.subject.name} ({g.groupCode})
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={(groupId) => setForm({ ...form, groupId })}
+            label="Grupo"
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>

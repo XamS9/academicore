@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
 import Grid from "@mui/material/Grid";
 import CircularProgress from "@mui/material/CircularProgress";
+import Link from "@mui/material/Link";
 import {
   BarChart,
   Bar,
@@ -20,6 +22,7 @@ import {
   Line,
 } from "recharts";
 import { reportsService } from "../../services/reports.service";
+import { systemSettingsService } from "../../services/system-settings.service";
 
 const COLORS = ["#4caf50", "#f44336", "#ff9800", "#2196f3"];
 
@@ -31,15 +34,35 @@ export default function ReportsPage() {
     count: 0,
     students: [],
   });
+  const [atRiskThreshold, setAtRiskThreshold] = useState(3);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      reportsService.getEnrollmentStats().then(setEnrollmentStats),
-      reportsService.getPassFail().then(setPassFail),
-      reportsService.getGpaTrends().then(setGpaTrends),
-      reportsService.getAtRisk().then(setAtRisk),
-    ]).finally(() => setLoading(false));
+    let cancelled = false;
+    (async () => {
+      try {
+        const [e, pf, gpa, risk, settings] = await Promise.all([
+          reportsService.getEnrollmentStats(),
+          reportsService.getPassFail(),
+          reportsService.getGpaTrends(),
+          reportsService.getAtRisk(),
+          systemSettingsService.get().catch(() => null),
+        ]);
+        if (cancelled) return;
+        setEnrollmentStats(e);
+        setPassFail(pf);
+        setGpaTrends(gpa);
+        setAtRisk(risk);
+        if (settings && typeof settings.atRiskThreshold === "number") {
+          setAtRiskThreshold(settings.atRiskThreshold);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -147,8 +170,26 @@ export default function ReportsPage() {
         {/* At-Risk */}
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2 }}>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-              Estudiantes en Riesgo
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+              Estudiantes en riesgo académico
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mb: 2, lineHeight: 1.6 }}
+            >
+              Aquí se listan alumnos con estatus{" "}
+              <strong>En riesgo</strong> (AT_RISK): riesgo{" "}
+              <strong>académico</strong>, no financiero. El sistema asigna ese
+              estatus cuando el estudiante tiene al menos{" "}
+              <strong>{atRiskThreshold}</strong> materias distintas cuya{" "}
+              <strong>última calificación registrada es reprobatoria</strong> y
+              no existe después un registro de aprobación en la misma materia.
+              Ese umbral se ajusta en{" "}
+              <Link component={RouterLink} to="/configuracion" underline="hover">
+                Configuración del sistema
+              </Link>
+              .
             </Typography>
             <Typography
               variant="h2"
@@ -159,7 +200,7 @@ export default function ReportsPage() {
               {atRisk.count}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              estudiantes con estatus AT_RISK
+              estudiantes con este estatus en la base de datos
             </Typography>
             {atRisk.students.slice(0, 5).map((s: any) => (
               <Typography key={s.id} variant="body2">

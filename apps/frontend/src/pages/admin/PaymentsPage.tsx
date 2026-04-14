@@ -19,6 +19,10 @@ import { useToast } from "../../hooks/useToast";
 import { paymentsService } from "../../services/payments.service";
 import { studentsService } from "../../services/students.service";
 import { academicPeriodsService } from "../../services/academic-periods.service";
+import {
+  feeStatusChipColor,
+  feeStatusLabel,
+} from "../../lib/fee-status";
 
 interface FeeConcept {
   id: string;
@@ -38,16 +42,6 @@ interface StudentFee {
   feeConcept: { name: string };
   period: { name: string };
 }
-
-const statusColors: Record<
-  string,
-  "warning" | "success" | "error" | "default"
-> = {
-  PENDING: "warning",
-  PAID: "success",
-  OVERDUE: "error",
-  CANCELLED: "default",
-};
 
 export default function PaymentsPage() {
   const [tab, setTab] = useState(0);
@@ -175,8 +169,8 @@ export default function PaymentsPage() {
       label: "Estado",
       render: (r) => (
         <Chip
-          label={r.status}
-          color={statusColors[r.status] ?? "default"}
+          label={feeStatusLabel(r.status)}
+          color={feeStatusChipColor(r.status)}
           size="small"
         />
       ),

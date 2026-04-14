@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Academicore">
+  <defs>
+    <linearGradient id="ac-bg" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#ac-bg)"/>
+  <path
+    fill="#ffffff"
+    d="M16 7 23 25h-3l-1.4-4H13.4L12 25H9l7-18zm-1.3 9h2.6L16 12.3l-1.3 3.7z"
+  />
+</svg>

@@ -245,13 +245,13 @@ export const mockCertifications: MockCertification[] = [
     id: "cert-002",
     studentId: "est-001",
     studentName: "Ana García",
-    type: "ENROLLMENT_PROOF",
+    type: "COMPLETION",
     status: "ACTIVE",
     verificationCode: "ACAD-2024-E5F6G7H8",
     documentHash: "sha256-xyz789uvw012...",
     issuedBy: "Laura Rodríguez",
     issuedAt: "2024-08-01T09:00:00Z",
-    expiresAt: "2025-02-01T09:00:00Z",
+    expiresAt: "2026-08-01T09:00:00Z",
     career: "Ingeniería en Sistemas Computacionales",
   },
 ];
@@ -279,12 +279,12 @@ export const mockCertificationCriteria: MockCertificationCriteria[] = [
   },
   {
     id: "crit-002",
-    type: "ENROLLMENT_PROOF",
+    type: "DEGREE",
     career: "Ingeniería en Sistemas Computacionales",
-    minGrade: 6.0,
-    validityMonths: 6,
+    minGrade: 7.0,
+    validityMonths: 60,
     description:
-      "Comprobante de inscripción vigente para el período académico actual.",
+      "Título profesional al cumplir todas las materias obligatorias y requisitos de la carrera.",
   },
   {
     id: "crit-003",
