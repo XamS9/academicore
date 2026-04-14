@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { certificationsService } from "./certifications.service";
 import { generateCertificatePdf } from "./certificate-pdf";
+import { HttpError } from "../../shared/http-error";
+import { assertStudentResourceAccess, requireStudentId } from "../../shared/student-access";
+import { prisma } from "../../shared/prisma.client";
 
 const IssueCertDto = z.object({
   studentId: z.string().uuid(),
@@ -44,12 +47,26 @@ class CertificationsController {
     }
   };
 
+  findMine = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const studentId = await requireStudentId(req.user!);
+      res.json(await certificationsService.findByStudent(studentId));
+    } catch (err) {
+      next(err);
+    }
+  };
+
   findByStudent = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
+      await assertStudentResourceAccess(req.user!, req.params.studentId);
       res.json(await certificationsService.findByStudent(req.params.studentId));
     } catch (err) {
       next(err);
@@ -131,6 +148,20 @@ class CertificationsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      const cert = await prisma.certification.findUnique({
+        where: { id: req.params.id },
+        select: { studentId: true },
+      });
+      if (!cert) throw new HttpError(404, "Certificación no encontrada");
+      if (req.user!.userType === "STUDENT") {
+        const studentId = await requireStudentId(req.user!);
+        if (cert.studentId !== studentId) {
+          throw new HttpError(403, "No autorizado");
+        }
+      } else if (req.user!.userType !== "ADMIN") {
+        throw new HttpError(403, "No autorizado");
+      }
+
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       const pdf = await generateCertificatePdf(req.params.id, frontendUrl);
       res.setHeader("Content-Type", "application/pdf");

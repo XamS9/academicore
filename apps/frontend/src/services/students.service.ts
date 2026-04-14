@@ -2,6 +2,10 @@ import { api } from "./api";
 
 export const studentsService = {
   getAll: () => api.get("/students").then((r) => r.data),
+  /** Current student profile (STUDENT role only). */
+  getMe: () => api.get("/students/me").then((r) => r.data),
+  /** Dashboard payload: enrollments, fees, records, grades, certifications, schedule. */
+  getMeOverview: () => api.get("/students/me/overview").then((r) => r.data),
   getById: (id: string) => api.get(`/students/${id}`).then((r) => r.data),
   getByUserId: (userId: string) =>
     api.get(`/students/by-user/${userId}`).then((r) => r.data),

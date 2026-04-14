@@ -2,6 +2,17 @@
 // ACADEMICORE — Database Schema (DBML)
 // Source of truth: apps/backend/prisma/schema.prisma
 // Keep this file in sync whenever the Prisma schema changes.
+//
+// Tables: 33
+//   users, students, teachers, roles, user_roles,
+//   careers, subjects, subject_prerequisites, career_subjects,
+//   academic_periods, classrooms, groups, group_classrooms,
+//   enrollments, enrollment_subjects,
+//   evaluation_types, evaluations, student_submissions, grades,
+//   academic_records, certification_criteria, certifications,
+//   audit_logs, topics, content_items, system_settings,
+//   notifications, fee_concepts, student_fees, payments,
+//   announcements, calendar_events, departments
 // ============================================================
 
 // ─── ENUMS ──────────────────────────────────────────────────
@@ -13,12 +24,19 @@ Enum UserType {
 }
 
 Enum AcademicStatus {
+  PENDING
   ACTIVE
   AT_RISK
   ELIGIBLE_FOR_GRADUATION
   SUSPENDED
   GRADUATED
   WITHDRAWN
+}
+
+Enum PeriodStatus {
+  OPEN
+  GRADING
+  CLOSED
 }
 
 Enum EnrollmentStatus {
@@ -200,14 +218,15 @@ Table career_subjects {
 }
 
 Table academic_periods {
-  id              uuid        [pk, default: `gen_random_uuid()`]
-  name            varchar(50) [not null]
-  start_date      date        [not null]
-  end_date        date        [not null]
-  enrollment_open boolean     [not null, default: false]
-  is_active       boolean     [not null, default: true]
-  created_at      timestamptz [not null, default: `now()`]
-  updated_at      timestamptz [not null]
+  id              uuid         [pk, default: `gen_random_uuid()`]
+  name            varchar(50)  [not null]
+  start_date      date         [not null]
+  end_date        date         [not null]
+  enrollment_open boolean      [not null, default: false]
+  is_active       boolean      [not null, default: true]
+  status          PeriodStatus [not null, default: 'OPEN', note: 'Lifecycle: OPEN → GRADING → CLOSED']
+  created_at      timestamptz  [not null, default: `now()`]
+  updated_at      timestamptz  [not null]
 }
 
 Table classrooms {
@@ -297,6 +316,25 @@ Table evaluations {
   updated_at         timestamptz  [not null]
 }
 
+Table student_submissions {
+  id             uuid            [pk, default: `gen_random_uuid()`]
+  student_id     uuid            [not null, ref: > students.id]
+  evaluation_id  uuid            [not null, ref: > evaluations.id]
+  title          varchar(255)    [not null]
+  type           ContentItemType [not null]
+  content        text            [not null, note: 'URL, text body, or file URL']
+  file_key       varchar(500)    [note: 'Storage key for deletion']
+  file_name      varchar(255)
+  file_size      int
+  file_mime_type varchar(100)
+  submitted_at   timestamptz     [not null, default: `now()`]
+  updated_at     timestamptz     [not null]
+
+  indexes {
+    (student_id, evaluation_id) [unique]
+  }
+}
+
 Table grades {
   id            uuid         [pk, default: `gen_random_uuid()`]
   evaluation_id uuid         [not null, ref: > evaluations.id]
@@ -320,7 +358,7 @@ Table academic_records {
   group_id           uuid         [not null, ref: > groups.id]
   academic_period_id uuid         [not null, ref: > academic_periods.id]
   final_grade        decimal(5,2) [not null, note: 'Weighted: SUM(score*weight/100)']
-  passed             boolean      [not null, note: 'true if final_grade >= 60']
+  passed             boolean      [not null, note: 'true if final_grade >= passing_grade']
   attempt_number     smallint     [not null, default: 1]
   generated_at       timestamptz  [not null, default: `now()`]
 
@@ -389,6 +427,7 @@ Table topics {
   title       varchar(200) [not null]
   description varchar(500)
   sort_order  smallint     [not null]
+  week_number smallint     [note: 'Maps topic to week of period. Dates auto-computed from period.start_date + (N-1)*7']
   created_at  timestamptz  [not null, default: `now()`]
   updated_at  timestamptz  [not null]
 
@@ -413,13 +452,19 @@ Table content_items {
 }
 
 Table system_settings {
-  id                        uuid         [pk, default: `gen_random_uuid()`]
-  passing_grade             decimal(5,2) [not null, default: 60.00, note: 'Min grade to pass (0-100)']
-  max_subjects_per_enrollment smallint   [not null, default: 7, note: 'Max subjects per student per period']
-  max_evaluation_weight     decimal(5,2) [not null, default: 100.00, note: 'Max sum of eval weights per group']
-  at_risk_threshold         smallint     [not null, default: 3, note: 'Failed subjects for AT_RISK status']
-  updated_at                timestamptz  [not null]
-  updated_by                uuid         [ref: > users.id]
+  id                          uuid         [pk, default: `gen_random_uuid()`]
+  passing_grade               decimal(5,2) [not null, default: 60.00, note: 'Min grade to pass (0-100)']
+  max_subjects_per_enrollment smallint     [not null, default: 7, note: 'Max subjects per student per period']
+  max_evaluation_weight       decimal(5,2) [not null, default: 100.00, note: 'Max sum of eval weights per group']
+  at_risk_threshold           smallint     [not null, default: 3, note: 'Failed subjects for AT_RISK status']
+  signature_image_1           text         [note: 'Base64 or URL for first signature image on certificates']
+  signature_name_1            varchar(200) [note: 'Name below first signature']
+  signature_title_1           varchar(200) [note: 'Title/role below first signature']
+  signature_image_2           text         [note: 'Base64 or URL for second signature image']
+  signature_name_2            varchar(200) [note: 'Name below second signature']
+  signature_title_2           varchar(200) [note: 'Title/role below second signature']
+  updated_at                  timestamptz  [not null]
+  updated_by                  uuid         [ref: > users.id]
 }
 
 Table notifications {

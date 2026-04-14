@@ -39,8 +39,6 @@ import UploadIcon from "@mui/icons-material/Upload";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import PendingIcon from "@mui/icons-material/HourglassEmpty";
 import { useToast } from "../../hooks/useToast";
-import { useAuth } from "../../store/auth.context";
-import { studentsService } from "../../services/students.service";
 import { enrollmentsService } from "../../services/enrollments.service";
 import { topicsService } from "../../services/topics.service";
 import { evaluationsService } from "../../services/evaluations.service";
@@ -139,11 +137,9 @@ const emptyForm = (): SubmissionForm => ({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StudentContentPage() {
-  const { currentUser } = useAuth();
   const { toast, showToast, clearToast } = useToast();
 
   // Cards view
-  const [studentId, setStudentId] = useState<string | null>(null);
   const [cards, setCards] = useState<GroupCard[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
 
@@ -175,12 +171,10 @@ export default function StudentContentPage() {
     const load = async () => {
       try {
         setCardsLoading(true);
-        const student = await studentsService.getByUserId(currentUser!.id);
-        setStudentId(student.id);
 
         const [enrollments, allSubmissions] = await Promise.all([
-          enrollmentsService.getByStudent(student.id),
-          studentSubmissionsService.getByStudent(student.id),
+          enrollmentsService.getMine(),
+          studentSubmissionsService.getMine(),
         ]);
 
         // Flatten enrolled groups
@@ -328,7 +322,6 @@ export default function StudentContentPage() {
   };
 
   const handleSave = async () => {
-    if (!studentId) return;
     try {
       let currentForm = form;
 
@@ -363,13 +356,11 @@ export default function StudentContentPage() {
         );
         showToast("Entrega actualizada");
       } else {
-        const created = await studentSubmissionsService.create({
-          studentId,
+        await studentSubmissionsService.create({
           evaluationId: currentEvaluationId,
           ...currentForm,
         });
-        // The new submission lacks the evaluation join; fetch it with one request
-        const fresh = await studentSubmissionsService.getByStudent(studentId);
+        const fresh = await studentSubmissionsService.getMine();
         setSubmissions(fresh);
         // Decrease pending count for the card
         if (selectedCard) {
@@ -381,7 +372,6 @@ export default function StudentContentPage() {
             ),
           );
         }
-        void created;
         showToast("Entrega publicada exitosamente");
       }
       closeDialog();

@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { TopicsService } from "./topics.service";
 import { CreateTopicDto, UpdateTopicDto, ReorderTopicsDto } from "./topics.dto";
+import {
+  assertStudentCanAccessTopic,
+  assertStudentEnrolledInGroup,
+  requireStudentId,
+} from "../../shared/student-access";
 
 export class TopicsController {
   constructor(private service: TopicsService) {}
@@ -11,6 +16,10 @@ export class TopicsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (req.user!.userType === "STUDENT") {
+        const studentId = await requireStudentId(req.user!);
+        await assertStudentEnrolledInGroup(studentId, req.params.groupId);
+      }
       const result = await this.service.findByGroup(req.params.groupId);
       res.json(result);
     } catch (err) {
@@ -24,6 +33,10 @@ export class TopicsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (req.user!.userType === "STUDENT") {
+        const studentId = await requireStudentId(req.user!);
+        await assertStudentCanAccessTopic(studentId, req.params.id);
+      }
       const result = await this.service.findById(req.params.id);
       res.json(result);
     } catch (err) {

@@ -6,6 +6,11 @@ import {
   UpdateStudentSubmissionDto,
 } from "./student-submissions.dto";
 
+export type CreateStudentSubmissionInput = Omit<
+  CreateStudentSubmissionDto,
+  "studentId"
+> & { studentId: string };
+
 export class StudentSubmissionsService {
   async findByEvaluation(evaluationId: string) {
     return prisma.studentSubmission.findMany({
@@ -42,7 +47,7 @@ export class StudentSubmissionsService {
     });
   }
 
-  async create(dto: CreateStudentSubmissionDto) {
+  async create(dto: CreateStudentSubmissionInput) {
     const evaluation = await prisma.evaluation.findUnique({
       where: { id: dto.evaluationId },
     });

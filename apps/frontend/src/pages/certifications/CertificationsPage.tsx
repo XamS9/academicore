@@ -964,17 +964,14 @@ function ThirdPartyValidationTab() {
 
 // ─── Student certs tab ───────────────────────────────────────────────────────
 
-function StudentCertsTab({ userId }: { userId: string }) {
+function StudentCertsTab() {
   const [certs, setCerts] = useState<CertItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const student = await api
-          .get(`/students/by-user/${userId}`)
-          .then((r) => r.data);
-        const data = await certificationsService.getByStudent(student.id);
+        const data = await certificationsService.getMine();
         setCerts(data);
       } catch {
         // no certs or error
@@ -982,7 +979,7 @@ function StudentCertsTab({ userId }: { userId: string }) {
         setLoading(false);
       }
     })();
-  }, [userId]);
+  }, []);
 
   if (loading) {
     return (
@@ -1117,7 +1114,7 @@ export default function CertificationsPage() {
   const studentTabs = [
     {
       label: "Mis Certificados",
-      component: <StudentCertsTab userId={currentUser!.id} />,
+      component: <StudentCertsTab />,
     },
     { label: "Criterios", component: <CriteriasTab canEdit={false} /> },
     { label: "Validación", component: <ThirdPartyValidationTab /> },

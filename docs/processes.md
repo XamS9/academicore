@@ -690,6 +690,142 @@ Admin-facing queue for reviewing and acting on pending student self-registration
 
 ---
 
+## 25. Draft Enrollment (Cart-Based Self-Enrollment)
+
+**Actors:** STUDENT
+
+Extended from Process 19. Students build a "cart" of desired groups before confirming enrollment.
+
+### Frontend UX
+
+The `/inscribir` page has a two-panel layout:
+- **Left panel** — Available groups table with prerequisite status indicators (✓ or ⚠), capacity chip, and "Add to cart" button per row
+- **Right panel** — Cart showing selected groups, total credits, prerequisite warnings, and a "Confirm" button
+
+| Icon | Meaning |
+|------|---------|
+| ✓ green | All prerequisites passed |
+| ⚠ yellow | One or more prerequisites not yet passed (hover to see which) |
+
+### Prerequisite Information
+
+`GET /api/enrollments/available-groups` now returns enriched data per group:
+- `prerequisitesMet: boolean` — whether the student has passed all prerequisites
+- `subject.prerequisites[]` — list of prerequisites, each with `{ id, name, code, met: boolean }`
+
+Computed server-side by comparing the student's `AcademicRecord` (passed=true) against each subject's `subject_prerequisites`.
+
+### Enrollment Flow
+
+| Step | Description |
+|------|-------------|
+| 1 | Student adds groups to cart (no enrollment yet — pure UI state) |
+| 2 | Student can remove groups from cart freely |
+| 3 | Student clicks "Confirmar inscripción" |
+| 4 | System calls `POST /api/enrollments/enroll` for each cart item sequentially |
+| 5 | Each item is validated by `sp_enroll_student` (prerequisites, capacity, etc.) |
+| 6 | Items that fail show individual error messages; successful items are confirmed |
+| 7 | Available groups list refreshes to exclude newly enrolled subjects |
+
+**Rules:** Students can add subjects with unmet prerequisites to the cart but receive a warning. Final validation is server-side. Students can freely modify the cart before confirming.
+
+---
+
+## 26. Subject Drop (Baja de Materia)
+
+**Actors:** STUDENT (own active-period subjects), ADMIN
+
+Students can drop individual subjects while the enrollment is still ACTIVE (i.e., before period is closed).
+
+### Frontend UX
+
+`/mi-inscripcion` page shows all enrollment history. Subjects with `status = ENROLLED` and belonging to an ACTIVE enrollment show a "Dar de baja" button. Clicking it opens a confirmation dialog.
+
+### Drop Flow
+
+| Step | Description |
+|------|-------------|
+| 1 | Student clicks "Dar de baja" on an ENROLLED subject |
+| 2 | Confirmation dialog shown with subject name |
+| 3 | On confirm: `PATCH /api/enrollments/drop` with `{ enrollmentSubjectId }` |
+| 4 | Stored procedure `sp_drop_enrollment_subject` sets status = DROPPED, decrements `group.currentStudents` |
+| 5 | Page refreshes; dropped subject shows "Baja" chip |
+
+**Rules:** Only ENROLLED subjects in an ACTIVE enrollment can be dropped. COMPLETED, FAILED, and DROPPED subjects do not show the button.
+
+---
+
+## 27. End Academic Period Workflow
+
+**Actors:** ADMIN
+
+### Period Lifecycle
+
+Academic periods follow a three-phase state machine:
+
+```
+OPEN  →  GRADING  →  CLOSED
+```
+
+| Status | enrollmentOpen | Description |
+|--------|---------------|-------------|
+| OPEN | true/false | Running period; enrollment may be open or closed |
+| GRADING | false | Enrollment closed; teachers submitting final grades |
+| CLOSED | false | Immutable; all grades and records finalized |
+
+### Phase 1 — Iniciar Calificación (OPEN → GRADING)
+
+**Endpoint:** `PATCH /api/academic-periods/:id/start-grading` (ADMIN)
+
+| Step | Description |
+|------|-------------|
+| 1 | Admin clicks "Iniciar Calificación" button on a period row |
+| 2 | Sets `enrollmentOpen = false`, `status = GRADING` |
+| 3 | Writes AuditLog entry (STATUS_CHANGE) |
+| 4 | Teachers see their groups but can no longer accept new students |
+
+### Phase 2 — Monitoring
+
+**Endpoint:** `GET /api/academic-periods/:id/progress` (ADMIN)
+
+Returns per-group grading completion:
+- `totalGroups` / `completedGroups` / `overallPct`
+- Per group: total grade slots (enrolled students × evaluations) vs graded slots
+
+Admin can open the **Progress Drawer** from the period row (AssessmentIcon button) to view live grading progress.
+
+A group is "complete" when all enrolled students have grades for all evaluations. Groups with no evaluations or no enrolled students are automatically considered complete.
+
+### Phase 3 — Cerrar Período (GRADING → CLOSED)
+
+**Endpoint:** `POST /api/academic-periods/:id/close` (ADMIN)
+Body: `{ force: boolean }`
+
+| Step | Description |
+|------|-------------|
+| 1 | Admin opens Progress Drawer, clicks "Cerrar Período" |
+| 2 | Confirmation dialog shows incomplete groups (if any) |
+| 3 | If incomplete groups exist: admin must check "Forzar cierre" checkbox to proceed |
+| 4 | On confirm: backend runs the close transaction (see below) |
+
+**Close transaction (atomic):**
+1. Lock period row for update
+2. If `force=true`: generate `AcademicRecord(finalGrade=0, passed=false)` for any student-group pair missing a record
+3. Update all ENROLLED `EnrollmentSubject` → COMPLETED (if passed) or FAILED
+4. Update all ACTIVE `Enrollment` → CLOSED
+5. Deactivate all `Group` rows in the period (`isActive=false`)
+6. Update `AcademicPeriod`: `status=CLOSED`, `isActive=false`, `enrollmentOpen=false`
+7. Write AuditLog entry
+8. Send GENERAL notification to all students: "Tu período académico ha sido cerrado. Tus calificaciones finales ya están disponibles."
+
+**Rules:**
+- A period must be in GRADING status to be closed
+- Closed periods are immutable (update and toggle-enrollment endpoints reject changes)
+- `force=true` is required if any groups have incomplete grading
+- The existing DB trigger `fn_generate_academic_record` continues to handle individual grade-level record generation during GRADING phase; the close transaction only fills gaps for force-closed groups
+
+---
+
 ## Not Implemented
 
 The following academic processes are **not** currently handled:

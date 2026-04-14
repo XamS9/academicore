@@ -160,6 +160,7 @@ const navByRole: Record<Role, NavEntry[]> = {
       label: "Mi Trayectoria",
       icon: <WorkspacePremiumIcon />,
       items: [
+        { label: "Mi Carrera", path: "/mi-carrera", icon: <MenuBookIcon /> },
         { label: "Historial de Notas", path: "/historial-calificaciones", icon: <GradingIcon /> },
         { label: "Historial Académico", path: "/academic-history", icon: <ListAltIcon /> },
         { label: "Mis Certificados", path: "/certifications", icon: <VerifiedIcon /> },

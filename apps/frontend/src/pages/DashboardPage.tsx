@@ -165,9 +165,7 @@ interface RecentAnnouncement {
   author: { firstName: string; lastName: string };
 }
 
-async function loadStudentWidgets(userId: string) {
-  const student = await api.get(`/students/by-user/${userId}`).then((r) => r.data);
-
+async function loadStudentWidgets() {
   type EnrollmentES = {
     groupId: string;
     status: string;
@@ -179,8 +177,8 @@ async function loadStudentWidgets(userId: string) {
   };
 
   const [enrollments, allSubmissions, announcements] = await Promise.all([
-    enrollmentsService.getByStudent(student.id) as Promise<EnrollmentItem[]>,
-    studentSubmissionsService.getByStudent(student.id),
+    enrollmentsService.getMine() as Promise<EnrollmentItem[]>,
+    studentSubmissionsService.getMine(),
     announcementsService.getMy() as Promise<RecentAnnouncement[]>,
   ]);
 
@@ -388,14 +386,12 @@ async function loadTeacherStats(userId: string): Promise<StatCard[]> {
   ];
 }
 
-async function loadStudentStats(userId: string): Promise<StatCard[]> {
-  const student = await api
-    .get(`/students/by-user/${userId}`)
-    .then((r) => r.data);
+async function loadStudentStats(): Promise<StatCard[]> {
+  const student = await studentsService.getMe();
   const [enrollments, passed, averages] = await Promise.all([
-    enrollmentsService.getByStudent(student.id),
-    academicRecordsService.getPassed(student.id),
-    academicRecordsService.getAveragesByPeriod(student.id),
+    enrollmentsService.getMine(),
+    academicRecordsService.getMyPassed(),
+    academicRecordsService.getMyAveragesByPeriod(),
   ]);
 
   const currentSubjects = (
@@ -471,7 +467,7 @@ export default function DashboardPage() {
         } else if (role === "TEACHER") {
           setStats(await loadTeacherStats(currentUser!.id));
         } else {
-          setStats(await loadStudentStats(currentUser!.id));
+          setStats(await loadStudentStats());
         }
       } catch {
         setStats([]);
@@ -490,7 +486,7 @@ export default function DashboardPage() {
 
     if (role === "STUDENT") {
       setLoadingWidgets(true);
-      loadStudentWidgets(currentUser!.id)
+      loadStudentWidgets()
         .then(({ upcoming, announcements }) => {
           setUpcomingDeadlines(upcoming);
           setRecentAnnouncements(announcements);

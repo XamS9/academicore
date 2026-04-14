@@ -4,6 +4,10 @@ import {
   CreateContentItemDto,
   UpdateContentItemDto,
 } from "./content-items.dto";
+import {
+  assertStudentCanAccessTopic,
+  requireStudentId,
+} from "../../shared/student-access";
 
 export class ContentItemsController {
   constructor(private service: ContentItemsService) {}
@@ -14,6 +18,10 @@ export class ContentItemsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (req.user!.userType === "STUDENT") {
+        const studentId = await requireStudentId(req.user!);
+        await assertStudentCanAccessTopic(studentId, req.params.topicId);
+      }
       const result = await this.service.findByTopic(req.params.topicId);
       res.json(result);
     } catch (err) {
@@ -27,6 +35,13 @@ export class ContentItemsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (req.user!.userType === "STUDENT") {
+        const studentId = await requireStudentId(req.user!);
+        const item = await this.service.findById(req.params.id);
+        await assertStudentCanAccessTopic(studentId, item.topicId);
+        res.json(item);
+        return;
+      }
       const result = await this.service.findById(req.params.id);
       res.json(result);
     } catch (err) {

@@ -4,7 +4,9 @@ import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
+import Drawer from "@mui/material/Drawer";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import Snackbar from "@mui/material/Snackbar";
@@ -13,13 +15,30 @@ import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
+import LinearProgress from "@mui/material/LinearProgress";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
+import Divider from "@mui/material/Divider";
+import Tooltip from "@mui/material/Tooltip";
 import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import LockClockIcon from "@mui/icons-material/LockClock";
+import LockIcon from "@mui/icons-material/Lock";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningIcon from "@mui/icons-material/Warning";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { academicPeriodsService } from "../../services/academic-periods.service";
 import { api } from "../../services/api";
+
+type PeriodStatus = "OPEN" | "GRADING" | "CLOSED";
 
 interface AcademicPeriodItem {
   id: string;
@@ -28,19 +47,46 @@ interface AcademicPeriodItem {
   endDate: string;
   enrollmentOpen: boolean;
   isActive: boolean;
+  status: PeriodStatus;
 }
 
-interface AcademicPeriodForm {
-  name: string;
-  startDate: string;
-  endDate: string;
-  enrollmentOpen: boolean;
+interface GroupProgress {
+  groupId: string;
+  groupCode: string;
+  subjectName: string;
+  subjectCode: string;
+  teacherName: string;
+  totalStudents: number;
+  totalEvals: number;
+  gradedSlots: number;
+  totalSlots: number;
+  complete: boolean;
 }
+
+interface PeriodProgress {
+  periodId: string;
+  periodName: string;
+  status: PeriodStatus;
+  totalGroups: number;
+  completedGroups: number;
+  overallPct: number;
+  groups: GroupProgress[];
+}
+
+const statusLabel: Record<PeriodStatus, string> = {
+  OPEN: "Abierto",
+  GRADING: "En Calificación",
+  CLOSED: "Cerrado",
+};
+const statusColor: Record<PeriodStatus, "info" | "warning" | "default"> = {
+  OPEN: "info",
+  GRADING: "warning",
+  CLOSED: "default",
+};
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "—";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("es-ES", {
+  return new Date(dateStr).toLocaleDateString("es-ES", {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -50,14 +96,28 @@ const formatDate = (dateStr: string) => {
 export default function AcademicPeriodsPage() {
   const [items, setItems] = useState<AcademicPeriodItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AcademicPeriodItem | null>(null);
-  const [form, setForm] = useState<AcademicPeriodForm>({
+  const [form, setForm] = useState({
     name: "",
     startDate: "",
     endDate: "",
     enrollmentOpen: false,
   });
+
+  // Progress drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [progress, setProgress] = useState<PeriodProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [drawerPeriod, setDrawerPeriod] = useState<AcademicPeriodItem | null>(null);
+
+  // Close dialog
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [forceClose, setForceClose] = useState(false);
+  const [closing, setClosing] = useState(false);
+
   const { toast, showToast, clearToast } = useToast();
 
   const load = async () => {
@@ -72,9 +132,7 @@ export default function AcademicPeriodsPage() {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const openCreate = () => {
     setEditTarget(null);
@@ -97,15 +155,15 @@ export default function AcademicPeriodsPage() {
     try {
       if (editTarget) {
         await academicPeriodsService.update(editTarget.id, form);
-        showToast("Período académico actualizado exitosamente");
+        showToast("Período actualizado exitosamente");
       } else {
         await academicPeriodsService.create(form);
-        showToast("Período académico creado exitosamente");
+        showToast("Período creado exitosamente");
       }
       setDialogOpen(false);
       load();
     } catch {
-      showToast("Error al guardar período académico", "error");
+      showToast("Error al guardar período", "error");
     }
   };
 
@@ -113,7 +171,7 @@ export default function AcademicPeriodsPage() {
     try {
       await api.patch(`/academic-periods/${item.id}/toggle-enrollment`);
       showToast(
-        `Inscripciones ${item.enrollmentOpen ? "cerradas" : "abiertas"} exitosamente`,
+        `Inscripciones ${item.enrollmentOpen ? "cerradas" : "abiertas"} exitosamente`
       );
       load();
     } catch {
@@ -121,20 +179,71 @@ export default function AcademicPeriodsPage() {
     }
   };
 
+  const handleStartGrading = async (item: AcademicPeriodItem) => {
+    try {
+      await academicPeriodsService.startGrading(item.id);
+      showToast(`Período "${item.name}" pasó a fase de calificación`);
+      load();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message ?? "Error al iniciar calificación", "error");
+    }
+  };
+
+  const loadProgress = async (periodId: string) => {
+    setProgressLoading(true);
+    try {
+      const data = await academicPeriodsService.getProgress(periodId);
+      setProgress(data);
+    } catch {
+      showToast("Error al cargar progreso", "error");
+    } finally {
+      setProgressLoading(false);
+    }
+  };
+
+  const openProgressDrawer = async (item: AcademicPeriodItem) => {
+    setDrawerPeriod(item);
+    setProgress(null);
+    setDrawerOpen(true);
+    await loadProgress(item.id);
+  };
+
+  const openCloseDialog = (item: AcademicPeriodItem) => {
+    setDrawerPeriod(item);
+    setForceClose(false);
+    setCloseDialogOpen(true);
+  };
+
+  const handleClosePeriod = async () => {
+    if (!drawerPeriod) return;
+    setClosing(true);
+    try {
+      await academicPeriodsService.closePeriod(drawerPeriod.id, forceClose);
+      showToast(`Período "${drawerPeriod.name}" cerrado exitosamente`);
+      setCloseDialogOpen(false);
+      setDrawerOpen(false);
+      load();
+    } catch (err: any) {
+      showToast(err?.response?.data?.message ?? "Error al cerrar período", "error");
+    } finally {
+      setClosing(false);
+    }
+  };
+
   const columns: Column<AcademicPeriodItem>[] = [
+    { key: "name", label: "Nombre" },
+    { key: "startDate", label: "Inicio", render: (row) => formatDate(row.startDate) },
+    { key: "endDate", label: "Fin", render: (row) => formatDate(row.endDate) },
     {
-      key: "name",
-      label: "Nombre",
-    },
-    {
-      key: "startDate",
-      label: "Inicio",
-      render: (row) => formatDate(row.startDate),
-    },
-    {
-      key: "endDate",
-      label: "Fin",
-      render: (row) => formatDate(row.endDate),
+      key: "status",
+      label: "Fase",
+      render: (row) => (
+        <Chip
+          label={statusLabel[row.status] ?? row.status}
+          color={statusColor[row.status] ?? "default"}
+          size="small"
+        />
+      ),
     },
     {
       key: "enrollmentOpen",
@@ -148,67 +257,79 @@ export default function AcademicPeriodsPage() {
       ),
     },
     {
-      key: "isActive",
-      label: "Estado",
-      render: (row) => (
-        <Chip
-          label={row.isActive ? "Activo" : "Inactivo"}
-          color={row.isActive ? "success" : "default"}
-          size="small"
-        />
-      ),
-    },
-    {
       key: "actions",
       label: "Acciones",
       render: (row) => (
-        <>
-          <IconButton size="small" onClick={() => openEdit(row)} title="Editar">
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            size="small"
-            color={row.enrollmentOpen ? "warning" : "success"}
-            onClick={() => handleToggleEnrollment(row)}
-            title={
-              row.enrollmentOpen
-                ? "Cerrar inscripciones"
-                : "Abrir inscripciones"
-            }
-          >
-            <EventAvailableIcon fontSize="small" />
-          </IconButton>
-        </>
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          {row.status !== "CLOSED" && (
+            <IconButton size="small" onClick={() => openEdit(row)} title="Editar">
+              <EditIcon fontSize="small" />
+            </IconButton>
+          )}
+          {row.status === "OPEN" && (
+            <>
+              <Tooltip title={row.enrollmentOpen ? "Cerrar inscripciones" : "Abrir inscripciones"}>
+                <IconButton
+                  size="small"
+                  color={row.enrollmentOpen ? "warning" : "success"}
+                  onClick={() => handleToggleEnrollment(row)}
+                >
+                  <EventAvailableIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Iniciar fase de calificación">
+                <IconButton
+                  size="small"
+                  color="info"
+                  onClick={() => handleStartGrading(row)}
+                >
+                  <LockClockIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+          {row.status === "GRADING" && (
+            <>
+              <Tooltip title="Ver progreso de calificación">
+                <IconButton
+                  size="small"
+                  color="info"
+                  onClick={() => openProgressDrawer(row)}
+                >
+                  <AssessmentIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Cerrar período">
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => openCloseDialog(row)}
+                >
+                  <LockIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+        </Box>
       ),
     },
   ];
+
+  const incompleteGroups = progress?.groups.filter((g) => !g.complete) ?? [];
 
   return (
     <Box>
       <Box className="flex justify-between items-center mb-6">
         <Typography variant="h5">Períodos Académicos</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={openCreate}
-        >
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
           Nuevo Período
         </Button>
       </Box>
 
-      <DataTable
-        columns={columns}
-        rows={items}
-        loading={loading}
-        getRowKey={(r) => r.id}
-      />
+      <DataTable columns={columns} rows={items} loading={loading} getRowKey={(r) => r.id} />
 
-      <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      {/* Create/Edit dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
           {editTarget ? "Editar Período Académico" : "Nuevo Período Académico"}
         </DialogTitle>
@@ -242,9 +363,7 @@ export default function AcademicPeriodsPage() {
             control={
               <Switch
                 checked={form.enrollmentOpen}
-                onChange={(e) =>
-                  setForm({ ...form, enrollmentOpen: e.target.checked })
-                }
+                onChange={(e) => setForm({ ...form, enrollmentOpen: e.target.checked })}
               />
             }
             label="Inscripciones abiertas"
@@ -252,13 +371,190 @@ export default function AcademicPeriodsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>
-            Guardar
+          <Button variant="contained" onClick={handleSave}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Progress drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 500 }, p: 3 } }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Typography variant="h6">Progreso de Calificación</Typography>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Tooltip title="Actualizar">
+              <IconButton
+                size="small"
+                onClick={() => drawerPeriod && loadProgress(drawerPeriod.id)}
+                disabled={progressLoading}
+              >
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {progressLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+        {progress && (
+          <>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+              {progress.periodName}
+            </Typography>
+
+            <Box sx={{ mb: 1 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                <Typography variant="body2">
+                  {progress.completedGroups} / {progress.totalGroups} grupos completados
+                </Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {progress.overallPct}%
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={progress.overallPct}
+                color={progress.overallPct === 100 ? "success" : "primary"}
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="none" sx={{ pb: 1 }}></TableCell>
+                  <TableCell sx={{ pb: 1 }}>Grupo / Materia</TableCell>
+                  <TableCell sx={{ pb: 1 }}>Profesor</TableCell>
+                  <TableCell align="right" sx={{ pb: 1 }}>Calificados</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {progress.groups.map((g) => (
+                  <TableRow key={g.groupId}>
+                    <TableCell padding="none">
+                      {g.complete ? (
+                        <CheckCircleIcon color="success" fontSize="small" />
+                      ) : (
+                        <WarningIcon color="warning" fontSize="small" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {g.subjectCode} {g.groupCode}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {g.subjectName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="caption">{g.teacherName}</Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="caption">
+                        {g.totalSlots === 0 ? "—" : `${g.gradedSlots}/${g.totalSlots}`}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Button
+              variant="contained"
+              color="error"
+              fullWidth
+              startIcon={<LockIcon />}
+              onClick={() => {
+                setCloseDialogOpen(true);
+                setForceClose(false);
+              }}
+            >
+              Cerrar Período
+            </Button>
+          </>
+        )}
+      </Drawer>
+
+      {/* Close period confirmation dialog */}
+      <Dialog
+        open={closeDialogOpen}
+        onClose={() => setCloseDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Cerrar Período Académico</DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Esta acción es <strong>irreversible</strong>. Una vez cerrado, no se
+            podrán modificar calificaciones ni inscripciones.
+          </Alert>
+
+          {incompleteGroups.length > 0 && (
+            <>
+              <Alert severity="error" sx={{ mb: 2 }}>
+                Hay <strong>{incompleteGroups.length}</strong> grupo(s) sin
+                calificaciones completas:
+                <ul style={{ margin: "4px 0 0 0", paddingLeft: 20 }}>
+                  {incompleteGroups.slice(0, 5).map((g) => (
+                    <li key={g.groupId}>
+                      <Typography variant="caption">
+                        {g.subjectCode} {g.groupCode} — {g.teacherName} (
+                        {g.gradedSlots}/{g.totalSlots})
+                      </Typography>
+                    </li>
+                  ))}
+                  {incompleteGroups.length > 5 && (
+                    <li>
+                      <Typography variant="caption">
+                        ...y {incompleteGroups.length - 5} más
+                      </Typography>
+                    </li>
+                  )}
+                </ul>
+              </Alert>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={forceClose}
+                    onChange={(e) => setForceClose(e.target.checked)}
+                  />
+                }
+                label="Forzar cierre — los estudiantes sin calificar recibirán nota 0"
+              />
+            </>
+          )}
+
+          {incompleteGroups.length === 0 && (
+            <DialogContentText>
+              Todos los grupos tienen calificaciones completas. ¿Confirmas cerrar
+              el período <strong>{drawerPeriod?.name}</strong>?
+            </DialogContentText>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloseDialogOpen(false)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={
+              closing ||
+              (incompleteGroups.length > 0 && !forceClose)
+            }
+            onClick={handleClosePeriod}
+          >
+            {closing ? "Cerrando..." : "Confirmar Cierre"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Snackbar open={!!toast} autoHideDuration={3000} onClose={clearToast}>
+      <Snackbar open={!!toast} autoHideDuration={4000} onClose={clearToast}>
         <Alert severity={toast?.severity} onClose={clearToast}>
           {toast?.message}
         </Alert>

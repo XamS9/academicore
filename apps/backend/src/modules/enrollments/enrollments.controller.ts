@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { EnrollmentsService } from "./enrollments.service";
 import { EnrollStudentDto, DropSubjectDto } from "./enrollments.dto";
 import { HttpError } from "../../shared/http-error";
+import { assertStudentResourceAccess, requireStudentId } from "../../shared/student-access";
 
 export class EnrollmentsController {
   constructor(private service: EnrollmentsService) {}
@@ -12,16 +13,24 @@ export class EnrollmentsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const dto = EnrollStudentDto.parse(req.body);
+      const parsed = EnrollStudentDto.parse(req.body);
 
-      // If caller is STUDENT, they can only enroll themselves
+      let studentId = parsed.studentId;
       if (req.user!.userType === "STUDENT") {
-        const student = await this.service.getStudentByUserId(req.user!.sub);
-        if (!student || student.id !== dto.studentId) {
+        const ownId = await requireStudentId(req.user!);
+        if (studentId !== undefined && studentId !== ownId) {
           throw new HttpError(403, "Solo puedes inscribirte a ti mismo");
         }
+        studentId = ownId;
+      } else if (req.user!.userType === "ADMIN") {
+        if (!studentId) {
+          throw new HttpError(400, "studentId es requerido para inscripción por administrador");
+        }
+      } else {
+        throw new HttpError(403, "No autorizado");
       }
 
+      const dto = { ...parsed, studentId };
       const result = await this.service.enrollStudent(dto);
       res.status(201).json(result);
     } catch (err) {
@@ -42,12 +51,41 @@ export class EnrollmentsController {
     }
   };
 
+  findMine = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const studentId = await requireStudentId(req.user!);
+      const result = await this.service.findByStudent(studentId);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  findMySchedule = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const studentId = await requireStudentId(req.user!);
+      const result = await this.service.getScheduleForStudent(studentId);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   findByStudent = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
+      await assertStudentResourceAccess(req.user!, req.params.studentId);
       const result = await this.service.findByStudent(req.params.studentId);
       res.json(result);
     } catch (err) {
@@ -75,7 +113,7 @@ export class EnrollmentsController {
   ): Promise<void> => {
     try {
       const dto = DropSubjectDto.parse(req.body);
-      const result = await this.service.dropSubject(dto.enrollmentSubjectId);
+      const result = await this.service.dropSubject(dto.enrollmentSubjectId, req.user!);
       res.json(result);
     } catch (err) {
       next(err);

@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const CreateStudentSubmissionSchema = z.object({
-  studentId: z.string().uuid(),
+  /** Optional for students; resolved from JWT. Required for admin/teacher on behalf of student. */
+  studentId: z.string().uuid().optional(),
   evaluationId: z.string().uuid(),
   title: z.string().min(1).max(255),
   type: z.enum(["LINK", "TEXT", "FILE_REF"]),

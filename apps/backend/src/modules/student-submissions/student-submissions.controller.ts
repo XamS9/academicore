@@ -4,6 +4,8 @@ import {
   CreateStudentSubmissionSchema,
   UpdateStudentSubmissionSchema,
 } from "./student-submissions.dto";
+import { assertStudentResourceAccess, requireStudentId } from "../../shared/student-access";
+import { HttpError } from "../../shared/http-error";
 
 export class StudentSubmissionsController {
   constructor(private readonly service: StudentSubmissionsService) {}
@@ -17,8 +19,19 @@ export class StudentSubmissionsController {
     }
   };
 
+  findMine = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const studentId = await requireStudentId(req.user!);
+      const data = await this.service.findByStudent(studentId);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   findByStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
+      await assertStudentResourceAccess(req.user!, req.params.studentId);
       const data = await this.service.findByStudent(req.params.studentId);
       res.json(data);
     } catch (err) {
@@ -28,8 +41,18 @@ export class StudentSubmissionsController {
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const dto = CreateStudentSubmissionSchema.parse(req.body);
-      const data = await this.service.create(dto);
+      const parsed = CreateStudentSubmissionSchema.parse(req.body);
+      let studentId = parsed.studentId;
+      if (req.user!.userType === "STUDENT") {
+        const own = await requireStudentId(req.user!);
+        if (studentId !== undefined && studentId !== own) {
+          throw new HttpError(403, "Solo puedes entregar como tú mismo");
+        }
+        studentId = own;
+      } else if (!studentId) {
+        throw new HttpError(400, "studentId es requerido");
+      }
+      const data = await this.service.create({ ...parsed, studentId });
       res.status(201).json(data);
     } catch (err) {
       next(err);

@@ -36,6 +36,7 @@ import ReportsPage from "./pages/admin/ReportsPage";
 import StudentPaymentsPage from "./pages/student/StudentPaymentsPage";
 import StudentSelfEnrollPage from "./pages/student/StudentSelfEnrollPage";
 import StudentGradesHistoryPage from "./pages/student/StudentGradesHistoryPage";
+import StudentCareerPage from "./pages/student/StudentCareerPage";
 
 export default function App() {
   return (
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="historial-calificaciones" element={<StudentGradesHistoryPage />} />
             <Route path="mi-contenido" element={<StudentContentPage />} />
             <Route path="mis-pagos" element={<StudentPaymentsPage />} />
+            <Route path="mi-carrera" element={<StudentCareerPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>

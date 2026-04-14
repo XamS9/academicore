@@ -14,7 +14,14 @@ studentSubmissionsRouter.get(
   controller.findByEvaluation,
 );
 
-// Student/Admin: list submissions for a specific student
+studentSubmissionsRouter.get(
+  "/me",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findMine,
+);
+
+// Student/Admin/Teacher: list submissions for a specific student
 studentSubmissionsRouter.get(
   "/student/:studentId",
   authenticate,

@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { GradesService } from "./grades.service";
 import { UpsertGradeDto, BulkUpsertGradesDto } from "./grades.dto";
+import {
+  assertStudentEnrolledInGroup,
+  assertStudentResourceAccess,
+  requireStudentId,
+} from "../../shared/student-access";
 
 export class GradesController {
   constructor(private service: GradesService) {}
@@ -14,6 +19,29 @@ export class GradesController {
       const result = await this.service.findByEvaluation(
         req.params.evaluationId,
       );
+      if (req.user!.userType === "STUDENT") {
+        const studentId = await requireStudentId(req.user!);
+        res.json(result.filter((g) => g.studentId === studentId));
+        return;
+      }
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  findMineByGroup = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const studentId = await requireStudentId(req.user!);
+      await assertStudentEnrolledInGroup(studentId, req.params.groupId);
+      const result = await this.service.findByStudentAndGroup(
+        studentId,
+        req.params.groupId,
+      );
       res.json(result);
     } catch (err) {
       next(err);
@@ -26,6 +54,13 @@ export class GradesController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      await assertStudentResourceAccess(req.user!, req.params.studentId);
+      if (req.user!.userType === "STUDENT") {
+        await assertStudentEnrolledInGroup(
+          req.params.studentId,
+          req.params.groupId,
+        );
+      }
       const result = await this.service.findByStudentAndGroup(
         req.params.studentId,
         req.params.groupId,

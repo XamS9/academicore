@@ -6,8 +6,6 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
-import { useAuth } from "../../store/auth.context";
-import { studentsService } from "../../services/students.service";
 import { enrollmentsService } from "../../services/enrollments.service";
 
 interface EnrollmentSubjectItem {
@@ -18,13 +16,23 @@ interface EnrollmentSubjectItem {
     subject: { name: string; code: string };
     teacher: { user: { firstName: string; lastName: string } };
   };
+  periodName: string;
+  enrollmentStatus: string;
 }
 
 interface EnrollmentItem {
   id: string;
   status: string;
   academicPeriod: { name: string };
-  enrollmentSubjects: EnrollmentSubjectItem[];
+  enrollmentSubjects: Array<{
+    id: string;
+    status: string;
+    group: {
+      groupCode: string;
+      subject: { name: string; code: string };
+      teacher: { user: { firstName: string; lastName: string } };
+    };
+  }>;
 }
 
 const statusLabels: Record<string, string> = {
@@ -51,36 +59,35 @@ const statusColors: Record<
 };
 
 export default function StudentEnrollmentPage() {
-  const { currentUser } = useAuth();
-  const [enrollments, setEnrollments] = useState<EnrollmentItem[]>([]);
+  const [allSubjects, setAllSubjects] = useState<EnrollmentSubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast, showToast, clearToast } = useToast();
 
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data: EnrollmentItem[] = await enrollmentsService.getMine();
+      setAllSubjects(
+        data.flatMap((e) =>
+          e.enrollmentSubjects.map((es) => ({
+            ...es,
+            periodName: e.academicPeriod.name,
+            enrollmentStatus: e.status,
+          }))
+        )
+      );
+    } catch {
+      showToast("Error al cargar inscripciones", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        const student = await studentsService.getByUserId(currentUser!.id);
-        const data = await enrollmentsService.getByStudent(student.id);
-        setEnrollments(data);
-      } catch {
-        showToast("Error al cargar inscripciones", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
   }, []);
 
-  const allSubjects = enrollments.flatMap((e) =>
-    e.enrollmentSubjects.map((es) => ({
-      ...es,
-      periodName: e.academicPeriod.name,
-      enrollmentStatus: e.status,
-    })),
-  );
-
-  const columns: Column<(typeof allSubjects)[0]>[] = [
+  const columns: Column<EnrollmentSubjectItem>[] = [
     { key: "periodName", label: "Período" },
     {
       key: "subject",

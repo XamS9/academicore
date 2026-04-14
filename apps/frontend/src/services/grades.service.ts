@@ -4,6 +4,8 @@ export const gradesService = {
   getAll: () => api.get("/grades").then((r) => r.data),
   getByEvaluation: (evaluationId: string) =>
     api.get(`/grades/evaluation/${evaluationId}`).then((r) => r.data),
+  getMineByGroup: (groupId: string) =>
+    api.get(`/grades/me/group/${groupId}`).then((r) => r.data),
   getByStudentAndGroup: (studentId: string, groupId: string) =>
     api
       .get(`/grades/student/${studentId}/group/${groupId}`)

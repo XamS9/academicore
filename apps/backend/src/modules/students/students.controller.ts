@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { studentsService } from "./students.service";
 import { CreateStudentDto, UpdateStudentDto } from "./students.dto";
+import { HttpError } from "../../shared/http-error";
 
 class StudentsController {
   findAll = async (
@@ -16,12 +17,47 @@ class StudentsController {
     }
   };
 
+  findMe = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      if (req.user!.userType !== "STUDENT") {
+        throw new HttpError(403, "Solo disponible para estudiantes");
+      }
+      const student = await studentsService.findByUserId(req.user!.sub);
+      res.status(200).json(student);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  findMeOverview = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      if (req.user!.userType !== "STUDENT") {
+        throw new HttpError(403, "Solo disponible para estudiantes");
+      }
+      const overview = await studentsService.getOverviewByUserId(req.user!.sub);
+      res.status(200).json(overview);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   findById = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (req.params.id === "me" || req.params.id === "overview") {
+        throw new HttpError(404, "Student not found");
+      }
       const student = await studentsService.findById(req.params.id);
       res.status(200).json(student);
     } catch (err) {
@@ -35,6 +71,12 @@ class StudentsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (
+        req.user!.userType === "STUDENT" &&
+        req.params.userId !== req.user!.sub
+      ) {
+        throw new HttpError(403, "No autorizado");
+      }
       const student = await studentsService.findByUserId(req.params.userId);
       res.status(200).json(student);
     } catch (err) {

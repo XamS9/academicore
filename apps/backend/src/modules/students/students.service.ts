@@ -1,6 +1,7 @@
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
 import { CreateStudentDto, UpdateStudentDto } from "./students.dto";
+import { enrollmentsService } from "../enrollments/enrollments.service";
 
 class StudentsService {
   private readonly include = {
@@ -31,6 +32,113 @@ class StudentsService {
     });
     if (!student) throw new HttpError(404, "Student not found");
     return student;
+  }
+
+  /**
+   * Single payload for student dashboard: profile, enrollments, fees summary,
+   * recent records, certifications, recent grades, and class schedule.
+   */
+  async getOverviewByUserId(userId: string) {
+    const student = await this.findByUserId(userId);
+    const studentId = student.id;
+
+    const [
+      enrollments,
+      fees,
+      academicRecords,
+      certifications,
+      recentGrades,
+      schedule,
+    ] = await Promise.all([
+      prisma.enrollment.findMany({
+        where: { studentId },
+        include: {
+          academicPeriod: true,
+          enrollmentSubjects: {
+            where: { status: "ENROLLED" },
+            include: {
+              group: {
+                include: {
+                  subject: { select: { id: true, name: true, code: true } },
+                  teacher: {
+                    include: {
+                      user: { select: { firstName: true, lastName: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      }),
+      prisma.studentFee.findMany({
+        where: { studentId },
+        include: {
+          feeConcept: { select: { id: true, name: true } },
+          period: { select: { id: true, name: true } },
+        },
+        orderBy: { dueDate: "asc" },
+        take: 40,
+      }),
+      prisma.academicRecord.findMany({
+        where: { studentId },
+        orderBy: { generatedAt: "desc" },
+        take: 15,
+        include: {
+          academicPeriod: { select: { id: true, name: true } },
+          group: {
+            include: { subject: { select: { id: true, name: true, code: true } } },
+          },
+        },
+      }),
+      prisma.certification.findMany({
+        where: { studentId },
+        orderBy: { issuedAt: "desc" },
+        take: 20,
+        include: {
+          career: { select: { name: true } },
+          issuer: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      prisma.grade.findMany({
+        where: { studentId },
+        orderBy: { updatedAt: "desc" },
+        take: 25,
+        include: {
+          evaluation: {
+            include: {
+              group: {
+                include: { subject: { select: { name: true, code: true } } },
+              },
+            },
+          },
+        },
+      }),
+      enrollmentsService.getScheduleForStudent(studentId),
+    ]);
+
+    const pendingFees = fees.filter((f) => f.status === "PENDING");
+    const feesSummary = {
+      pendingCount: pendingFees.length,
+      pendingTotal: pendingFees.reduce((s, f) => s + Number(f.amount), 0),
+      overdueCount: pendingFees.filter((f) => new Date(f.dueDate) < new Date()).length,
+    };
+
+    return {
+      student,
+      enrollments,
+      fees: fees.map((f) => ({
+        ...f,
+        amount: Number(f.amount),
+      })),
+      feesSummary,
+      academicRecords,
+      certifications,
+      recentGrades,
+      schedule,
+    };
   }
 
   async create(dto: CreateStudentDto) {
@@ -67,43 +175,18 @@ class StudentsService {
         data: { academicStatus: "ACTIVE" },
       });
 
-      // Auto-assign inscription fee if an active concept and active period exist
-      const [inscriptionFee, activePeriod] = await Promise.all([
-        tx.feeConcept.findFirst({
-          where: {
-            isActive: true,
-            name: { contains: "inscripci", mode: "insensitive" },
-          },
-        }),
-        tx.academicPeriod.findFirst({
-          where: { isActive: true },
-          orderBy: { startDate: "desc" },
-        }),
-      ]);
+      // Ensure the STUDENT role exists and is assigned
+      const studentRole = await tx.role.upsert({
+        where: { name: "STUDENT" },
+        update: {},
+        create: { name: "STUDENT", description: "Student role" },
+      });
+      await tx.userRole.upsert({
+        where: { userId_roleId: { userId: student.userId, roleId: studentRole.id } },
+        update: {},
+        create: { userId: student.userId, roleId: studentRole.id },
+      });
 
-      if (inscriptionFee && activePeriod) {
-        const alreadyAssigned = await tx.studentFee.findFirst({
-          where: {
-            studentId: id,
-            feeConceptId: inscriptionFee.id,
-            periodId: activePeriod.id,
-          },
-        });
-
-        if (!alreadyAssigned) {
-          const dueDate = new Date(activePeriod.startDate);
-          dueDate.setDate(dueDate.getDate() + 30);
-          await tx.studentFee.create({
-            data: {
-              studentId: id,
-              feeConceptId: inscriptionFee.id,
-              periodId: activePeriod.id,
-              amount: inscriptionFee.amount,
-              dueDate,
-            },
-          });
-        }
-      }
     });
 
     return this.findById(id);

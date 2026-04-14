@@ -111,6 +111,12 @@ enum CalendarEventType {
   OTHER
 }
 
+enum PeriodStatus {
+  OPEN
+  GRADING
+  CLOSED
+}
+
 // ─────────────────────────────────────────────
 // 1. USERS — Supertype
 // ─────────────────────────────────────────────
@@ -301,14 +307,15 @@ model CareerSubject {
 // ─────────────────────────────────────────────
 
 model AcademicPeriod {
-  id             String   @id @default(uuid()) @db.Uuid
-  name           String   @db.VarChar(50)
-  startDate      DateTime @map("start_date") @db.Date
-  endDate        DateTime @map("end_date") @db.Date
-  enrollmentOpen Boolean  @default(false) @map("enrollment_open")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id             String       @id @default(uuid()) @db.Uuid
+  name           String       @db.VarChar(50)
+  startDate      DateTime     @map("start_date") @db.Date
+  endDate        DateTime     @map("end_date") @db.Date
+  enrollmentOpen Boolean      @default(false) @map("enrollment_open")
+  isActive       Boolean      @default(true) @map("is_active")
+  status         PeriodStatus @default(OPEN)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   groups          Group[]
   enrollments     Enrollment[]

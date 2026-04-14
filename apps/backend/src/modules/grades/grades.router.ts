@@ -12,6 +12,12 @@ gradesRouter.get(
   controller.findByEvaluation,
 );
 gradesRouter.get(
+  "/me/group/:groupId",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findMineByGroup,
+);
+gradesRouter.get(
   "/student/:studentId/group/:groupId",
   authenticate,
   controller.findByStudentAndGroup,

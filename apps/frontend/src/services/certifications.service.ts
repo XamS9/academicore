@@ -16,6 +16,7 @@ export const certificationsService = {
   revoke: (id: string, reason: string) =>
     api.post(`/certifications/${id}/revoke`, { reason }).then((r) => r.data),
   getCriteria: () => api.get("/certifications/criteria").then((r) => r.data),
+  getMine: () => api.get("/certifications/me").then((r) => r.data),
   getByStudent: (studentId: string) =>
     api.get(`/certifications/student/${studentId}`).then((r) => r.data),
   downloadPdf: (id: string) =>

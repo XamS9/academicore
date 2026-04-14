@@ -11,6 +11,18 @@ studentsRouter.get(
   studentsController.findAll,
 );
 studentsRouter.get(
+  "/me/overview",
+  authenticate,
+  authorize("STUDENT"),
+  studentsController.findMeOverview,
+);
+studentsRouter.get(
+  "/me",
+  authenticate,
+  authorize("STUDENT"),
+  studentsController.findMe,
+);
+studentsRouter.get(
   "/by-user/:userId",
   authenticate,
   studentsController.findByUserId,

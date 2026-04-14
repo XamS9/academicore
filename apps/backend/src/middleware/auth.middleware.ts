@@ -41,7 +41,10 @@ export function authenticate(
 export function authorize(...roles: string[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) return next(new HttpError(401, "Unauthenticated"));
-    const hasRole = roles.some((r) => req.user!.roles.includes(r));
+    // Check both the roles[] array (from user_roles table) and userType as fallback
+    const hasRole =
+      roles.some((r) => req.user!.roles.includes(r)) ||
+      roles.includes(req.user!.userType);
     if (!hasRole) return next(new HttpError(403, "Insufficient permissions"));
     next();
   };

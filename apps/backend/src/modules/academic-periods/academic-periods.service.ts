@@ -1,5 +1,6 @@
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
+import { notificationsService } from "../notifications/notifications.service";
 import {
   CreateAcademicPeriodDto,
   UpdateAcademicPeriodDto,
@@ -7,7 +8,7 @@ import {
 
 class AcademicPeriodsService {
   async findAll() {
-    return prisma.academicPeriod.findMany();
+    return prisma.academicPeriod.findMany({ orderBy: { createdAt: "desc" } });
   }
 
   async findActive() {
@@ -17,9 +18,7 @@ class AcademicPeriodsService {
   }
 
   async findById(id: string) {
-    const period = await prisma.academicPeriod.findUnique({
-      where: { id },
-    });
+    const period = await prisma.academicPeriod.findUnique({ where: { id } });
     if (!period) throw new HttpError(404, "Academic period not found");
     return period;
   }
@@ -36,7 +35,10 @@ class AcademicPeriodsService {
   }
 
   async update(id: string, dto: UpdateAcademicPeriodDto) {
-    await this.findById(id);
+    const period = await this.findById(id);
+    if (period.status === "CLOSED") {
+      throw new HttpError(400, "No se puede modificar un período cerrado");
+    }
     return prisma.academicPeriod.update({
       where: { id },
       data: {
@@ -56,6 +58,9 @@ class AcademicPeriodsService {
 
   async toggleEnrollment(id: string) {
     const period = await this.findById(id);
+    if (period.status === "CLOSED") {
+      throw new HttpError(400, "El período está cerrado");
+    }
     return prisma.academicPeriod.update({
       where: { id },
       data: { enrollmentOpen: !period.enrollmentOpen },
@@ -68,6 +73,275 @@ class AcademicPeriodsService {
       where: { id },
       data: { isActive: !period.isActive },
     });
+  }
+
+  // ─── End-Period Workflow ─────────────────────────────────────
+
+  /**
+   * Returns per-group grading completion for a period.
+   * Used by the admin progress drawer.
+   */
+  async getPeriodProgress(id: string) {
+    const period = await this.findById(id);
+
+    const groups = await prisma.group.findMany({
+      where: { academicPeriodId: id },
+      include: {
+        subject: { select: { name: true, code: true } },
+        teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+        evaluations: { select: { id: true } },
+        enrollmentSubjects: {
+          where: { status: "ENROLLED" },
+          select: { id: true, enrollmentId: true },
+        },
+      },
+    });
+
+    const groupProgress = await Promise.all(
+      groups.map(async (group) => {
+        const totalStudents = group.enrollmentSubjects.length;
+        const totalEvals = group.evaluations.length;
+        const totalSlots = totalStudents * totalEvals;
+
+        let gradedSlots = 0;
+        if (totalSlots > 0) {
+          // Count how many (student, evaluation) pairs have a grade
+          const studentIds = await prisma.enrollmentSubject
+            .findMany({
+              where: {
+                groupId: group.id,
+                status: "ENROLLED",
+                enrollment: { academicPeriodId: id },
+              },
+              include: { enrollment: { select: { studentId: true } } },
+            })
+            .then((es) => es.map((e) => e.enrollment.studentId));
+
+          gradedSlots = await prisma.grade.count({
+            where: {
+              evaluationId: { in: group.evaluations.map((e) => e.id) },
+              studentId: { in: studentIds },
+            },
+          });
+        }
+
+        const complete =
+          totalSlots === 0 || gradedSlots >= totalSlots;
+
+        return {
+          groupId: group.id,
+          groupCode: group.groupCode,
+          subjectName: group.subject.name,
+          subjectCode: group.subject.code,
+          teacherName: `${group.teacher.user.firstName} ${group.teacher.user.lastName}`,
+          totalStudents,
+          totalEvals,
+          gradedSlots,
+          totalSlots,
+          complete,
+        };
+      })
+    );
+
+    const totalGroups = groupProgress.length;
+    const completedGroups = groupProgress.filter((g) => g.complete).length;
+    const overallPct =
+      totalGroups === 0 ? 100 : Math.round((completedGroups / totalGroups) * 100);
+
+    return {
+      periodId: id,
+      periodName: period.name,
+      status: period.status,
+      totalGroups,
+      completedGroups,
+      overallPct,
+      groups: groupProgress,
+    };
+  }
+
+  /**
+   * OPEN → GRADING: closes enrollment, begins grading phase.
+   */
+  async startGrading(id: string, adminUserId: string) {
+    const period = await this.findById(id);
+    if (period.status !== "OPEN") {
+      throw new HttpError(
+        400,
+        `No se puede iniciar calificación: el período está en estado ${period.status}`
+      );
+    }
+
+    const updated = await prisma.academicPeriod.update({
+      where: { id },
+      data: { status: "GRADING", enrollmentOpen: false },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        entityType: "academic_period",
+        entityId: id,
+        action: "STATUS_CHANGE",
+        performedBy: adminUserId,
+        oldValues: { status: "OPEN" },
+        newValues: { status: "GRADING" },
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * GRADING → CLOSED: finalizes all grades, closes enrollments and groups.
+   * force=true allows closing even if not all groups have all grades submitted.
+   */
+  async closePeriod(
+    id: string,
+    adminUserId: string,
+    force = false
+  ) {
+    const period = await this.findById(id);
+    if (period.status === "CLOSED") {
+      throw new HttpError(400, "El período ya está cerrado");
+    }
+    if (period.status !== "GRADING") {
+      throw new HttpError(
+        400,
+        "El período debe estar en estado CALIFICACIÓN antes de cerrarse. Use 'Iniciar Calificación' primero."
+      );
+    }
+
+    const progress = await this.getPeriodProgress(id);
+
+    if (!force && progress.completedGroups < progress.totalGroups) {
+      const pending = progress.groups
+        .filter((g) => !g.complete)
+        .map((g) => `${g.subjectCode} ${g.groupCode} (${g.teacherName})`);
+      throw new HttpError(
+        400,
+        `Hay ${pending.length} grupo(s) sin calificar completamente: ${pending.slice(0, 5).join(", ")}${pending.length > 5 ? "..." : ""}. Use force=true para forzar el cierre.`
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Lock the row for this transaction
+      await tx.$queryRaw`SELECT id FROM academic_periods WHERE id = ${id}::uuid FOR UPDATE`;
+
+      // If force: generate 0-grade academic records for incomplete student-group pairs
+      if (force) {
+        const incompleteGroups = progress.groups.filter((g) => !g.complete);
+        for (const g of incompleteGroups) {
+          const enrolledStudents = await tx.enrollmentSubject.findMany({
+            where: {
+              groupId: g.groupId,
+              status: "ENROLLED",
+              enrollment: { academicPeriodId: id },
+            },
+            include: { enrollment: { select: { studentId: true } } },
+          });
+          for (const es of enrolledStudents) {
+            const exists = await tx.academicRecord.findUnique({
+              where: {
+                studentId_groupId: {
+                  studentId: es.enrollment.studentId,
+                  groupId: g.groupId,
+                },
+              },
+            });
+            if (!exists) {
+              await tx.academicRecord.create({
+                data: {
+                  studentId: es.enrollment.studentId,
+                  groupId: g.groupId,
+                  academicPeriodId: id,
+                  finalGrade: 0,
+                  passed: false,
+                  attemptNumber: 1,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // Finalize enrollment_subjects: ENROLLED → COMPLETED or FAILED
+      const allEnrolledSubjects = await tx.enrollmentSubject.findMany({
+        where: {
+          status: "ENROLLED",
+          enrollment: { academicPeriodId: id },
+          group: { academicPeriodId: id },
+        },
+        include: { enrollment: { select: { studentId: true } } },
+      });
+
+      for (const es of allEnrolledSubjects) {
+        const record = await tx.academicRecord.findUnique({
+          where: {
+            studentId_groupId: {
+              studentId: es.enrollment.studentId,
+              groupId: es.groupId,
+            },
+          },
+        });
+        await tx.enrollmentSubject.update({
+          where: { id: es.id },
+          data: { status: record?.passed ? "COMPLETED" : "FAILED" },
+        });
+      }
+
+      // Close enrollment headers for this period
+      await tx.enrollment.updateMany({
+        where: { academicPeriodId: id, status: "ACTIVE" },
+        data: { status: "CLOSED" },
+      });
+
+      // Deactivate all groups in this period
+      await tx.group.updateMany({
+        where: { academicPeriodId: id },
+        data: { isActive: false },
+      });
+
+      // Close the period itself
+      await tx.academicPeriod.update({
+        where: { id },
+        data: { status: "CLOSED", isActive: false, enrollmentOpen: false },
+      });
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          entityType: "academic_period",
+          entityId: id,
+          action: "STATUS_CHANGE",
+          performedBy: adminUserId,
+          oldValues: { status: "GRADING" },
+          newValues: {
+            status: "CLOSED",
+            totalGroups: progress.totalGroups,
+            completedGroups: progress.completedGroups,
+            forcedClose: force,
+          },
+        },
+      });
+    });
+
+    // Notify all students enrolled in this period
+    const affectedEnrollments = await prisma.enrollment.findMany({
+      where: { academicPeriodId: id },
+      include: { student: { include: { user: { select: { id: true } } } } },
+    });
+
+    const userIds = affectedEnrollments.map((e) => e.student.user.id);
+    if (userIds.length > 0) {
+      await notificationsService.createBulk(userIds, {
+        title: "Período académico cerrado",
+        message: `El período ${period.name} ha sido cerrado. Tus calificaciones finales ya están disponibles.`,
+        type: "GENERAL",
+        relatedEntity: "academic_period",
+        relatedEntityId: id,
+      });
+    }
+
+    return { success: true, periodName: period.name };
   }
 }
 

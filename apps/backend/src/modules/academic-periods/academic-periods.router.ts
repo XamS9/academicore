@@ -15,6 +15,12 @@ academicPeriodsRouter.get(
   authenticate,
   academicPeriodsController.findById,
 );
+academicPeriodsRouter.get(
+  "/:id/progress",
+  authenticate,
+  authorize("ADMIN"),
+  academicPeriodsController.getPeriodProgress,
+);
 academicPeriodsRouter.post(
   "/",
   authenticate,
@@ -32,4 +38,16 @@ academicPeriodsRouter.patch(
   authenticate,
   authorize("ADMIN"),
   academicPeriodsController.toggleEnrollment,
+);
+academicPeriodsRouter.patch(
+  "/:id/start-grading",
+  authenticate,
+  authorize("ADMIN"),
+  academicPeriodsController.startGrading,
+);
+academicPeriodsRouter.post(
+  "/:id/close",
+  authenticate,
+  authorize("ADMIN"),
+  academicPeriodsController.closePeriod,
 );

@@ -14,7 +14,17 @@ class CareersService {
       where: { id, deletedAt: null },
       include: {
         careerSubjects: {
-          include: { subject: true },
+          include: {
+            subject: {
+              include: {
+                prerequisites: {
+                  include: {
+                    prerequisite: { select: { id: true, name: true, code: true } },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     });

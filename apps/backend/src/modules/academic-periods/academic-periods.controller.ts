@@ -79,10 +79,55 @@ class AcademicPeriodsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const period = await academicPeriodsService.toggleEnrollment(
+      const period = await academicPeriodsService.toggleEnrollment(req.params.id);
+      res.status(200).json(period);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getPeriodProgress = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const progress = await academicPeriodsService.getPeriodProgress(req.params.id);
+      res.status(200).json(progress);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  startGrading = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const period = await academicPeriodsService.startGrading(
         req.params.id,
+        req.user!.sub,
       );
       res.status(200).json(period);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  closePeriod = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const force = req.body?.force === true;
+      const result = await academicPeriodsService.closePeriod(
+        req.params.id,
+        req.user!.sub,
+        force,
+      );
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }

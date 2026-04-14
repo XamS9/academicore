@@ -14,8 +14,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import GradeIcon from "@mui/icons-material/Grade";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
-import { useAuth } from "../../store/auth.context";
-import { studentsService } from "../../services/students.service";
 import { enrollmentsService } from "../../services/enrollments.service";
 import { gradesService } from "../../services/grades.service";
 
@@ -37,12 +35,10 @@ interface CourseCard {
 }
 
 export default function StudentGradesPage() {
-  const { currentUser } = useAuth();
   const { toast, showToast, clearToast } = useToast();
   const [searchParams] = useSearchParams();
   const targetGroupId = searchParams.get("groupId");
 
-  const [studentId, setStudentId] = useState("");
   const [cards, setCards] = useState<CourseCard[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
 
@@ -56,8 +52,6 @@ export default function StudentGradesPage() {
     const load = async () => {
       try {
         setCardsLoading(true);
-        const student = await studentsService.getByUserId(currentUser!.id);
-        setStudentId(student.id);
 
         type ESItem = {
           groupId: string;
@@ -74,7 +68,7 @@ export default function StudentGradesPage() {
         };
 
         const enrollments: EnrollmentItem[] =
-          await enrollmentsService.getByStudent(student.id);
+          await enrollmentsService.getMine();
 
         // Only show groups from the active enrollment (current period)
         const currentGroups = enrollments
@@ -95,7 +89,7 @@ export default function StudentGradesPage() {
         const gradesByGroup = await Promise.all(
           currentGroups.map((g) =>
             gradesService
-              .getByStudentAndGroup(student.id, g.groupId)
+              .getMineByGroup(g.groupId)
               .then((gs: GradeItem[]) => ({ groupId: g.groupId, grades: gs }))
               .catch(() => ({ groupId: g.groupId, grades: [] as GradeItem[] })),
           ),
@@ -133,6 +127,7 @@ export default function StudentGradesPage() {
       }
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount load
   }, []);
 
   // ─── Auto-select card from query param (deep-link from notification) ─────────
@@ -149,10 +144,7 @@ export default function StudentGradesPage() {
     setSelectedCard(card);
     setDetailLoading(true);
     try {
-      const data = await gradesService.getByStudentAndGroup(
-        studentId,
-        card.groupId,
-      );
+      const data = await gradesService.getMineByGroup(card.groupId);
       setGrades(data);
     } catch {
       showToast("Error al cargar calificaciones", "error");

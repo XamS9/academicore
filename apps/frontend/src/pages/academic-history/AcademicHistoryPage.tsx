@@ -118,7 +118,7 @@ export default function AcademicHistoryPage() {
   useEffect(() => {
     if (currentUser?.role === "STUDENT") {
       studentsService
-        .getByUserId(currentUser.id)
+        .getMe()
         .then((data: StudentItem) => {
           setStudents([data]);
           setSelectedStudentId(data.id);
@@ -138,17 +138,21 @@ export default function AcademicHistoryPage() {
   useEffect(() => {
     if (!selectedStudentId) return;
     setLoading(true);
-    Promise.all([
-      academicRecordsService.getByStudent(selectedStudentId),
-      academicRecordsService.getAveragesByPeriod(selectedStudentId),
-    ])
+    const isOwnStudent = currentUser?.role === "STUDENT";
+    const recordsPromise = isOwnStudent
+      ? academicRecordsService.getMine()
+      : academicRecordsService.getByStudent(selectedStudentId);
+    const averagesPromise = isOwnStudent
+      ? academicRecordsService.getMyAveragesByPeriod()
+      : academicRecordsService.getAveragesByPeriod(selectedStudentId);
+    Promise.all([recordsPromise, averagesPromise])
       .then(([recs, avgs]) => {
         setRecords(recs as AcademicRecord[]);
         setPeriodAverages(avgs as PeriodAvg[]);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [selectedStudentId]);
+  }, [selectedStudentId, currentUser?.role]);
 
   const passed = records.filter((r) => r.passed);
   const failed = records.filter((r) => !r.passed);

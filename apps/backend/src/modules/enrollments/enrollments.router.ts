@@ -19,6 +19,18 @@ enrollmentsRouter.get(
   controller.findAvailableGroups,
 );
 enrollmentsRouter.get(
+  "/me/schedule",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findMySchedule,
+);
+enrollmentsRouter.get(
+  "/me",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findMine,
+);
+enrollmentsRouter.get(
   "/student/:studentId",
   authenticate,
   controller.findByStudent,
@@ -32,6 +44,6 @@ enrollmentsRouter.get(
 enrollmentsRouter.patch(
   "/drop",
   authenticate,
-  authorize("ADMIN"),
+  authorize("ADMIN", "STUDENT"),
   controller.dropSubject,
 );

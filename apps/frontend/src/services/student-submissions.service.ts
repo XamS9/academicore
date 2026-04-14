@@ -45,6 +45,8 @@ export interface StudentSubmissionWithEval extends StudentSubmission {
 }
 
 export const studentSubmissionsService = {
+  getMine: (): Promise<StudentSubmissionWithEval[]> =>
+    api.get("/student-submissions/me").then((r) => r.data),
   getByStudent: (studentId: string): Promise<StudentSubmissionWithEval[]> =>
     api.get(`/student-submissions/student/${studentId}`).then((r) => r.data),
 
@@ -54,7 +56,7 @@ export const studentSubmissionsService = {
       .then((r) => r.data),
 
   create: (data: {
-    studentId: string;
+    studentId?: string;
     evaluationId: string;
     title: string;
     type: "LINK" | "TEXT" | "FILE_REF";

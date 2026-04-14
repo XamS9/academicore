@@ -18,6 +18,12 @@ certificationsRouter.get(
   certificationsController.findAll,
 );
 certificationsRouter.get(
+  "/me",
+  authenticate,
+  authorize("STUDENT"),
+  certificationsController.findMine,
+);
+certificationsRouter.get(
   "/student/:studentId",
   authenticate,
   certificationsController.findByStudent,

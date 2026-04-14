@@ -11,8 +11,6 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import GradeIcon from "@mui/icons-material/Grade";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
-import { useAuth } from "../../store/auth.context";
-import { studentsService } from "../../services/students.service";
 import { enrollmentsService } from "../../services/enrollments.service";
 import { gradesService } from "../../services/grades.service";
 
@@ -39,7 +37,6 @@ interface PeriodHistory {
 }
 
 export default function StudentGradesHistoryPage() {
-  const { currentUser } = useAuth();
   const { toast, showToast, clearToast } = useToast();
 
   const [history, setHistory] = useState<PeriodHistory[]>([]);
@@ -49,7 +46,6 @@ export default function StudentGradesHistoryPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const student = await studentsService.getByUserId(currentUser!.id);
 
         type ESItem = {
           groupId: string;
@@ -67,7 +63,7 @@ export default function StudentGradesHistoryPage() {
         };
 
         const enrollments: EnrollmentItem[] =
-          await enrollmentsService.getByStudent(student.id);
+          await enrollmentsService.getMine();
 
         // Only past (non-active) enrollments
         const pastEnrollments = enrollments.filter(
@@ -97,7 +93,7 @@ export default function StudentGradesHistoryPage() {
         const gradeResults = await Promise.all(
           allGroups.map((g) =>
             gradesService
-              .getByStudentAndGroup(student.id, g.groupId)
+              .getMineByGroup(g.groupId)
               .then((gs: GradeItem[]) => ({ groupId: g.groupId, grades: gs }))
               .catch(() => ({ groupId: g.groupId, grades: [] as GradeItem[] })),
           ),
