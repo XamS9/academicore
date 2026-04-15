@@ -45,6 +45,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../../store/auth.context";
+import { useStudentNav } from "../../store/student-nav.context";
 
 const DRAWER_WIDTH = 260;
 
@@ -253,15 +254,58 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
+function filterStudentNavItems(
+  items: NavItem[],
+  role: Role,
+  gates: {
+    showMiInscripcion: boolean;
+    showInscribirMaterias: boolean;
+    showMiContenido: boolean;
+    showMisCalificaciones: boolean;
+  },
+): NavItem[] {
+  if (role !== "STUDENT") return items;
+  return items.filter((item) => {
+    if (item.path === "/mi-inscripcion") return gates.showMiInscripcion;
+    if (item.path === "/inscribir-materias") return gates.showInscribirMaterias;
+    if (item.path === "/mi-contenido") return gates.showMiContenido;
+    if (item.path === "/mis-calificaciones") return gates.showMisCalificaciones;
+    return true;
+  });
+}
+
 export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const { currentUser } = useAuth();
   const location = useLocation();
   const role = (currentUser?.role ?? "STUDENT") as Role;
+  const {
+    showMiInscripcion,
+    showInscribirMaterias,
+    showMiContenido,
+    showMisCalificaciones,
+  } = useStudentNav();
 
-  const entries = navByRole[role];
+  const entries = navByRole[role].map((entry) => {
+    if (role === "STUDENT" && isSection(entry) && entry.key === "academic") {
+      return {
+        ...entry,
+        items: filterStudentNavItems(entry.items, role, {
+          showMiInscripcion,
+          showInscribirMaterias,
+          showMiContenido,
+          showMisCalificaciones,
+        }),
+      };
+    }
+    return entry;
+  });
+
+  const visibleEntries = entries.filter((entry) =>
+    isSection(entry) ? entry.items.length > 0 : true,
+  );
 
   // Auto-open the section that contains the current route
-  const initialOpen = entries.reduce<Record<string, boolean>>((acc, entry) => {
+  const initialOpen = visibleEntries.reduce<Record<string, boolean>>((acc, entry) => {
     if (isSection(entry)) {
       acc[entry.key] = entry.items.some(
         (item) =>
@@ -337,7 +381,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
       {/* Nav */}
       <List dense sx={{ flex: 1, pt: 1.5, px: 0.5 }}>
-        {entries.map((entry) => {
+        {visibleEntries.map((entry) => {
           if (isSection(entry)) {
             const sectionOpen = openSections[entry.key] ?? false;
             const sectionHasActive = entry.items.some((item) =>

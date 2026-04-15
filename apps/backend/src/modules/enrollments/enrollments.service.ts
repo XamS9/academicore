@@ -330,6 +330,50 @@ export class EnrollmentsService {
     });
   }
 
+  /**
+   * UI gating for students: inscription payment + enrollment window for active period.
+   */
+  async getStudentNavState(userId: string) {
+    const student = await prisma.student.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) {
+      throw new HttpError(404, "Estudiante no encontrado");
+    }
+
+    const activePeriod = await prisma.academicPeriod.findFirst({
+      where: { isActive: true },
+      select: { id: true, enrollmentOpen: true },
+    });
+
+    if (!activePeriod) {
+      return {
+        activePeriodId: null as string | null,
+        enrollmentOpen: false,
+        pendingInscriptionPayment: false,
+      };
+    }
+
+    const pendingInscription = await prisma.studentFee.findFirst({
+      where: {
+        studentId: student.id,
+        periodId: activePeriod.id,
+        status: { in: ["PENDING", "OVERDUE"] },
+        feeConcept: {
+          name: { contains: "inscripci", mode: "insensitive" },
+        },
+      },
+      select: { id: true },
+    });
+
+    return {
+      activePeriodId: activePeriod.id,
+      enrollmentOpen: activePeriod.enrollmentOpen,
+      pendingInscriptionPayment: !!pendingInscription,
+    };
+  }
+
   async dropSubject(enrollmentSubjectId: string, user: JwtPayload) {
     const es = await prisma.enrollmentSubject.findUnique({
       where: { id: enrollmentSubjectId },

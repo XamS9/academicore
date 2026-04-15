@@ -15,6 +15,7 @@ import Alert from "@mui/material/Alert";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { paymentsService } from "../../services/payments.service";
+import { useStudentNav } from "../../store/student-nav.context";
 import {
   feeStatusChipColor,
   feeStatusLabel,
@@ -30,6 +31,7 @@ interface StudentFee {
 }
 
 export default function StudentPaymentsPage() {
+  const { refresh: refreshStudentNav } = useStudentNav();
   const [fees, setFees] = useState<StudentFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -59,7 +61,8 @@ export default function StudentPaymentsPage() {
       await paymentsService.pay(selectedFee.id, { method });
       showToast("Pago procesado exitosamente");
       setSelectedFee(null);
-      load();
+      await load();
+      await refreshStudentNav();
     } catch {
       showToast("Error al procesar pago", "error");
     } finally {

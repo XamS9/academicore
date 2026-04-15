@@ -25,6 +25,12 @@ enrollmentsRouter.get(
   controller.findMySchedule,
 );
 enrollmentsRouter.get(
+  "/me/nav-state",
+  authenticate,
+  authorize("STUDENT"),
+  controller.getMyNavState,
+);
+enrollmentsRouter.get(
   "/me",
   authenticate,
   authorize("STUDENT"),

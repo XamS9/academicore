@@ -34,6 +34,7 @@ import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../store/auth.context";
+import { useStudentNav } from "../store/student-nav.context";
 import { api } from "../services/api";
 import { studentsService } from "../services/students.service";
 import { teachersService } from "../services/teachers.service";
@@ -446,6 +447,7 @@ async function loadStudentStats(): Promise<StatCard[]> {
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
+  const { showMiContenido, navState } = useStudentNav();
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatCard[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -859,9 +861,15 @@ export default function DashboardPage() {
                   <Typography variant="h6" fontWeight={700}>
                     Próximas Entregas
                   </Typography>
-                  <Button size="small" onClick={() => navigate("/mi-contenido")}>
-                    Ver materias
-                  </Button>
+                  {showMiContenido ? (
+                    <Button size="small" onClick={() => navigate("/mi-contenido")}>
+                      Ver materias
+                    </Button>
+                  ) : navState?.pendingInscriptionPayment ? (
+                    <Button size="small" color="warning" variant="outlined" onClick={() => navigate("/mis-pagos")}>
+                      Pagar inscripción
+                    </Button>
+                  ) : null}
                 </Box>
                 <Divider sx={{ mb: 2 }} />
                 {loadingWidgets ? (
@@ -884,7 +892,8 @@ export default function DashboardPage() {
                             disablePadding
                             sx={{ py: 1 }}
                             secondaryAction={
-                              !d.submitted && (
+                              !d.submitted &&
+                              showMiContenido && (
                                 <Button
                                   size="small"
                                   variant="outlined"

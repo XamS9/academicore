@@ -7,6 +7,9 @@ export const enrollmentsService = {
   getMine: () => api.get("/enrollments/me").then((r) => r.data),
   /** Class schedule for active period (STUDENT only). */
   getMySchedule: () => api.get("/enrollments/me/schedule").then((r) => r.data),
+  /** Sidebar / route gating (STUDENT only). */
+  getMyNavState: () =>
+    api.get("/enrollments/me/nav-state").then((r) => r.data),
   getByStudent: (studentId: string) =>
     api.get(`/enrollments/student/${studentId}`).then((r) => r.data),
   getAvailableGroups: () =>

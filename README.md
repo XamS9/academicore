@@ -30,7 +30,7 @@ Academicore provides institutions with tools to manage:
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm 10+
+- **Node.js** 18+ and npm 10+ (optional: install or switch versions with **[nvm](https://github.com/nvm-sh/nvm)** — e.g. `nvm install 20` then `nvm use 20`)
 - **PostgreSQL** 16+ (local or Docker)
 - **Git**
 
@@ -54,7 +54,10 @@ For local PostgreSQL:
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/academicore"
 ```
 
-For Docker Compose (see step 3):
+For Docker ComposeComposeForFor Docker Compose (see steFor Docker Compose (see step 3):
+ (see steFor Docker Compose (see step 3):
+p For Docker Compose (see step 3):
+3):
 ```env
 DATABASE_URL="postgresql://academicore:academicore_pass@db:5432/academicore"
 ```
@@ -134,6 +137,15 @@ academicore/
 npm run dev              # Start backend + frontend concurrently
 npm run dev:backend      # Backend only (ts-node-dev with auto-reload)
 npm run dev:frontend     # Frontend only (Vite dev server)
+```
+
+**From inside `apps/` (optional):** This repo uses npm workspaces. After `npm install` at the repository root, you can run the same scripts from each package directory—equivalent to the root shortcuts above:
+
+```bash
+cd apps/frontend && npm run dev   # same as: npm run dev:frontend (from root)
+cd apps/backend && npm run dev    # same as: npm run dev:backend (from root)
+cd apps/frontend && npm run build && npm run lint
+cd apps/backend && npm run prisma:seed
 ```
 
 ### Build
@@ -227,9 +239,12 @@ A modern single-page application with Spanish-language routes and user interface
 
 ## Documentation
 
-- **`docs/processes.md`** — Business process workflows (enrollment, grading, certification, etc.), validation rules, and role-based responsibilities. **Must be kept in sync with code changes.**
+- **`docs/processes.md`** — Business process workflows (enrollment, grading, certification, payments, etc.), validation rules, and role-based responsibilities. Includes **student UI locks vs academic cycle** (enrollment window, per-period inscription fee, next period). **Must be kept in sync with code changes.**
 - **`docs/schema.dbml`** — Database schema in DBML format (all tables, enums, relationships, indexes). **Must be updated when Prisma schema changes.**
+- **`docs/e2e-admin-playbook.md`**, **`docs/e2e-teacher-playbook.md`**, **`docs/e2e-student-playbook.md`** — End-to-end checklists for seeded E2E users (`admin.e2e`, `teacher.e2e`, `student.e2e`).
 - **`CLAUDE.md`** — AI assistant guidance for working with this codebase.
+
+**User manual (optional):** With both servers running (`npm run dev`), `npm run generate:manual` builds `manuals/user-manual.html` and `user-manual.pdf` from `apps/backend/scripts/generate-manual.js`.
 
 ## Environment Variables
 

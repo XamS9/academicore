@@ -25,6 +25,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { enrollmentsService } from "../../services/enrollments.service";
+import { useStudentNav } from "../../store/student-nav.context";
 import { academicPeriodsService } from "../../services/academic-periods.service";
 import { getApiErrorMessage } from "../../services/api";
 
@@ -85,6 +86,7 @@ interface EnrolledSubjectRow {
 }
 
 export default function StudentSelfEnrollPage() {
+  const { refresh: refreshStudentNav } = useStudentNav();
   const [loading, setLoading] = useState(true);
   const [activePeriodId, setActivePeriodId] = useState<string | null>(null);
   const [activePeriodName, setActivePeriodName] = useState<string>("");
@@ -225,6 +227,7 @@ export default function StudentSelfEnrollPage() {
     }
     await loadEnrolled(activePeriodId);
     await loadAvailable();
+    await refreshStudentNav();
   };
 
   // ── Enrolled columns ────────────────────────────────────

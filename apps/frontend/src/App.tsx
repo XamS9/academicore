@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import { AuthProvider } from "./store/auth.context";
+import { StudentNavProvider } from "./store/student-nav.context";
 import PrivateRoute from "./components/auth/PrivateRoute";
+import StudentRouteGate from "./components/auth/StudentRouteGate";
 import AppLayout from "./components/layout/AppLayout";
 
 import LoginPage from "./pages/LoginPage";
@@ -41,6 +43,7 @@ import StudentCareerPage from "./pages/student/StudentCareerPage";
 export default function App() {
   return (
     <AuthProvider>
+      <StudentNavProvider>
       <Routes>
         {/* Public — no auth, no layout */}
         <Route path="/login" element={<LoginPage />} />
@@ -82,20 +85,46 @@ export default function App() {
             <Route path="mis-grupos" element={<TeacherGroupsPage />} />
             <Route path="mis-grupos/:groupId" element={<TeacherGroupDetailPage />} />
             {/* Student */}
-            <Route path="mi-inscripcion" element={<StudentEnrollmentPage />} />
+            <Route
+              path="mi-inscripcion"
+              element={
+                <StudentRouteGate gate="inscription">
+                  <StudentEnrollmentPage />
+                </StudentRouteGate>
+              }
+            />
             <Route
               path="inscribir-materias"
-              element={<StudentSelfEnrollPage />}
+              element={
+                <StudentRouteGate gate="inscribir">
+                  <StudentSelfEnrollPage />
+                </StudentRouteGate>
+              }
             />
-            <Route path="mis-calificaciones" element={<StudentGradesPage />} />
+            <Route
+              path="mis-calificaciones"
+              element={
+                <StudentRouteGate gate="grades">
+                  <StudentGradesPage />
+                </StudentRouteGate>
+              }
+            />
             <Route path="historial-calificaciones" element={<StudentGradesHistoryPage />} />
-            <Route path="mi-contenido" element={<StudentContentPage />} />
+            <Route
+              path="mi-contenido"
+              element={
+                <StudentRouteGate gate="content">
+                  <StudentContentPage />
+                </StudentRouteGate>
+              }
+            />
             <Route path="mis-pagos" element={<StudentPaymentsPage />} />
             <Route path="mi-carrera" element={<StudentCareerPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>
       </Routes>
+      </StudentNavProvider>
     </AuthProvider>
   );
 }

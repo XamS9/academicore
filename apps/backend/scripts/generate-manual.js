@@ -430,7 +430,7 @@ const PAGES = {
     {
       route: "/solicitudes-registro",
       label: "Solicitudes de Registro",
-      desc: "Cola de estudiantes que se registraron desde el portal público y esperan aprobación. Muestra nombre, correo, carrera solicitada y fecha de solicitud. Aprobar activa el acceso al sistema y asigna automáticamente el cargo de inscripción; Rechazar elimina el registro.",
+      desc: "Cola de estudiantes que se registraron desde el portal público y esperan aprobación. Muestra nombre, correo, carrera solicitada y fecha de solicitud. Aprobar activa la cuenta y el rol de estudiante; Rechazar elimina el registro. El cargo de inscripción al período se genera cuando el estudiante se inscribe por primera vez a un grupo en ese período (no al aprobar la solicitud).",
       extras: [
         {
           label: "Diálogo: Rechazar Solicitud",
@@ -534,7 +534,7 @@ const PAGES = {
     {
       route: "/pagos",
       label: "Pagos y Finanzas",
-      desc: "Gestión de conceptos de cobro y cargos a estudiantes. Permite definir conceptos y asignar cobros individuales o grupales.",
+      desc: "Gestión de conceptos de cobro y cargos a estudiantes. Permite definir conceptos y asignar cobros individuales o grupales. La cuota de inscripción del período se crea automáticamente en la primera inscripción a grupo del estudiante en ese período (además de los cargos que asigne el administrador).",
       extras: [
         {
           label: "Formulario: Nuevo Concepto de Cobro",
@@ -762,7 +762,7 @@ const PAGES = {
     {
       route: "/inscribir-materias",
       label: "Inscribir Materias",
-      desc: "Proceso de auto-inscripción para el período activo. Muestra los grupos disponibles validando prerrequisitos y cupo. El estudiante selecciona y confirma las materias que desea cursar.",
+      desc: "Proceso de auto-inscripción para el período activo. Muestra los grupos disponibles validando prerrequisitos y cupo. El estudiante selecciona y confirma las materias que desea cursar. La primera inscripción a un grupo en ese período genera en el sistema el cargo de inscripción semestral (concepto activo cuyo nombre contiene «inscripci»), visible en Mis pagos.",
     },
     {
       route: "/mis-calificaciones",
@@ -786,7 +786,7 @@ const PAGES = {
     {
       route: "/mi-contenido",
       label: "Mi Contenido",
-      desc: "Recursos académicos y temas publicados por los docentes de los grupos en que el estudiante está inscrito.",
+      desc: "Recursos académicos y temas publicados por los docentes de los grupos en que el estudiante está inscrito. El acceso exige inscripción vigente y haber pagado la cuota de inscripción del período de ese grupo.",
       extras: [
         {
           label: "Contenido de una Materia",
@@ -800,7 +800,7 @@ const PAGES = {
     {
       route: "/mis-pagos",
       label: "Mis Pagos",
-      desc: "Estado de cuenta personal: conceptos de pago pendientes con fecha de vencimiento e historial de pagos realizados.",
+      desc: "Estado de cuenta personal: conceptos de pago pendientes con fecha de vencimiento e historial de pagos realizados. Incluye la cuota de inscripción del período cuando corresponde (creada al inscribir el primer grupo) y otros cargos asignados por administración.",
       extras: [
         {
           label: "Formulario: Confirmar Pago",

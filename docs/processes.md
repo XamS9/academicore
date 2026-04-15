@@ -241,38 +241,41 @@ Each `Group` has `deliveryMode`: **ON_SITE** (presencial), **VIRTUAL** (sin sede
 
 ## 10. Student Enrollment (Core Process)
 
-**Actors:** ADMIN
+**Actors:** ADMIN (enroll any student), STUDENT (self-enrollment to own profile)
 
-**Endpoint:** `POST /api/inscripciones/enroll`
+**Endpoint:** `POST /api/enrollments/enroll`
 
-This process is handled by the `sp_enroll_student` stored procedure to guarantee atomicity.
+**Implementation:** `enrollments.service.ts` runs a Prisma transaction (the REST API does **not** call SQL `sp_enroll_student`; migrations still ship that function for parity or direct DB use).
 
-| Step | Validation | Error code |
-|------|------------|------------|
-| 1 | Academic period exists | -1 |
-| 2 | Period has `enrollmentOpen = true` | -2 |
-| 3 | Student exists and not soft-deleted | -3 |
-| 4 | Student status in {ACTIVE, AT_RISK, ELIGIBLE_FOR_GRADUATION} | -4 |
-| 5 | Group exists and `isActive = true` | -5 |
-| 6 | Group has capacity (`currentStudents < maxStudents`) | -6 |
-| 7 | Student has passed all prerequisite subjects (via `academic_records.passed`) | -7 |
-| 8 | Student not already enrolled in this group | -8 |
+| Step | Validation | HTTP |
+|------|------------|------|
+| 1 | Academic period exists | 400 |
+| 2 | Period has `enrollmentOpen = true` | 400 |
+| 3 | Student exists and not soft-deleted | 400 |
+| 4 | Student status in {ACTIVE, AT_RISK, ELIGIBLE_FOR_GRADUATION} | 400 |
+| 5 | Group exists and `isActive = true` | 400 |
+| 6 | Group has capacity (`currentStudents < maxStudents`) | 400 |
+| 7 | Prerequisites satisfied (records + co-requisite in same period allowed) | 400 |
+| 8 | Student not already enrolled in this group | 400 |
+| 9 | Enrolled subject count for period is below `maxSubjectsPerEnrollment` (system settings) | 400 |
 
-**On success (code 0):**
-- Creates or retrieves `Enrollment` record for the student+period
-- Creates `EnrollmentSubject` record (status = ENROLLED)
+**On success:**
+- Creates or retrieves `Enrollment` for student+period
+- Creates `EnrollmentSubject` (status = ENROLLED)
 - Increments `group.currentStudents`
+- **Inscription fee:** If this call created the **first** `Enrollment` row for that student+period, creates a `StudentFee` for the active `FeeConcept` whose name contains `"inscripci"` (if one exists), unless one already exists for that student+concept+period. Due date: +30 days from enrollment.
 
 ### Subject Drop
 
-**Endpoint:** `PATCH /api/inscripciones/drop` — calls `sp_drop_enrollment_subject` stored procedure.
+**Endpoint:** `PATCH /api/enrollments/drop` — `enrollments.service.dropSubject` (Prisma); updates subject to DROPPED and decrements group count.
 
 ### Read Operations
 
 | Endpoint | Roles |
 |----------|-------|
-| `GET /api/inscripciones/student/:studentId` | All authenticated |
-| `GET /api/inscripciones/period/:periodId` | ADMIN |
+| `GET /api/enrollments/student/:studentId` | Authenticated (STUDENT: own only via resource checks) |
+| `GET /api/enrollments/period/:periodId` | ADMIN |
+| `GET /api/enrollments/me/nav-state` | STUDENT (UI gating: pending inscription payment, enrollment window) |
 
 ---
 
@@ -481,7 +484,7 @@ Single-row configuration table that controls system-wide academic parameters. Pr
 | Setting | Field | Default | Description |
 |---------|-------|---------|-------------|
 | Passing Grade | `passingGrade` | 60 | Minimum grade to pass a subject (0–100 scale). Used by DB trigger `fn_generate_academic_record`. |
-| Max Subjects per Enrollment | `maxSubjectsPerEnrollment` | 7 | Maximum subjects a student can enroll in per academic period. Enforced by `sp_enroll_student`. |
+| Max Subjects per Enrollment | `maxSubjectsPerEnrollment` | 7 | Maximum subjects a student can enroll in per academic period. Enforced by `enrollments.service` (and mirrored in SQL `sp_enroll_student` if used outside the API). |
 | Max Evaluation Weight | `maxEvaluationWeight` | 100 | Maximum sum of evaluation weights per group. Enforced by the evaluations service. |
 | AT_RISK Threshold | `atRiskThreshold` | 3 | Number of failed subjects that triggers AT_RISK status. Used by DB trigger `fn_update_student_academic_status`. |
 
@@ -556,6 +559,8 @@ Mock payment flow — no real payment gateway. Generates reference codes and rec
 | Assign fee | `POST /api/payments/student-fees` | ADMIN |
 | Assign bulk | `POST /api/payments/student-fees/bulk` | ADMIN |
 
+**Automatic inscription fee:** When a student enrolls in **at least one group** for a period for the **first** time (first `Enrollment` row for that student+period), the system creates a pending `StudentFee` using the active fee concept whose name contains `"inscripci"` (e.g. “Inscripción semestral”), if such a concept exists. One fee per student per period for that concept; further group adds in the same period do not duplicate it. Admins may still assign other fees manually.
+
 ### Payment Flow
 
 **Endpoint:** `POST /api/payments/pay/:studentFeeId`
@@ -592,9 +597,9 @@ Extended from Process 10. Students can now enroll themselves into available grou
 |------|-------------|
 | 1 | Student browses available groups (filtered by career, active period, excluding already-enrolled) |
 | 2 | Student selects a group and submits enrollment |
-| 3 | System verifies `req.user.sub === student.userId` (can only enroll themselves) |
-| 4 | Stored procedure `sp_enroll_student` validates prerequisites, capacity, etc. (same as admin flow) |
-| 5 | On success: creates enrollment + notification (ENROLLMENT_CONFIRMED) |
+| 3 | Controller resolves `studentId` from JWT for STUDENT; ADMIN must pass `studentId` in body |
+| 4 | `enrollments.service.enrollStudent` validates prerequisites, capacity, max subjects, etc. (same rules as Process 10) |
+| 5 | On success: enrollment row + subject + group counter + inscription `StudentFee` on first period enrollment (see Process 10) + notification (`ENROLLMENT_CONFIRMED`) |
 
 **Rules:** Same validation chain as admin enrollment (Process 10). Student ownership enforced at the controller level.
 
@@ -852,6 +857,32 @@ Body: `{ force: boolean }`
 
 ---
 
+## 28. Student UI Locks vs Academic Cycle
+
+**Source:** `GET /api/enrollments/me/nav-state` and `StudentNavProvider` (`apps/frontend`).
+
+The student sidebar and route gates use the **active** period (`isActive = true`), **`enrollmentOpen`**, and whether there is a **pending inscription fee** (PENDING/OVERDUE `StudentFee` for that period whose fee concept name contains `"inscripci"`).
+
+| Lock | Meaning in UI |
+|------|----------------|
+| `pendingInscriptionPayment` | **Mi Inscripción**, **Mi Contenido**, **Mis Calificaciones** are hidden; user is steered to **Mis pagos** until the inscription fee is paid. |
+| `enrollmentOpen === false` | **Inscribir materias** is hidden (no new enrollments this period). |
+| No active period | Enrollment-related routes follow the same “no period” handling as when flags are false. |
+
+**Intended behavior across the cycle**
+
+1. **Enrollment window** (`period.status = OPEN` and `enrollmentOpen = true`): the student enrolls in groups first; the **first** enrollment in that period generates the period’s inscription charge; then they **pay** to unlock learning content and grades for that period.
+
+2. **After the enrollment window closes until grading starts** (`OPEN` with `enrollmentOpen = false`): **Inscribir materias** disappears. For students who **already paid**, there are **no further payment-related UI changes** in the sidebar—**Mi Inscripción**, **Contenido**, and **Calificaciones** stay available as before. Students who never enrolled during the window can no longer self-enroll for that period.
+
+3. **Grading phase** (`status = GRADING`, `enrollmentOpen` always false): same sidebar logic as (2) for payment and visibility—**no extra gating step** is introduced solely because the period entered grading; teachers enter final grades.
+
+4. **Period closed; later a new period becomes active**: the student must **enroll again** in groups for the **new** period and **pay the new period’s inscription fee** again (a new `StudentFee` is created on first enrollment in that period—see Process 18).
+
+**Note:** The frontend does **not** read `period.status` (OPEN/GRADING/CLOSED) for these flags; behavior is driven by `isActive`, `enrollmentOpen`, and pending inscription payment. Closing a period deactivates it; the next `isActive` period resets the enrollment/payment story for that cycle.
+
+---
+
 ## Not Implemented
 
 The following academic processes are **not** currently handled:
@@ -859,3 +890,4 @@ The following academic processes are **not** currently handled:
 - **Faculty workload / contracts** — no HR-related processes
 - **Library / resources** — no resource management
 - **Transfer credits** — no mechanism for external credit recognition
+- **Monthly or recurring tuition fees** — not implemented. Only the **per-period inscription** charge is auto-generated on first group enrollment (Process 18). Automated monthly/weekly fee generation was considered as a possible extension and is **out of scope** for the current product; may be revisited later.

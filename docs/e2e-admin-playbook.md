@@ -26,7 +26,7 @@ This guide is for validating all major `ADMIN` capabilities while collaborating 
 8. Open `/anuncios` and create an `ALL` announcement.
 9. Create a `CAREER` announcement targeting the E2E student career.
 10. Create a `GROUP` announcement targeting the new E2E group.
-11. Open payments section and assign one inscription fee to `student.e2e` for the active period.
+11. Open payments section and verify fees for students (for `student.e2e`, the cargo de inscripción se crea al inscribir el primer grupo; no hace falta asignarlo a mano en el flujo base).
 12. Open `/calendar-events` and create one event of each type (`HOLIDAY`, `EXAM_WEEK`, `DEADLINE`, `OTHER`).
 13. Ask student to confirm content/evaluation access is blocked until fee payment.
 14. Ask student to pay the fee and confirm access is unlocked afterward.

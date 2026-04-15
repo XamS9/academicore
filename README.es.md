@@ -30,7 +30,7 @@ Academicore proporciona a las instituciones herramientas para gestionar:
 
 ### Requisitos Previos
 
-- **Node.js** 18+ y npm 10+
+- **Node.js** 18+ y npm 10+ (opcional: instalar o cambiar de versión con **[nvm](https://github.com/nvm-sh/nvm)** — p. ej. `nvm install 20` y luego `nvm use 20`)
 - **PostgreSQL** 16+ (local o Docker)
 - **Git**
 
@@ -136,6 +136,15 @@ npm run dev:backend      # Solo backend (ts-node-dev con recarga automática)
 npm run dev:frontend     # Solo frontend (servidor de desarrollo Vite)
 ```
 
+**Desde dentro de `apps/` (opcional):** El monorepo usa *npm workspaces*. Tras `npm install` en la raíz del repositorio, puedes ejecutar los mismos scripts en cada paquete; equivalen a los atajos de la raíz:
+
+```bash
+cd apps/frontend && npm run dev   # igual que: npm run dev:frontend (desde la raíz)
+cd apps/backend && npm run dev    # igual que: npm run dev:backend (desde la raíz)
+cd apps/frontend && npm run build && npm run lint
+cd apps/backend && npm run prisma:seed
+```
+
 ### Construcción
 
 ```bash
@@ -227,9 +236,12 @@ Una aplicación de página única moderna con rutas y interfaz en español.
 
 ## Documentación
 
-- **`docs/processes.md`** — Flujos de procesos de negocio (matrícula, calificación, certificación, etc.), reglas de validación y responsabilidades basadas en roles. **Debe mantenerse sincronizado con cambios de código.**
+- **`docs/processes.md`** — Flujos de procesos de negocio (matrícula, calificación, certificación, pagos, etc.), reglas de validación y responsabilidades por rol. Incluye **candados de UI del estudiante frente al ciclo académico** (ventana de inscripción, cuota de inscripción por período, siguiente período). **Debe mantenerse sincronizado con cambios de código.**
 - **`docs/schema.dbml`** — Esquema de base de datos en formato DBML (todas las tablas, enums, relaciones, índices). **Debe actualizarse cuando cambia el esquema Prisma.**
+- **`docs/e2e-admin-playbook.md`**, **`docs/e2e-teacher-playbook.md`**, **`docs/e2e-student-playbook.md`** — Guías E2E para usuarios de prueba sembrados (`admin.e2e`, `teacher.e2e`, `student.e2e`).
 - **`CLAUDE.md`** — Guía del asistente de IA para trabajar con este código.
+
+**Manual de usuario (opcional):** Con ambos servidores en marcha (`npm run dev`), `npm run generate:manual` genera `manuals/user-manual.html` y `user-manual.pdf` a partir de `apps/backend/scripts/generate-manual.js`.
 
 ## Variables de Entorno
 

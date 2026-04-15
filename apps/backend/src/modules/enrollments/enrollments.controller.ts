@@ -79,6 +79,19 @@ export class EnrollmentsController {
     }
   };
 
+  getMyNavState = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const result = await this.service.getStudentNavState(req.user!.sub);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   findByStudent = async (
     req: Request,
     res: Response,

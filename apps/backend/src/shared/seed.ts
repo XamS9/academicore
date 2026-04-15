@@ -14,8 +14,9 @@
  * actions, and system settings with signatures.
  *
  * E2E: `teacher.e2e` imparte `ETH101-E2E` (2026-1) con temas, materiales y
- * evaluaciones; `student.e2e` tiene cargo de inscripción PENDIENTE para ese
- * período (flujo pago → contenido). El resto de grupos 2026-1 incluyen temas
+ * evaluaciones; `student.e2e` arranca sin materias ni cargo de inscripción: la
+ * primera inscripción a grupo crea el cargo (misma lógica que en producción).
+ * El resto de grupos 2026-1 incluyen temas
  * donde aplica el dataset demo.
  *
  * Called automatically on startup when NODE_ENV !== 'production' and the DB
@@ -3064,27 +3065,6 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
-  await prisma.studentFee.upsert({
-    where: { id: "550e8400-e29b-41d4-a716-4466554400e2" },
-    update: {
-      studentId: studentE2E.id,
-      periodId: period2025.id,
-      feeConceptId: feeInscripcion.id,
-      amount: 5000,
-      dueDate: new Date("2026-02-15"),
-      status: "PENDING",
-    },
-    create: {
-      id: "550e8400-e29b-41d4-a716-4466554400e2",
-      studentId: studentE2E.id,
-      feeConceptId: feeInscripcion.id,
-      periodId: period2025.id,
-      amount: 5000,
-      dueDate: new Date("2026-02-15"),
-      status: "PENDING",
-    },
-  });
-
   // ── 24. SAMPLE PAYMENT ───────────────────────────────────────────────────
   await prisma.payment.upsert({
     where: { referenceCode: "PAY-SEED0001" },
@@ -3471,7 +3451,7 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   console.log("   E2E accounts (passwords with symbols as seeded):");
   console.log("   Admin:    admin.e2e@academicore.com    / AdminE2E#2026");
   console.log("   Teacher:  teacher.e2e@academicore.com   / TeacherE2E#2026  → grupo ETH101-E2E (2026-1), temas + evaluaciones");
-  console.log("   Student:  student.e2e@academicore.com   / StudentE2E#2026  → inscripción ISC sin materias; cargo inscripción PENDIENTE 2026-1");
+  console.log("   Student:  student.e2e@academicore.com   / StudentE2E#2026  → sin materias; cargo inscripción al inscribir primer grupo (2026-1)");
   console.log("");
   console.log("   More demo students (password student123):");
   console.log("   · Estados académicos: luis.pendiente@, maria.riesgo@, pedro.elegible@,");
