@@ -17,7 +17,6 @@ import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -82,6 +81,20 @@ const statusIcon = (status: string) => {
       return <PendingIcon color="warning" fontSize="small" />;
   }
 };
+
+/** Public file URL served by backend static `/api/files` (same-origin or VITE_API_URL host). */
+function admissionFilePublicUrl(fileKey: string): string {
+  const root =
+    import.meta.env.VITE_API_URL?.replace("/api", "") ||
+    (typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.host}`
+      : "http://localhost:3000");
+  return `${root.replace(/\/$/, "")}/api/files/${fileKey}`;
+}
+
+function isImageAdmissionDoc(mime: string | null | undefined): boolean {
+  return !!mime?.toLowerCase().startsWith("image/");
+}
 
 export default function SignupRequestsPage() {
   const { toast, showToast, clearToast } = useToast();
@@ -362,7 +375,9 @@ export default function SignupRequestsPage() {
             sx={{ mt: 0.5 }}
           >
             Estudiantes que se registraron y esperan aprobación para acceder al
-            sistema.
+            sistema. Mientras estén pendientes, puedes abrir sus documentos con
+            el ícono de documento o el chip &quot;Documentos&quot; para ver
+            archivos, aprobar o rechazar cada uno antes de aprobar la solicitud.
           </Typography>
         </Box>
         <Button
@@ -513,7 +528,7 @@ export default function SignupRequestsPage() {
       <Dialog
         open={!!docsTarget}
         onClose={() => setDocsTarget(null)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>
@@ -528,85 +543,128 @@ export default function SignupRequestsPage() {
               El estudiante no ha subido ningún documento.
             </Alert>
           ) : (
-            <List>
-              {docs.map((doc) => (
-                <ListItem
-                  key={doc.id}
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    mb: 1,
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 36 }}>
-                    {statusIcon(doc.status)}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography variant="body2" fontWeight={600}>
-                          {DOC_TYPE_LABELS[doc.type] ?? doc.type}
-                        </Typography>
-                        {statusChip(doc.status)}
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        <a
-                          href={`${import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3000"}/api/files/${doc.fileKey}`}
+            <List disablePadding>
+              {docs.map((doc) => {
+                const fileHref = admissionFilePublicUrl(doc.fileKey);
+                return (
+                  <ListItem
+                    key={doc.id}
+                    alignItems="flex-start"
+                    sx={{
+                      flexDirection: "column",
+                      alignItems: "stretch",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      mb: 1,
+                      py: 1.5,
+                      px: 1.5,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 1,
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 36, mt: 0.25 }}>
+                        {statusIcon(doc.status)}
+                      </ListItemIcon>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <Typography variant="body2" fontWeight={600}>
+                            {DOC_TYPE_LABELS[doc.type] ?? doc.type}
+                          </Typography>
+                          {statusChip(doc.status)}
+                        </Box>
+                        <Typography
+                          component="a"
+                          href={fileHref}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ fontSize: 12, color: "#1976d2" }}
+                          variant="caption"
+                          sx={{
+                            display: "inline-block",
+                            mt: 0.5,
+                            color: "primary.main",
+                          }}
                         >
-                          {doc.fileName} (
-                          {(doc.fileSize / 1024).toFixed(1)} KB)
-                        </a>
+                          {doc.fileName} ({(doc.fileSize / 1024).toFixed(1)}{" "}
+                          KB) — abrir en pestaña nueva
+                        </Typography>
                         {doc.rejectionReason && (
                           <Typography
                             variant="caption"
                             color="error"
                             display="block"
+                            sx={{ mt: 0.5 }}
                           >
                             Motivo: {doc.rejectionReason}
                           </Typography>
                         )}
-                      </>
-                    }
-                  />
-                  {doc.status !== "APPROVED" && (
-                    <Box sx={{ display: "flex", gap: 0.5 }}>
-                      <Tooltip title="Aprobar documento">
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => approveDoc(doc.id)}
-                        >
-                          <CheckCircleIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Rechazar documento">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            setRejectDocTarget(doc);
-                            setRejectDocReason("");
+                        {isImageAdmissionDoc(doc.fileMimeType) ? (
+                          <Box
+                            component="img"
+                            src={fileHref}
+                            alt={doc.fileName}
+                            sx={{
+                              mt: 1.5,
+                              maxWidth: "100%",
+                              maxHeight: 320,
+                              height: "auto",
+                              borderRadius: 1,
+                              border: "1px solid",
+                              borderColor: "divider",
+                              bgcolor: "action.hover",
+                              objectFit: "contain",
+                            }}
+                          />
+                        ) : null}
+                      </Box>
+                      {doc.status !== "APPROVED" && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: 0.5,
+                            flexShrink: 0,
+                            alignSelf: "flex-start",
                           }}
                         >
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                          <Tooltip title="Aprobar documento">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => approveDoc(doc.id)}
+                            >
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Rechazar documento">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => {
+                                setRejectDocTarget(doc);
+                                setRejectDocReason("");
+                              }}
+                            >
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
                     </Box>
-                  )}
-                </ListItem>
-              ))}
+                  </ListItem>
+                );
+              })}
             </List>
           )}
           {!docsLoading && allDocsApproved && (

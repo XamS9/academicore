@@ -12,6 +12,8 @@ import Step from "@mui/material/Step";
 import StepLabel from "@mui/material/StepLabel";
 import Alert from "@mui/material/Alert";
 import Grid from "@mui/material/Grid";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import List from "@mui/material/List";
@@ -52,6 +54,8 @@ const STEPS = [
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const verticalStepper = useMediaQuery(theme.breakpoints.down("md"));
 
   const [step, setStep] = useState(0);
   const [careers, setCareers] = useState<Career[]>([]);
@@ -249,7 +253,10 @@ export default function RegisterPage() {
     >
       <Card
         sx={{
-          maxWidth: step === 1 ? 720 : step === 3 ? 560 : 480,
+          maxWidth:
+            step === 1 || step === 3
+              ? { xs: "100%", sm: 720 }
+              : { xs: "100%", sm: 480 },
           width: "100%",
           mx: 2,
         }}
@@ -292,8 +299,24 @@ export default function RegisterPage() {
             </Typography>
           </Box>
 
-          {/* Stepper */}
-          <Stepper activeStep={step} sx={{ mb: 4 }}>
+          {/* Stepper: horizontal overflows on small screens — use vertical below md */}
+          <Stepper
+            activeStep={step}
+            orientation={verticalStepper ? "vertical" : "horizontal"}
+            alternativeLabel={!verticalStepper}
+            sx={{
+              mb: 4,
+              ...(verticalStepper
+                ? { alignSelf: "stretch", "& .MuiStepLabel-label": { fontSize: "0.8125rem" } }
+                : {
+                    overflowX: "auto",
+                    pb: 0.5,
+                    "& .MuiStepLabel-label": {
+                      fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                    },
+                  }),
+            }}
+          >
             {STEPS.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -527,34 +550,74 @@ export default function RegisterPage() {
                 Sube los documentos requeridos para completar tu registro.
                 Todos son obligatorios.
               </Typography>
-              <List>
+              <List disablePadding sx={{ width: "100%" }}>
                 {requiredTypes.map((rt) => {
                   const uploaded = uploadedDocs.find(
                     (d) => d.type === rt.type,
                   );
                   return (
-                    <ListItem key={rt.type} sx={{ pl: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        {uploaded ? (
-                          <CheckCircleIcon color="success" />
-                        ) : (
-                          <UploadFileIcon color="disabled" />
-                        )}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={rt.label}
-                        secondary={
-                          uploaded
-                            ? uploaded.fileName
-                            : "Pendiente de subir"
-                        }
-                      />
+                    <ListItem
+                      key={rt.type}
+                      alignItems="flex-start"
+                      sx={{
+                        pl: 0,
+                        pr: 0,
+                        py: 1.5,
+                        flexDirection: { xs: "column", sm: "row" },
+                        alignItems: { xs: "stretch", sm: "center" },
+                        gap: { xs: 1, sm: 0 },
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                        "&:last-of-type": { borderBottom: "none" },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 1.5,
+                          flex: 1,
+                          minWidth: 0,
+                          width: { xs: "100%", sm: "auto" },
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36, mt: 0.25 }}>
+                          {uploaded ? (
+                            <CheckCircleIcon color="success" />
+                          ) : (
+                            <UploadFileIcon color="disabled" />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={rt.label}
+                          secondary={
+                            uploaded
+                              ? uploaded.fileName
+                              : "Pendiente de subir"
+                          }
+                          primaryTypographyProps={{
+                            variant: "body2",
+                            fontWeight: 600,
+                          }}
+                          secondaryTypographyProps={{
+                            sx: {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              wordBreak: "break-word",
+                            },
+                          }}
+                        />
+                      </Box>
                       <Button
                         component="label"
                         size="small"
-                        variant={uploaded ? "text" : "outlined"}
+                        variant={uploaded ? "outlined" : "contained"}
                         startIcon={<AttachFileIcon />}
                         disabled={uploading}
+                        sx={{
+                          flexShrink: 0,
+                          alignSelf: { xs: "stretch", sm: "center" },
+                          ml: { xs: 0, sm: 1 },
+                        }}
                       >
                         {uploaded ? "Cambiar" : "Subir"}
                         <input
@@ -603,7 +666,9 @@ export default function RegisterPage() {
                 Atrás
               </Button>
             ) : (
-              <Box />
+              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: "center" }}>
+                Paso final — completa todas las cargas
+              </Typography>
             )}
             {step < 2 ? (
               <Button

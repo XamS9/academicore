@@ -30,6 +30,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import {
   SIGNATURE_1_BASE64,
   SIGNATURE_2_BASE64,
@@ -562,32 +564,54 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       enrollmentDate: new Date("2026-04-01"),
     },
   });
-  for (const row of [
+  const seedAssetsAdmissionDir = path.join(
+    __dirname,
+    "..",
+    "..",
+    "seed-assets",
+    "admission",
+  );
+  const uploadDir = path.resolve(
+    process.env.UPLOAD_DIR ?? path.join(process.cwd(), "uploads"),
+  );
+
+  const admissionSeedRows = [
     {
       type: "ID_CARD" as const,
-      fileName: "ine-demo.png",
-      mime: "image/png",
+      storageName: "id_card.jpg",
+      fileName: "ine-demo.jpg",
+      mime: "image/jpeg",
     },
     {
       type: "HIGH_SCHOOL_DIPLOMA" as const,
+      storageName: "high_school_diploma.pdf",
       fileName: "bachillerato-demo.pdf",
       mime: "application/pdf",
     },
     {
       type: "PHOTO" as const,
+      storageName: "photo.jpg",
       fileName: "foto-demo.jpg",
       mime: "image/jpeg",
     },
-  ]) {
+  ];
+
+  for (const row of admissionSeedRows) {
+    const fileKey = `seed/admission/${studentRegDemo.id}/${row.storageName}`;
+    const destAbs = path.join(uploadDir, fileKey);
+    await fs.mkdir(path.dirname(destAbs), { recursive: true });
+    await fs.copyFile(path.join(seedAssetsAdmissionDir, row.storageName), destAbs);
+    const size = (await fs.stat(destAbs)).size;
+
     const existing = await prisma.admissionDocument.findFirst({
       where: { studentId: studentRegDemo.id, type: row.type },
     });
     const data = {
       studentId: studentRegDemo.id,
       type: row.type,
-      fileKey: `seed/admission/${studentRegDemo.id}/${row.type.toLowerCase()}`,
+      fileKey,
       fileName: row.fileName,
-      fileSize: 24_000,
+      fileSize: size,
       fileMimeType: row.mime,
       status: "PENDING" as const,
     };
