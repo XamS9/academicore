@@ -19,6 +19,7 @@ import CareersPage from "./pages/admin/CareersPage";
 import SubjectsPage from "./pages/admin/SubjectsPage";
 import AcademicPeriodsPage from "./pages/admin/AcademicPeriodsPage";
 import ClassroomsPage from "./pages/admin/ClassroomsPage";
+import DepartmentsPage from "./pages/admin/DepartmentsPage";
 import GroupsPage from "./pages/admin/GroupsPage";
 import EnrollmentsPage from "./pages/admin/EnrollmentsPage";
 import EvaluationsPage from "./pages/admin/EvaluationsPage";
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="materias" element={<SubjectsPage />} />
             <Route path="periodos" element={<AcademicPeriodsPage />} />
             <Route path="aulas" element={<ClassroomsPage />} />
+            <Route path="departamentos" element={<DepartmentsPage />} />
             <Route path="grupos" element={<GroupsPage />} />
             <Route path="inscripciones" element={<EnrollmentsPage />} />
             <Route path="evaluaciones" element={<EvaluationsPage />} />

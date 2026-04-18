@@ -280,6 +280,29 @@ const PAGES = {
       ],
     },
     {
+      route: "/departamentos",
+      label: "Departamentos",
+      desc: "Catálogo institucional de departamentos académicos usados al asignar docentes en Usuarios.",
+      extras: [
+        {
+          label: "Formulario: Nuevo Departamento",
+          desc: "Diálogo para crear un departamento indicando solo el nombre.",
+          setup: async (page) => {
+            await clickButtonByText(page, "Nuevo Departamento");
+            await delay(800);
+          },
+        },
+        {
+          label: "Formulario: Editar Departamento",
+          desc: "El lápiz abre el nombre para editar; la papelera elimina si ningún docente usa ese departamento.",
+          setup: async (page) => {
+            await clickFirstRowButton(page, 0);
+            await delay(800);
+          },
+        },
+      ],
+    },
+    {
       route: "/grupos",
       label: "Grupos",
       desc: "Grupos de clase que vinculan materia, período, aula y docente con un cupo máximo de estudiantes.",

@@ -106,7 +106,7 @@ CRUD on the `User` entity (supertype for Student/Teacher/Admin).
 | Update teacher fields | `PATCH /api/profesores/:id` | employeeCode, department |
 | Delete | `DELETE /api/profesores/:id` | Soft delete |
 
-**Rules:** Employee code must be unique. One-to-one with User. Department is selected from the predefined `departments` catalogue (see Process 23).
+**Rules:** Employee code must be unique. One-to-one with User. Department is selected from the `departments` catalogue (see Process 23; admins maintain it at `/departamentos`).
 
 **Frontend create flow:** With the Docentes filter active on `/usuarios`, the "Nuevo Docente" button opens a user-creation form (Nombre, Apellido, Correo, Contraseña) with the role field pre-set to "Docente" and disabled.
 
@@ -708,19 +708,24 @@ Aggregation queries on existing data — no new tables required.
 
 ## 23. Department Catalogue
 
-**Actors:** All authenticated (read-only)
+**Actors:** ADMIN (create/update/delete), all authenticated (list)
 
-Read-only reference catalogue of academic departments used to populate the Departamento dropdown in the teacher create/edit form.
+Catalogue of academic departments for the **Departamento** dropdown when creating/editing teachers (`/usuarios`). The `teachers.department` field remains a **string** matching `departments.name` (not an FK).
 
 | Operation | Endpoint | Roles |
 |-----------|----------|-------|
 | List | `GET /api/departments` | All authenticated |
+| Create | `POST /api/departments` `{ name }` | ADMIN |
+| Update | `PATCH /api/departments/:id` `{ name }` | ADMIN |
+| Delete | `DELETE /api/departments/:id` | ADMIN |
 
-Departments are seeded on first run and ordered alphabetically. The 21 seeded departments cover the main academic areas of a Mexican university:
+**Rename:** `PATCH` updates `departments.name` and runs `UPDATE teachers SET department = newName WHERE department = oldName` for non-deleted teachers so docente assignments stay aligned.
 
-Administración de Empresas, Arquitectura, Biología, Ciencias Computacionales, Comunicación, Contabilidad, Derecho, Diseño Gráfico, Educación, Enfermería, Física, Humanidades, Idiomas, Ingeniería Civil, Ingeniería Eléctrica, Ingeniería Mecánica, Ingeniería en Sistemas, Matemáticas, Medicina, Psicología, Química.
+**Delete:** Rejected if any non-deleted teacher has `department` equal to that catalogue name (admin must clear or reassign in Usuarios first).
 
-**Rules:** No create/update/delete via API — managed through DB seed. The `department` field on the `teachers` table remains a `varchar(150)` string (not a foreign key) so historical records are preserved if a department name is ever renamed in the seed.
+**Frontend:** `/departamentos` (admin sidebar — Gestión Académica). Non-admin users are redirected from the page; API still enforces `authorize("ADMIN")` on writes.
+
+Initial seed still creates a baseline set of department names; admins may extend the catalogue from the UI.
 
 ---
 

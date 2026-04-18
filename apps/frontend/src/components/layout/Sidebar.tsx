@@ -19,6 +19,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SubjectIcon from "@mui/icons-material/Subject";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
+import DomainIcon from "@mui/icons-material/Domain";
 import GroupsIcon from "@mui/icons-material/Groups";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import GradingIcon from "@mui/icons-material/Grading";
@@ -83,6 +84,7 @@ const navByRole: Record<Role, NavEntry[]> = {
         { label: "Materias", path: "/materias", icon: <SubjectIcon /> },
         { label: "Períodos", path: "/periodos", icon: <CalendarMonthIcon /> },
         { label: "Aulas", path: "/aulas", icon: <MeetingRoomIcon /> },
+        { label: "Departamentos", path: "/departamentos", icon: <DomainIcon /> },
         { label: "Grupos", path: "/grupos", icon: <GroupsIcon /> },
       ],
     },

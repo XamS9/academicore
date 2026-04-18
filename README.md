@@ -234,7 +234,8 @@ A modern single-page application with Spanish-language routes and user interface
 - `/carreras` — Careers (admin)
 - `/materias` — Subjects (admin)
 - `/periodos` — Academic periods (admin)
-- `/aulas` — Groups/Classes (teacher/admin)
+- `/aulas` — Classrooms (teacher/admin)
+- `/departamentos` — Academic departments catalogue (admin)
 - `/grupos` — Group management (teacher/admin)
 
 ## Documentation

@@ -85,7 +85,7 @@ Prisma schema at `apps/backend/prisma/schema.prisma`. Key domain model: User (su
 - **Auth state**: `src/store/auth.context.tsx` — React Context (`AuthProvider`), stores token/user in localStorage
 - **Routing**: `src/App.tsx` — Public: `/login`, `/verify/:code`. Authenticated routes wrapped in `AppLayout`
 - **Service layer**: `src/services/<name>.service.ts` — one per backend module, uses shared Axios instance
-- **Spanish paths**: `/usuarios`, `/estudiantes`, `/profesores`, `/carreras`, `/materias`, `/periodos`, `/aulas`, `/grupos`
+- **Spanish paths**: `/usuarios`, `/estudiantes`, `/profesores`, `/carreras`, `/materias`, `/periodos`, `/aulas`, `/departamentos`, `/grupos`
 
 ## Environment Variables
 
