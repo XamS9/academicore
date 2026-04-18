@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
 import { notificationsService } from "../notifications/notifications.service";
+import { syncMonthlyTuitionInstallmentsGlobal } from "../../shared/monthly-tuition";
 import type {
   CreateFeeConceptInput,
   UpdateFeeConceptInput,
@@ -176,6 +177,10 @@ export class PaymentsService {
         },
       },
     });
+
+    if (fee.feeConcept.name.toLowerCase().includes("inscripci")) {
+      await syncMonthlyTuitionInstallmentsGlobal(fee.studentId, fee.periodId);
+    }
 
     return payment;
   }

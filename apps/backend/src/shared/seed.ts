@@ -11,7 +11,9 @@
  * FAILED), evaluations, grades, submissions, academic records, certification
  * types/statuses, fee/payment states, calendar event types, announcements
  * (ALL / CAREER / GROUP), notifications (all NotificationType values), audit
- * actions, and system settings with signatures.
+ * actions, system settings (credit cost, max credits per subject, signatures),
+ * optional per-subject tuition amounts, syllabus templates (`syllabus_topics`),
+ * teacher progress (`group_topic_progress`), and sample admission documents.
  *
  * E2E: `teacher.e2e` imparte `ETH101-E2E` (2026-1) con temas, materiales y
  * evaluaciones; `student.e2e` arranca sin materias ni cargo de inscripción: la
@@ -518,6 +520,96 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     extraStudents.push({ userId: u.id, id: st.id, email: es.email });
   }
 
+  // ── 5b. ADMISSION DOCUMENTS — demo solicitud (usuario inactivo, docs pendientes)
+  const regDemoUser = await prisma.user.upsert({
+    where: { email: "solicitud.registro@academicore.com" },
+    update: {
+      isActive: false,
+      deletedAt: null,
+    },
+    create: {
+      userType: "STUDENT",
+      firstName: "Aspirante",
+      lastName: "Documentación",
+      email: "solicitud.registro@academicore.com",
+      passwordHash: await hash("student123"),
+      isActive: false,
+    },
+  });
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: regDemoUser.id,
+        roleId: studentRole.id,
+      },
+    },
+    update: {},
+    create: { userId: regDemoUser.id, roleId: studentRole.id },
+  });
+  const studentRegDemo = await prisma.student.upsert({
+    where: { studentCode: "EST-SEED-SOL" },
+    update: {
+      userId: regDemoUser.id,
+      careerId: career.id,
+      academicStatus: "PENDING",
+      deletedAt: null,
+    },
+    create: {
+      userId: regDemoUser.id,
+      studentCode: "EST-SEED-SOL",
+      careerId: career.id,
+      academicStatus: "PENDING",
+      enrollmentDate: new Date("2026-04-01"),
+    },
+  });
+  for (const row of [
+    {
+      type: "ID_CARD" as const,
+      fileName: "ine-demo.png",
+      mime: "image/png",
+    },
+    {
+      type: "HIGH_SCHOOL_DIPLOMA" as const,
+      fileName: "bachillerato-demo.pdf",
+      mime: "application/pdf",
+    },
+    {
+      type: "PHOTO" as const,
+      fileName: "foto-demo.jpg",
+      mime: "image/jpeg",
+    },
+  ]) {
+    const existing = await prisma.admissionDocument.findFirst({
+      where: { studentId: studentRegDemo.id, type: row.type },
+    });
+    const data = {
+      studentId: studentRegDemo.id,
+      type: row.type,
+      fileKey: `seed/admission/${studentRegDemo.id}/${row.type.toLowerCase()}`,
+      fileName: row.fileName,
+      fileSize: 24_000,
+      fileMimeType: row.mime,
+      status: "PENDING" as const,
+    };
+    if (existing) {
+      await prisma.admissionDocument.update({
+        where: { id: existing.id },
+        data: {
+          fileKey: data.fileKey,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          fileMimeType: data.fileMimeType,
+          status: data.status,
+          reviewedBy: null,
+          reviewedAt: null,
+          rejectionReason: null,
+        },
+      });
+    } else {
+      await prisma.admissionDocument.create({ data });
+    }
+  }
+
   const studentDiana = extraStudents.find((s) => s.email === "diana.baja@academicore.com")!;
   const studentEnrique = extraStudents.find((s) => s.email === "enrique.cancel@academicore.com")!;
   const studentSofia = extraStudents.find((s) => s.email === "sofia.adm@academicore.com")!;
@@ -560,16 +652,17 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
     prisma.subject.upsert({
       where: { code: "PRG201" },
-      update: { isActive: true },
+      update: { isActive: true, tuitionAmount: 3600 },
       create: {
         name: "Programación Orientada a Objetos",
         code: "PRG201",
         credits: 6,
+        tuitionAmount: 3600,
       },
     }),
     prisma.subject.upsert({
       where: { code: "BD101" },
-      update: { isActive: true },
+      update: { isActive: true, tuitionAmount: null },
       create: { name: "Base de Datos", code: "BD101", credits: 6 },
     }),
     prisma.subject.upsert({
@@ -579,11 +672,12 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     }),
     prisma.subject.upsert({
       where: { code: "ETH101" },
-      update: { isActive: true },
+      update: { isActive: true, tuitionAmount: 1200 },
       create: {
         name: "Ética Profesional",
         code: "ETH101",
         credits: 3,
+        tuitionAmount: 1200,
       },
     }),
     prisma.subject.upsert({
@@ -2948,6 +3042,169 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
     },
   });
 
+  // ── 20b. SYLLABUS (temario por materia) & AVANCE POR GRUPO ──────────────────
+  const sylPrgTopics = await Promise.all([
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: prg201.id, sortOrder: 1 } },
+      update: {},
+      create: {
+        subjectId: prg201.id,
+        sortOrder: 1,
+        title: "Fundamentos OO y encapsulamiento",
+        description:
+          "Objetos, clases, ocultamiento de información y contratos.",
+      },
+    }),
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: prg201.id, sortOrder: 2 } },
+      update: {},
+      create: {
+        subjectId: prg201.id,
+        sortOrder: 2,
+        title: "Herencia, interfaces y polimorfismo",
+        description: "Diseño por extensión y sustitución.",
+      },
+    }),
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: prg201.id, sortOrder: 3 } },
+      update: {},
+      create: {
+        subjectId: prg201.id,
+        sortOrder: 3,
+        title: "Patrones de diseño básicos",
+        description: "Singleton, Factory, Observer (introducción).",
+      },
+    }),
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: prg201.id, sortOrder: 4 } },
+      update: {},
+      create: {
+        subjectId: prg201.id,
+        sortOrder: 4,
+        title: "Pruebas y buenas prácticas",
+        description: "Pruebas unitarias básicas y legibilidad del código.",
+      },
+    }),
+  ]);
+  await Promise.all([
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: bd101.id, sortOrder: 1 } },
+      update: {},
+      create: {
+        subjectId: bd101.id,
+        sortOrder: 1,
+        title: "Modelado relacional y normalización",
+        description: "Tablas, claves, formas normales.",
+      },
+    }),
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: bd101.id, sortOrder: 2 } },
+      update: {},
+      create: {
+        subjectId: bd101.id,
+        sortOrder: 2,
+        title: "SQL y transacciones",
+        description: "Consultas, integridad referencial, ACID.",
+      },
+    }),
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: bd101.id, sortOrder: 3 } },
+      update: {},
+      create: {
+        subjectId: bd101.id,
+        sortOrder: 3,
+        title: "Índices y rendimiento",
+        description: "Planes de ejecución introductorios.",
+      },
+    }),
+  ]);
+  const [sylEth1, sylEth2] = await Promise.all([
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: eth101.id, sortOrder: 1 } },
+      update: {},
+      create: {
+        subjectId: eth101.id,
+        sortOrder: 1,
+        title: "Marcos éticos y código profesional",
+        description: "Principios y normativa aplicable.",
+      },
+    }),
+    prisma.syllabusTopic.upsert({
+      where: { subjectId_sortOrder: { subjectId: eth101.id, sortOrder: 2 } },
+      update: {},
+      create: {
+        subjectId: eth101.id,
+        sortOrder: 2,
+        title: "Ética en TI y datos personales",
+        description: "Privacidad, consentimiento y sesgos.",
+      },
+    }),
+  ]);
+
+  await prisma.groupTopicProgress.upsert({
+    where: {
+      groupId_topicId: {
+        groupId: grpPrg201.id,
+        topicId: sylPrgTopics[0].id,
+      },
+    },
+    update: {
+      teacherId: teacher.id,
+      coveredAt: new Date("2026-02-05"),
+      weekNumber: 1,
+      notes: "Semana 1 — laboratorio",
+    },
+    create: {
+      groupId: grpPrg201.id,
+      topicId: sylPrgTopics[0].id,
+      teacherId: teacher.id,
+      coveredAt: new Date("2026-02-05"),
+      weekNumber: 1,
+      notes: "Semana 1 — laboratorio",
+    },
+  });
+  await prisma.groupTopicProgress.upsert({
+    where: {
+      groupId_topicId: {
+        groupId: grpPrg201.id,
+        topicId: sylPrgTopics[1].id,
+      },
+    },
+    update: {
+      teacherId: teacher.id,
+      coveredAt: new Date("2026-02-12"),
+      weekNumber: 2,
+      notes: "Herencia y interfaces",
+    },
+    create: {
+      groupId: grpPrg201.id,
+      topicId: sylPrgTopics[1].id,
+      teacherId: teacher.id,
+      coveredAt: new Date("2026-02-12"),
+      weekNumber: 2,
+      notes: "Herencia y interfaces",
+    },
+  });
+  await prisma.groupTopicProgress.upsert({
+    where: {
+      groupId_topicId: { groupId: grpEth101E2E.id, topicId: sylEth1.id },
+    },
+    update: {
+      teacherId: teacherE2E.id,
+      coveredAt: new Date("2026-01-28"),
+      weekNumber: 1,
+      notes: "Sesión introductoria",
+    },
+    create: {
+      groupId: grpEth101E2E.id,
+      topicId: sylEth1.id,
+      teacherId: teacherE2E.id,
+      coveredAt: new Date("2026-01-28"),
+      weekNumber: 1,
+      notes: "Sesión introductoria",
+    },
+  });
+
   // ── 21. SYSTEM SETTINGS ───────────────────────────────────────────────────
   const existingSettings = await prisma.systemSettings.findFirst();
   if (!existingSettings) {
@@ -2957,6 +3214,10 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
         maxSubjectsPerEnrollment: 7,
         maxEvaluationWeight: 100,
         atRiskThreshold: 3,
+        creditCost: 500,
+        inscriptionFee: 5000,
+        cyclesPerYear: 2,
+        maxCreditsPerSubject: 24,
         updatedBy: adminUser.id,
         signatureImage1: SIGNATURE_1_BASE64,
         signatureName1: "Rector/a",
@@ -3023,6 +3284,29 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
       amount: 1,
       description: "Ya no se asigna a estudiantes",
       isActive: false,
+    },
+  });
+
+  // Per-subject tuition fee concept (auto-provisioned by enrollment service)
+  await prisma.feeConcept.upsert({
+    where: { id: "00000000-0000-0000-0000-fee000000004" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-fee000000004",
+      name: "Matrícula de materia",
+      amount: 0,
+      description: "Cargo por materia inscrita (monto varía según materia/créditos)",
+    },
+  });
+
+  await prisma.feeConcept.upsert({
+    where: { id: "00000000-0000-0000-0000-fee000000005" },
+    update: {},
+    create: {
+      id: "00000000-0000-0000-0000-fee000000005",
+      name: "Mensualidad académica",
+      amount: 0,
+      description: "Cuotas mensuales del período (matrícula total fraccionada)",
     },
   });
 
@@ -3452,6 +3736,8 @@ export async function runSeed(prisma: PrismaClient): Promise<void> {
   console.log("   Admin:    admin.e2e@academicore.com    / AdminE2E#2026");
   console.log("   Teacher:  teacher.e2e@academicore.com   / TeacherE2E#2026  → grupo ETH101-E2E (2026-1), temas + evaluaciones");
   console.log("   Student:  student.e2e@academicore.com   / StudentE2E#2026  → sin materias; cargo inscripción al inscribir primer grupo (2026-1)");
+  console.log("");
+  console.log("   Solicitud registro + docs admisión (inactivo): solicitud.registro@academicore.com / student123");
   console.log("");
   console.log("   More demo students (password student123):");
   console.log("   · Estados académicos: luis.pendiente@, maria.riesgo@, pedro.elegible@,");

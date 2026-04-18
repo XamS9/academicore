@@ -241,6 +241,8 @@ A modern single-page application with Spanish-language routes and user interface
 
 - **`docs/processes.md`** — Business process workflows (enrollment, grading, certification, payments, etc.), validation rules, and role-based responsibilities. Includes **student UI locks vs academic cycle** (enrollment window, per-period inscription fee, next period). **Must be kept in sync with code changes.**
 - **`docs/schema.dbml`** — Database schema in DBML format (all tables, enums, relationships, indexes). **Must be updated when Prisma schema changes.**
+- **`apps/frontend`** — User-facing changes (routes, screens, labels, workflows) should include matching **UI updates** in the same delivery when applicable.
+- **`apps/backend/scripts/generate-manual.js`** — Source for `npm run generate:manual`. **Update this script** when documented flows or UI navigation change so HTML/PDF manuals stay accurate.
 - **`docs/e2e-admin-playbook.md`**, **`docs/e2e-teacher-playbook.md`**, **`docs/e2e-student-playbook.md`** — End-to-end checklists for seeded E2E users (`admin.e2e`, `teacher.e2e`, `student.e2e`).
 - **`CLAUDE.md`** — AI assistant guidance for working with this codebase.
 
@@ -290,7 +292,7 @@ Frontend is typically served separately (e.g., static hosting, Docker image, or 
    npm run prisma:migrate     # Create migration
    ```
 3. **Add Features**: Create module files following the 5-file pattern
-4. **Update Documentation**: Keep `docs/processes.md` and `docs/schema.dbml` in sync
+4. **Update Documentation & UX artifacts**: Keep `docs/processes.md` and `docs/schema.dbml` in sync; update **`apps/frontend`** for user-visible changes; update **`apps/backend/scripts/generate-manual.js`** when flows or screens captured in the manual change
 5. **Test**: Run locally with `npm run dev`
 6. **Commit**: Use conventional commits (feat, fix, refactor, docs, chore)
 7. **Push & PR**: Create PR against `main`

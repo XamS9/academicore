@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "./prisma.client";
 
 function stripDiacritics(input: string): string {
@@ -68,4 +69,30 @@ export async function allocateUniqueSubjectCode(name: string): Promise<string> {
     });
     return !!row;
   });
+}
+
+/** Unique `students.student_code` for admin-created accounts (matches public register style). */
+export async function allocateUniqueStudentCode(): Promise<string> {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const candidate = `EST-${randomUUID().slice(0, 8).toUpperCase()}`;
+    const exists = await prisma.student.findFirst({
+      where: { studentCode: candidate },
+      select: { id: true },
+    });
+    if (!exists) return candidate;
+  }
+  throw new Error("Could not allocate unique student code");
+}
+
+/** Unique `teachers.employee_code` when admin omits código de empleado. */
+export async function allocateUniqueEmployeeCode(): Promise<string> {
+  for (let seq = 1; seq < 999_999; seq++) {
+    const candidate = `DOC-${String(seq).padStart(4, "0")}`;
+    const exists = await prisma.teacher.findFirst({
+      where: { employeeCode: candidate, deletedAt: null },
+      select: { id: true },
+    });
+    if (!exists) return candidate;
+  }
+  throw new Error("Could not allocate unique employee code");
 }

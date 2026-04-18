@@ -35,7 +35,7 @@ import {
   type Department,
 } from "../../services/departments.service";
 import { careersService } from "../../services/careers.service";
-import { api } from "../../services/api";
+import { api, getApiErrorMessage } from "../../services/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -120,7 +120,15 @@ interface CreateForm {
   lastName: string;
   email: string;
   password: string;
+  confirmPassword: string;
   userType: "ADMIN" | "TEACHER" | "STUDENT";
+  /** STUDENT */
+  careerId: string;
+  academicStatus: AcademicStatus;
+  studentCode: string;
+  /** TEACHER */
+  employeeCode: string;
+  department: string;
 }
 
 interface StudentEditForm {
@@ -174,7 +182,13 @@ export default function UsersPage() {
     lastName: "",
     email: "",
     password: "",
+    confirmPassword: "",
     userType: "STUDENT",
+    careerId: "",
+    academicStatus: "ACTIVE",
+    studentCode: "",
+    employeeCode: "",
+    department: "",
   });
   const [studentEditForm, setStudentEditForm] = useState<StudentEditForm>({
     firstName: "",
@@ -267,7 +281,19 @@ export default function UsersPage() {
     setEditUserTarget(null);
     setEditStudentTarget(null);
     setEditTeacherTarget(null);
-    setCreateForm({ firstName: "", lastName: "", email: "", password: "", userType: "STUDENT" });
+    setCreateForm({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      userType: "STUDENT",
+      careerId: careers[0]?.id ?? "",
+      academicStatus: "ACTIVE",
+      studentCode: "",
+      employeeCode: "",
+      department: "",
+    });
     setDialogOpen(true);
   };
 
@@ -320,13 +346,59 @@ export default function UsersPage() {
   const handleSave = async () => {
     try {
       if (!isEditing) {
-        // ── Create: always use the unified form's userType ──
-        await usersService.create(createForm);
+        const fn = createForm.firstName.trim();
+        const ln = createForm.lastName.trim();
+        const em = createForm.email.trim();
+        if (!fn || !ln || !em) {
+          showToast("Nombre, apellido y correo son obligatorios", "error");
+          return;
+        }
+        if (createForm.password.length < 6) {
+          showToast("La contraseña debe tener al menos 6 caracteres", "error");
+          return;
+        }
+        if (createForm.password !== createForm.confirmPassword) {
+          showToast("Las contraseñas no coinciden", "error");
+          return;
+        }
+        if (createForm.userType === "STUDENT" && !createForm.careerId) {
+          showToast("Seleccione la carrera del estudiante", "error");
+          return;
+        }
+
+        let payload: Record<string, unknown> = {
+          userType: createForm.userType,
+          firstName: fn,
+          lastName: ln,
+          email: em,
+          password: createForm.password,
+        };
+        if (createForm.userType === "STUDENT") {
+          payload = {
+            ...payload,
+            careerId: createForm.careerId,
+            ...(createForm.academicStatus !== "ACTIVE"
+              ? { academicStatus: createForm.academicStatus }
+              : {}),
+            ...(createForm.studentCode.trim()
+              ? { studentCode: createForm.studentCode.trim() }
+              : {}),
+          };
+        } else if (createForm.userType === "TEACHER") {
+          payload = {
+            ...payload,
+            ...(createForm.employeeCode.trim()
+              ? { employeeCode: createForm.employeeCode.trim() }
+              : {}),
+            ...(createForm.department.trim()
+              ? { department: createForm.department.trim() }
+              : {}),
+          };
+        }
+
+        await usersService.create(payload);
         showToast("Usuario creado exitosamente");
-        // Refresh whichever table matches the new user's role
-        if (createForm.userType === "STUDENT") loadStudents();
-        else if (createForm.userType === "TEACHER") loadTeachers();
-        else loadUsers();
+        reloadCurrent();
       } else if (editStudentTarget) {
         await Promise.all([
           usersService.update(editStudentTarget.user.id, {
@@ -366,8 +438,8 @@ export default function UsersPage() {
         reloadCurrent();
       }
       setDialogOpen(false);
-    } catch {
-      showToast("Error al guardar", "error");
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al guardar"), "error");
     }
   };
 
@@ -594,7 +666,7 @@ export default function UsersPage() {
       )}
 
       {/* Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>{dialogTitle()}</DialogTitle>
         <DialogContent className="flex flex-col gap-4 pt-4">
 
@@ -623,8 +695,29 @@ export default function UsersPage() {
               <TextField
                 label="Contraseña"
                 type="password"
+                autoComplete="new-password"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                fullWidth margin="dense"
+              />
+              <TextField
+                label="Confirmar contraseña"
+                type="password"
+                autoComplete="new-password"
+                value={createForm.confirmPassword}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, confirmPassword: e.target.value })
+                }
+                error={
+                  createForm.confirmPassword.length > 0 &&
+                  createForm.password !== createForm.confirmPassword
+                }
+                helperText={
+                  createForm.confirmPassword.length > 0 &&
+                  createForm.password !== createForm.confirmPassword
+                    ? "Las contraseñas no coinciden"
+                    : undefined
+                }
                 fullWidth margin="dense"
               />
               <FormControl fullWidth margin="dense">
@@ -633,7 +726,10 @@ export default function UsersPage() {
                   label="Rol"
                   value={createForm.userType}
                   onChange={(e) =>
-                    setCreateForm({ ...createForm, userType: e.target.value as CreateForm["userType"] })
+                    setCreateForm({
+                      ...createForm,
+                      userType: e.target.value as CreateForm["userType"],
+                    })
                   }
                 >
                   <MenuItem value="ADMIN">Administrador</MenuItem>
@@ -641,6 +737,102 @@ export default function UsersPage() {
                   <MenuItem value="STUDENT">Estudiante</MenuItem>
                 </Select>
               </FormControl>
+
+              {createForm.userType === "STUDENT" && (
+                <>
+                  {careers.length === 0 ? (
+                    <Typography variant="body2" color="warning.main">
+                      Cargando carreras… Si no aparecen, intente cerrar el diálogo y
+                      abrirlo de nuevo.
+                    </Typography>
+                  ) : null}
+                  <FormControl fullWidth margin="dense" required disabled={careers.length === 0}>
+                    <InputLabel>Carrera</InputLabel>
+                    <Select
+                      label="Carrera"
+                      value={createForm.careerId || (careers[0]?.id ?? "")}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, careerId: e.target.value })
+                      }
+                    >
+                      {careers.map((c) => (
+                        <MenuItem key={c.id} value={c.id}>
+                          {c.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth margin="dense">
+                    <InputLabel>Estado académico inicial</InputLabel>
+                    <Select
+                      label="Estado académico inicial"
+                      value={createForm.academicStatus}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          academicStatus: e.target.value as AcademicStatus,
+                        })
+                      }
+                    >
+                      {(Object.keys(ACADEMIC_STATUS_LABELS) as AcademicStatus[]).map(
+                        (key) => (
+                          <MenuItem key={key} value={key}>
+                            {ACADEMIC_STATUS_LABELS[key]}
+                          </MenuItem>
+                        ),
+                      )}
+                    </Select>
+                  </FormControl>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
+                    «Pendiente» crea la cuenta inactiva (como registro público) hasta
+                    aprobación y documentos de admisión si aplica.
+                  </Typography>
+                  <TextField
+                    label="Código de estudiante (opcional)"
+                    value={createForm.studentCode}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, studentCode: e.target.value })
+                    }
+                    fullWidth
+                    margin="dense"
+                    helperText="Vacío = el sistema asigna un código único automáticamente"
+                  />
+                </>
+              )}
+
+              {createForm.userType === "TEACHER" && (
+                <>
+                  <TextField
+                    label="Código de empleado (opcional)"
+                    value={createForm.employeeCode}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, employeeCode: e.target.value })
+                    }
+                    fullWidth
+                    margin="dense"
+                    helperText="Vacío = se genera un código DOC-#### único"
+                  />
+                  <TextField
+                    select
+                    label="Departamento"
+                    value={createForm.department}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, department: e.target.value })
+                    }
+                    fullWidth
+                    margin="dense"
+                  >
+                    <MenuItem value="">
+                      <em>Sin departamento</em>
+                    </MenuItem>
+                    {departments.map((d) => (
+                      <MenuItem key={d.id} value={d.name}>
+                        {d.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </>
+              )}
             </>
           )}
 

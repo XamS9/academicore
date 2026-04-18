@@ -26,6 +26,7 @@ interface StudentFee {
   amount: string;
   dueDate: string;
   status: string;
+  installmentNumber?: number | null;
   feeConcept: { name: string };
   period: { name: string };
 }
@@ -71,7 +72,14 @@ export default function StudentPaymentsPage() {
   };
 
   const columns: Column<StudentFee>[] = [
-    { key: "concept", label: "Concepto", render: (r) => r.feeConcept.name },
+    {
+      key: "concept",
+      label: "Concepto",
+      render: (r) =>
+        r.installmentNumber != null
+          ? `${r.feeConcept.name} — Cuota ${r.installmentNumber}`
+          : r.feeConcept.name,
+    },
     { key: "period", label: "Período", render: (r) => r.period.name },
     {
       key: "amount",

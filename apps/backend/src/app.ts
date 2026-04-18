@@ -32,6 +32,8 @@ import { reportsRouter } from "./modules/reports/reports.router";
 import { departmentsRouter } from "./modules/departments/departments.router";
 import { studentSubmissionsRouter } from "./modules/student-submissions/student-submissions.router";
 import { uploadsRouter } from "./modules/uploads/uploads.router";
+import { syllabusRouter } from "./modules/syllabus/syllabus.router";
+import { admissionDocumentsRouter } from "./modules/admission-documents/admission-documents.router";
 
 const app = express();
 
@@ -78,6 +80,8 @@ api.use("/reports", reportsRouter);
 api.use("/departments", departmentsRouter);
 api.use("/student-submissions", studentSubmissionsRouter);
 api.use("/uploads", uploadsRouter);
+api.use("/syllabus", syllabusRouter);
+api.use("/admission-documents", admissionDocumentsRouter);
 
 app.use("/api", api);
 

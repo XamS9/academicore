@@ -1,0 +1,18 @@
+---
+description: Keep frontend UI and manual generator in sync when changing features
+alwaysApply: true
+---
+
+# Frontend and user manual
+
+When implementing or changing features that affect behavior users see:
+
+1. **`apps/frontend`** — Update pages, services, routing (`App.tsx`), labels, and role-specific flows as needed. Match existing Spanish routes and UI patterns.
+
+2. **`apps/backend/scripts/generate-manual.js`** — If navigation, screen titles, tabs, dialogs, or step-by-step flows change for routes the manual captures, update this script (new steps, selectors, tab labels, login/extras). Regenerate with `npm run generate:manual` (requires `npm run dev`).
+
+3. **`docs/processes.md`** — Still required for business-process changes (per project docs).
+
+4. **`docs/schema.dbml`** — Still required when `schema.prisma` changes.
+
+Do not ship backend-only changes that leave the UI or manual misleading.

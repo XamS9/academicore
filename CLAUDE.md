@@ -98,6 +98,8 @@ Copy `.env.example` → `.env` at monorepo root. Key vars:
 
 - **`docs/processes.md`** — Documents every business process the app handles (enrollment, grading, certification, etc.) including validation steps, actor roles, and automated triggers. **This file must be kept up to date whenever a business process is added, modified, or removed.**
 - **`docs/schema.dbml`** — DBML representation of the full database schema (all tables, enums, relationships, indexes, and constraints). **This file must be kept in sync whenever the Prisma schema changes.**
+- **Frontend (`apps/frontend`)** — When you add or change user-facing behavior, routes, labels, or role-specific screens, **update the React UI** in the same change (or follow-up): pages, services, routing in `App.tsx`, and consistency with existing Spanish paths/labels.
+- **User manual generator** — **`apps/backend/scripts/generate-manual.js`** drives `npm run generate:manual` (screenshots + HTML/PDF). Whenever flows, navigation, tab names, or critical UI steps change for admin/teacher/student/public routes, **extend or adjust this script** so the manual stays accurate (new `goto` steps, dialogs, tabs, credentials if seed users change).
 
 ## Docker
 

@@ -35,6 +35,7 @@ interface StudentFee {
   amount: string;
   dueDate: string;
   status: string;
+  installmentNumber?: number | null;
   student: {
     studentCode: string;
     user: { firstName: string; lastName: string };
@@ -152,7 +153,14 @@ export default function PaymentsPage() {
       render: (r) =>
         `${r.student.user.firstName} ${r.student.user.lastName} (${r.student.studentCode})`,
     },
-    { key: "concept", label: "Concepto", render: (r) => r.feeConcept.name },
+    {
+      key: "concept",
+      label: "Concepto",
+      render: (r) =>
+        r.installmentNumber != null
+          ? `${r.feeConcept.name} — Cuota ${r.installmentNumber}`
+          : r.feeConcept.name,
+    },
     { key: "period", label: "Período", render: (r) => r.period.name },
     {
       key: "amount",

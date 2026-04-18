@@ -133,7 +133,7 @@ const PAGES = {
         },
         {
           label: "Formulario: Nuevo Usuario",
-          desc: "El botón Nuevo Usuario siempre abre el mismo formulario unificado con nombre, apellido, correo, contraseña y un selector de rol (Administrador, Docente o Estudiante). El filtro activo no cambia el formulario.",
+          desc: "El botón Nuevo Usuario siempre abre el mismo formulario unificado con nombre, apellido, correo, contraseña, confirmación de contraseña y un selector de rol (Administrador, Docente o Estudiante). El filtro activo no cambia el formulario.",
           setup: async (page) => {
             await clickButtonByText(page, "Nuevo Usuario");
             await delay(800);
@@ -195,11 +195,11 @@ const PAGES = {
     {
       route: "/materias",
       label: "Materias",
-      desc: "Catálogo de asignaturas con créditos y prerrequisitos. Define la estructura curricular de las carreras.",
+      desc: "Catálogo de asignaturas con créditos, prerrequisitos y arancel opcional por materia (monto fijo). Si el arancel está vacío, en inscripción se usa el costo global por crédito definido en Configuración. El ícono de libro abre el temario oficial de la materia (temas ordenados).",
       extras: [
         {
           label: "Formulario: Nueva Materia",
-          desc: "Formulario para crear una asignatura con nombre, código, créditos y materias prerrequisito.",
+          desc: "Formulario para crear una asignatura con nombre, código, créditos, prerrequisitos, arancel opcional y materias prerequisito.",
           setup: async (page) => {
             await clickButtonByText(page, "Nueva Materia");
             await delay(800);
@@ -207,10 +207,28 @@ const PAGES = {
         },
         {
           label: "Formulario: Editar Materia",
-          desc: "El botón de lápiz en la fila permite modificar nombre, código y créditos de una asignatura existente.",
+          desc: "El botón de lápiz en la columna Acciones permite modificar nombre, código, créditos, prerrequisitos y arancel (el primer ícono abre Temario, no editar).",
           setup: async (page) => {
-            await clickFirstRowButton(page, 0);
+            await page.evaluate(() => {
+              const edit = document.querySelector('tbody tr button[title="Editar"]');
+              if (edit) edit.click();
+            });
             await delay(800);
+          },
+        },
+        {
+          label: "Diálogo: Temario de la materia",
+          desc: "El primer botón del grupo de acciones (ícono de libro) abre el diálogo para definir el temario oficial: lista ordenada de temas del plan de curso (reordenar, agregar, eliminar).",
+          setup: async (page) => {
+            await page.evaluate(() => {
+              const row = document.querySelector("tbody tr");
+              if (!row) return;
+              const lastCell = row.querySelector("td:last-child");
+              if (!lastCell) return;
+              const buttons = lastCell.querySelectorAll("button");
+              if (buttons[0]) buttons[0].click();
+            });
+            await delay(900);
           },
         },
       ],
@@ -430,7 +448,7 @@ const PAGES = {
     {
       route: "/solicitudes-registro",
       label: "Solicitudes de Registro",
-      desc: "Cola de estudiantes que se registraron desde el portal público y esperan aprobación. Muestra nombre, correo, carrera solicitada y fecha de solicitud. Aprobar activa la cuenta y el rol de estudiante; Rechazar elimina el registro. El cargo de inscripción al período se genera cuando el estudiante se inscribe por primera vez a un grupo en ese período (no al aprobar la solicitud).",
+      desc: "Cola de estudiantes que se registraron desde el portal público y esperan aprobación. Muestra nombre, correo, carrera solicitada y fecha de solicitud. El administrador revisa la documentación escaneada cargada en el registro antes de activar la cuenta; Aprobar activa la cuenta y el rol de estudiante; Rechazar elimina el registro. El cargo de inscripción al período se genera cuando el estudiante se inscribe por primera vez a un grupo en ese período (no al aprobar la solicitud).",
       extras: [
         {
           label: "Diálogo: Rechazar Solicitud",
@@ -506,7 +524,7 @@ const PAGES = {
     {
       route: "/configuracion",
       label: "Configuración del Sistema",
-      desc: "Parámetros globales editables: calificación mínima aprobatoria, máximo de materias por inscripción, peso máximo de evaluaciones, umbral de riesgo académico y firmas digitales (imagen + nombre + cargo) para los certificados PDF.",
+      desc: "Parámetros globales editables: calificación mínima aprobatoria, máximo de materias por inscripción, peso máximo de evaluaciones, umbral de riesgo académico, costo por crédito (base para matrícula mensual cuando la materia no tiene arancel propio: créditos × costo por crédito), cuota de inscripción por período, ciclos por año (define cuántas mensualidades tiene el período: 12÷ciclos), máximo de créditos por materia en catálogo, y firmas digitales para certificados PDF.",
     },
     {
       route: "/calendario",
@@ -534,7 +552,7 @@ const PAGES = {
     {
       route: "/pagos",
       label: "Pagos y Finanzas",
-      desc: "Gestión de conceptos de cobro y cargos a estudiantes. Permite definir conceptos y asignar cobros individuales o grupales. La cuota de inscripción del período se crea automáticamente en la primera inscripción a grupo del estudiante en ese período (además de los cargos que asigne el administrador).",
+      desc: "Gestión de conceptos de cobro y cargos a estudiantes. Permite definir conceptos y asignar cargos individuales o grupales. La cuota de inscripción del período se crea en la primera inscripción a grupo (monto en Configuración); tras pagarla (o si la inscripción está en 0), el sistema genera mensualidades «Mensualidad académica» que suman la matrícula del período por materias inscritas (arancel o créditos × costo por crédito), fraccionada según los ciclos por año configurados.",
       extras: [
         {
           label: "Formulario: Nuevo Concepto de Cobro",
@@ -625,7 +643,7 @@ const PAGES = {
       // Navigate to /mis-grupos and click the first row to reach the detail page.
       route: "/mis-grupos",
       label: "Detalle de Grupo",
-      desc: "Página central de gestión de un grupo con tres pestañas: Evaluaciones, Calificaciones y Contenido. El encabezado muestra materia, código de grupo, período y número de estudiantes. Un botón de retroceso vuelve al listado de grupos.",
+      desc: "Página central de gestión de un grupo con pestañas: Evaluaciones, Calificaciones, Contenido (materiales semana a semana) y Temario (seguimiento del plan de curso de la materia: marcar temas del temario como vistos, con semana y fecha). El encabezado muestra materia, código de grupo, período y número de estudiantes.",
       setup: async (page) => {
         await page.evaluate(() => {
           const row = document.querySelector("tbody tr");
@@ -703,6 +721,19 @@ const PAGES = {
             });
             await delay(1500);
             await clickTabByLabel(page, "Contenido");
+            await delay(600);
+          },
+        },
+        {
+          label: "Tab: Temario",
+          desc: "Sigue el plan de curso definido en la materia: marcar cada tema del temario como cubierto, con semana, fecha y notas. Complementa el Contenido (materiales) con el avance programático.",
+          setup: async (page) => {
+            await page.evaluate(() => {
+              const row = document.querySelector("tbody tr");
+              if (row) row.click();
+            });
+            await delay(1500);
+            await clickTabByLabel(page, "Temario");
             await delay(600);
           },
         },
@@ -786,13 +817,23 @@ const PAGES = {
     {
       route: "/mi-contenido",
       label: "Mi Contenido",
-      desc: "Recursos académicos y temas publicados por los docentes de los grupos en que el estudiante está inscrito. El acceso exige inscripción vigente y haber pagado la cuota de inscripción del período de ese grupo.",
+      desc: "Recursos académicos y temas publicados por los docentes de los grupos en que el estudiante está inscrito. Incluye la pestaña Temario (lectura) con el avance del plan de curso cuando la materia tiene temario definido. El acceso exige inscripción vigente y haber pagado la cuota de inscripción del período de ese grupo.",
       extras: [
         {
           label: "Contenido de una Materia",
           desc: "Al seleccionar una materia en el selector superior se muestran los temas con sus materiales expandibles (enlaces, textos, referencias).",
           setup: async (page) => {
             await selectFirstMuiOption(page, 0);
+          },
+        },
+        {
+          label: "Pestaña: Temario (progreso del plan)",
+          desc: "Visible solo si la materia tiene temario: barra de progreso y lista de temas del plan marcados por el docente. Requiere haber elegido una materia en el selector.",
+          setup: async (page) => {
+            await selectFirstMuiOption(page, 0);
+            await delay(500);
+            await clickTabByLabel(page, "Temario");
+            await delay(600);
           },
         },
       ],
@@ -1192,7 +1233,7 @@ async function captureRolePages(browser, role, credentials, pages) {
 
 // ─── HTML builder ─────────────────────────────────────────────────────────────
 
-function buildHtmlDocument({ adminPages, teacherPages, studentPages, verifyPage }) {
+function buildHtmlDocument({ adminPages, teacherPages, studentPages, verifyPage, registerPage }) {
   const date = new Date().toLocaleDateString("es-MX", {
     year: "numeric", month: "long", day: "numeric",
   });
@@ -1254,22 +1295,32 @@ function buildHtmlDocument({ adminPages, teacherPages, studentPages, verifyPage 
       </div>
     </div>`;
 
-  const publicSection = verifyPage ? `
+  const publicSection = verifyPage || registerPage ? `
     <div class="role-section" style="page-break-before: always; break-before: page;">
       <div class="role-header" style="background:linear-gradient(135deg,#0ea5e9 0%,#0284c7 100%)">
         <div class="role-header-inner">
-          <h2>Verificación Pública</h2>
+          <h2>Acceso público</h2>
           <span class="page-count">Sin autenticación requerida</span>
         </div>
       </div>
       <div class="role-pages">
-        <div id="public-verify" style="margin-bottom:36px; padding-bottom:36px;">
+        <div id="public-registro" style="margin-bottom:36px; padding-bottom:36px; border-bottom:1px solid #f1f5f9;">
+          <div class="page-entry-header">
+            <h3>Autoregistro de estudiante</h3>
+            <span class="route-badge">/registro</span>
+          </div>
+          <p class="description">Formulario público para crear solicitud de cuenta (datos personales y carrera). El flujo puede incluir la carga de documentación escaneada requerida según política institucional; las solicitudes quedan pendientes hasta revisión en <strong>Solicitudes de Registro</strong>.</p>
+          ${img(registerPage?.screenshot, "Autoregistro")}
+          ${registerPage?.error ? `<div class="error-notice">⚠ Captura: ${registerPage.error}</div>` : ""}
+        </div>
+        <div id="public-verify">
           <div class="page-entry-header">
             <h3>Portal de Verificación de Certificados</h3>
             <span class="route-badge">/verify/:codigo</span>
           </div>
           <p class="description">Página pública accesible sin iniciar sesión. Cualquier persona (empleadores, instituciones) puede verificar la autenticidad de un certificado ingresando la URL <code>/verify/&lt;codigo&gt;</code> o escaneando el código QR del documento PDF. Muestra el nombre del estudiante, tipo de certificado, fecha de emisión, estado (activo/revocado/vencido) y fecha de vencimiento.</p>
-          ${img(verifyPage.screenshot, "Portal de verificación pública")}
+          ${img(verifyPage?.screenshot, "Portal de verificación pública")}
+          ${verifyPage?.error ? `<div class="error-notice">⚠ Captura: ${verifyPage.error}</div>` : ""}
         </div>
       </div>
     </div>` : "";
@@ -1359,6 +1410,13 @@ function buildHtmlDocument({ adminPages, teacherPages, studentPages, verifyPage 
       ${tocSection("TEACHER", "Docente",       "#8b5cf6", teacherPages)}
       ${tocSection("STUDENT", "Estudiante",    "#22c55e", studentPages)}
     </div>
+    <div style="margin-top:28px;padding-top:22px;border-top:2px solid #e2e8f0;">
+      <div class="toc-role-header" style="color:#0284c7">ACCESO PÚBLICO</div>
+      <ol style="padding-left:18px;margin-top:8px;">
+        <li><a href="#public-registro">Autoregistro (/registro)</a></li>
+        <li><a href="#public-verify">Verificación de certificados (/verify)</a></li>
+      </ol>
+    </div>
   </div>
 
   ${roleSection("ADMIN",   "Administrador", "linear-gradient(135deg,#ef4444 0%,#b91c1c 100%)", adminPages)}
@@ -1419,7 +1477,11 @@ async function main() {
     const teacherPages = await captureRolePages(browser, "TEACHER", CREDENTIALS.TEACHER, PAGES.TEACHER);
     const studentPages = await captureRolePages(browser, "STUDENT", CREDENTIALS.STUDENT, PAGES.STUDENT);
 
-    // Public verification page (no auth)
+    // Public pages (no auth)
+    console.log("\n[PUBLIC] Capturing /registro…");
+    const registerPage = await capturePublicPage(browser, `${FRONTEND_URL}/registro`);
+    console.log(`  → ${registerPage.error ? "✗ " + registerPage.error : "✓"}`);
+
     console.log("\n[PUBLIC] Capturing /verify/:code…");
     const verifyPage = await capturePublicPage(
       browser,
@@ -1429,11 +1491,20 @@ async function main() {
 
     const allPages = [...adminPages, ...teacherPages, ...studentPages];
     const allExtras = allPages.flatMap((p) => p.extras || []);
-    const failed = [...allPages, ...allExtras].filter((p) => p.error).length;
-    const total  = allPages.length + allExtras.length + 1; // +1 for verify
+    const failed =
+      [...allPages, ...allExtras].filter((p) => p.error).length +
+      (registerPage.error ? 1 : 0) +
+      (verifyPage.error ? 1 : 0);
+    const total = allPages.length + allExtras.length + 2; // +2 public: registro + verify
     console.log(`\nCaptures: ${total - failed}/${total} succeeded.`);
 
-    const htmlContent = buildHtmlDocument({ adminPages, teacherPages, studentPages, verifyPage });
+    const htmlContent = buildHtmlDocument({
+      adminPages,
+      teacherPages,
+      studentPages,
+      verifyPage,
+      registerPage,
+    });
 
     const htmlPath = path.join(outDir, "user-manual.html");
     fs.writeFileSync(htmlPath, htmlContent, "utf8");

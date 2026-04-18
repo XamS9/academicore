@@ -11,10 +11,12 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArticleIcon from "@mui/icons-material/Article";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import GradingIcon from "@mui/icons-material/Grading";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 import { groupsService } from "../../services/groups.service";
 import GroupContentPanel from "./panels/GroupContentPanel";
 import GroupEvaluationsPanel from "./panels/GroupEvaluationsPanel";
 import GroupGradesPanel from "./panels/GroupGradesPanel";
+import GroupSyllabusPanel from "./panels/GroupSyllabusPanel";
 
 interface GroupDetail {
   id: string;
@@ -76,7 +78,20 @@ export default function TeacherGroupDetailPage() {
 
       {/* ── Tabs ── */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+        <Tabs
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          textColor="primary"
+          indicatorColor="primary"
+          sx={{
+            "& .MuiTab-root.Mui-selected .MuiTab-iconWrapper": {
+              color: "primary.main",
+            },
+            "& .MuiTab-root:not(.Mui-selected) .MuiTab-iconWrapper": {
+              color: "action.active",
+            },
+          }}
+        >
           <Tab
             icon={<AssignmentIcon fontSize="small" />}
             iconPosition="start"
@@ -92,6 +107,11 @@ export default function TeacherGroupDetailPage() {
             iconPosition="start"
             label="Contenido"
           />
+          <Tab
+            icon={<MenuBookIcon fontSize="small" />}
+            iconPosition="start"
+            label="Temario"
+          />
         </Tabs>
       </Box>
 
@@ -99,6 +119,7 @@ export default function TeacherGroupDetailPage() {
       {tab === 0 && <GroupEvaluationsPanel groupId={groupId} />}
       {tab === 1 && <GroupGradesPanel groupId={groupId} />}
       {tab === 2 && <GroupContentPanel groupId={groupId} periodStartDate={group?.academicPeriod?.startDate} />}
+      {tab === 3 && <GroupSyllabusPanel groupId={groupId} />}
     </Box>
   );
 }

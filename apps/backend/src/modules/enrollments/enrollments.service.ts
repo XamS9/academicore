@@ -3,6 +3,7 @@ import { HttpError } from "../../shared/http-error";
 import { notificationsService } from "../notifications/notifications.service";
 import type { JwtPayload } from "../../middleware/auth.middleware";
 import { getStudentIdForUser } from "../../shared/student-access";
+import { syncMonthlyTuitionInstallmentsGlobal } from "../../shared/monthly-tuition";
 import { EnrollStudentDto } from "./enrollments.dto";
 
 type EnrollStudentInput = EnrollStudentDto & { studentId: string };
@@ -96,8 +97,10 @@ export class EnrollmentsService {
         data: { currentStudents: { increment: 1 } },
       });
 
-      // Generate inscription fee on first enrollment for this period
-      if (isFirstEnrollment) {
+      // Generate inscription fee on first enrollment for this period (amount from system_settings.inscription_fee)
+      const txSettings = await tx.systemSettings.findFirst();
+      const inscriptionAmount = Number(txSettings?.inscriptionFee ?? 0);
+      if (isFirstEnrollment && inscriptionAmount > 0) {
         const inscriptionConcept = await tx.feeConcept.findFirst({
           where: { isActive: true, name: { contains: "inscripci", mode: "insensitive" } },
         });
@@ -113,7 +116,7 @@ export class EnrollmentsService {
                 studentId: dto.studentId,
                 feeConceptId: inscriptionConcept.id,
                 periodId: dto.periodId,
-                amount: inscriptionConcept.amount,
+                amount: inscriptionAmount,
                 dueDate,
               },
             });
@@ -121,6 +124,8 @@ export class EnrollmentsService {
         }
       }
     });
+
+    await syncMonthlyTuitionInstallmentsGlobal(dto.studentId, dto.periodId);
 
     // Notify student
     await notificationsService.create({
@@ -200,6 +205,7 @@ export class EnrollmentsService {
             name: true,
             code: true,
             credits: true,
+            tuitionAmount: true,
             prerequisites: {
               include: {
                 prerequisite: { select: { id: true, name: true, code: true } },
@@ -218,14 +224,21 @@ export class EnrollmentsService {
       },
     });
 
+    const settings = await prisma.systemSettings.findFirst();
+    const creditCost = Number(settings?.creditCost ?? 0);
+
     return groups.map((g) => {
       const prereqs = g.subject.prerequisites;
       const prerequisitesMet =
         prereqs.length === 0 ||
         prereqs.every((p) => passedSubjectIds.has(p.prerequisiteId));
+      const computedTuition = g.subject.tuitionAmount
+        ? Number(g.subject.tuitionAmount)
+        : creditCost * g.subject.credits;
       return {
         ...g,
         prerequisitesMet,
+        computedTuition,
         subject: {
           ...g.subject,
           prerequisites: prereqs.map((p) => ({
@@ -406,6 +419,8 @@ export class EnrollmentsService {
         data: { currentStudents: { decrement: 1 } },
       });
     });
+
+    await syncMonthlyTuitionInstallmentsGlobal(es.enrollment.studentId, es.enrollment.academicPeriodId);
 
     return { success: true, message: "Baja de materia exitosa" };
   }

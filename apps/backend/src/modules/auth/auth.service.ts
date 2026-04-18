@@ -5,6 +5,7 @@ import { prisma } from "../../shared/prisma.client";
 import { HttpError } from "../../shared/http-error";
 import { env } from "../../config/env";
 import { LoginDto, RegisterDto } from "./auth.dto";
+import { signAdmissionUploadToken } from "../../middleware/upload-token.middleware";
 
 interface JwtPayload {
   sub: string;
@@ -76,7 +77,11 @@ class AuthService {
     };
   }
 
-  async register(dto: RegisterDto): Promise<{ message: string }> {
+  async register(dto: RegisterDto): Promise<{
+    message: string;
+    studentId: string;
+    uploadToken: string;
+  }> {
     const existing = await prisma.user.findFirst({ where: { email: dto.email } });
     if (existing) throw new HttpError(409, "Este correo ya está registrado");
 
@@ -87,6 +92,7 @@ class AuthService {
 
     const studentCode = `STU-${randomUUID().slice(0, 8).toUpperCase()}`;
 
+    let studentId = "";
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -98,7 +104,7 @@ class AuthService {
           isActive: false,
         },
       });
-      await tx.student.create({
+      const student = await tx.student.create({
         data: {
           userId: user.id,
           studentCode,
@@ -106,9 +112,15 @@ class AuthService {
           academicStatus: "PENDING",
         },
       });
+      studentId = student.id;
     });
 
-    return { message: "Registro exitoso. Tu cuenta está pendiente de aprobación." };
+    const uploadToken = signAdmissionUploadToken(studentId);
+    return {
+      message: "Registro exitoso. Tu cuenta está pendiente de aprobación.",
+      studentId,
+      uploadToken,
+    };
   }
 
   async refresh(refreshToken: string): Promise<{ accessToken: string }> {

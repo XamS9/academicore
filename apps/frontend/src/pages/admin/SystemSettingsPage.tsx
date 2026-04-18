@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Snackbar from "@mui/material/Snackbar";
@@ -24,6 +25,10 @@ interface SettingsForm {
   maxSubjectsPerEnrollment: number;
   maxEvaluationWeight: number;
   atRiskThreshold: number;
+  creditCost: number;
+  inscriptionFee: number;
+  cyclesPerYear: 1 | 2 | 3 | 4 | 6 | 12;
+  maxCreditsPerSubject: number;
   sig1: SignatureBlock;
   sig2: SignatureBlock;
 }
@@ -33,6 +38,10 @@ const defaultForm: SettingsForm = {
   maxSubjectsPerEnrollment: 7,
   maxEvaluationWeight: 100,
   atRiskThreshold: 3,
+  creditCost: 0,
+  inscriptionFee: 5000,
+  cyclesPerYear: 2,
+  maxCreditsPerSubject: 24,
   sig1: { image: null, name: "", title: "" },
   sig2: { image: null, name: "", title: "" },
 };
@@ -161,6 +170,10 @@ export default function SystemSettingsPage() {
           maxSubjectsPerEnrollment: data.maxSubjectsPerEnrollment,
           maxEvaluationWeight: Number(data.maxEvaluationWeight),
           atRiskThreshold: data.atRiskThreshold,
+          creditCost: Number(data.creditCost ?? 0),
+          inscriptionFee: Number(data.inscriptionFee ?? 5000),
+          cyclesPerYear: (data.cyclesPerYear ?? 2) as SettingsForm["cyclesPerYear"],
+          maxCreditsPerSubject: Number(data.maxCreditsPerSubject ?? 24),
           sig1: {
             image: data.signatureImage1 ?? null,
             name: data.signatureName1 ?? "",
@@ -190,6 +203,10 @@ export default function SystemSettingsPage() {
         maxSubjectsPerEnrollment: form.maxSubjectsPerEnrollment,
         maxEvaluationWeight: form.maxEvaluationWeight,
         atRiskThreshold: form.atRiskThreshold,
+        creditCost: form.creditCost,
+        inscriptionFee: form.inscriptionFee,
+        cyclesPerYear: form.cyclesPerYear,
+        maxCreditsPerSubject: form.maxCreditsPerSubject,
         signatureImage1: form.sig1.image,
         signatureName1: form.sig1.name || null,
         signatureTitle1: form.sig1.title || null,
@@ -259,6 +276,83 @@ export default function SystemSettingsPage() {
           }
           inputProps={{ min: 1, max: 20, step: 1 }}
           helperText="Número máximo de materias que un estudiante puede inscribir por período"
+          fullWidth
+          margin="normal"
+        />
+
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+          Costos
+        </Typography>
+
+        <TextField
+          label="Costo por crédito"
+          type="number"
+          value={form.creditCost}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              creditCost: Math.max(0, Number(e.target.value)),
+            })
+          }
+          inputProps={{ min: 0, step: "0.01" }}
+          helperText="Tarifa global por crédito. Se multiplica por los créditos de cada materia para calcular la matrícula (salvo que la materia tenga un monto fijo)."
+          fullWidth
+          margin="normal"
+        />
+
+        <TextField
+          label="Cuota de inscripción por período"
+          type="number"
+          value={form.inscriptionFee}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              inscriptionFee: Math.max(0, Number(e.target.value)),
+            })
+          }
+          inputProps={{ min: 0, step: "0.01" }}
+          helperText="Monto del cargo automático cuando el estudiante se inscribe por primera vez a un grupo en un período académico (requiere un concepto de cobro activo cuyo nombre contenga «inscripci»). En 0 no se genera ese cargo."
+          fullWidth
+          margin="normal"
+        />
+
+        <TextField
+          select
+          label="Ciclos académicos por año"
+          value={form.cyclesPerYear}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              cyclesPerYear: Number(e.target.value) as SettingsForm["cyclesPerYear"],
+            })
+          }
+          helperText="Define cuántas mensualidades tiene un período: 12 ÷ ciclos (ej. 2 ciclos → 6 meses por período). Las cuotas mensuales se generan después de pagar la inscripción (si aplica)."
+          fullWidth
+          margin="normal"
+        >
+          {([1, 2, 3, 4, 6, 12] as const).map((c) => (
+            <MenuItem key={c} value={c}>
+              {c} ({12 / c} meses por ciclo)
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField
+          label="Máx. créditos por materia"
+          type="number"
+          value={form.maxCreditsPerSubject}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              maxCreditsPerSubject: Math.max(
+                1,
+                Math.min(99, Math.round(Number(e.target.value))),
+              ),
+            })
+          }
+          inputProps={{ min: 1, max: 99, step: 1 }}
+          helperText="Cantidad máxima de créditos que puede tener una sola materia en el catálogo. No podrá bajar este valor si ya existen materias con más créditos."
           fullWidth
           margin="normal"
         />

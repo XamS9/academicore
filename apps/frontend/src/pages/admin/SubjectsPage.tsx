@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
@@ -12,26 +12,52 @@ import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
+import Autocomplete from "@mui/material/Autocomplete";
+import Tooltip from "@mui/material/Tooltip";
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
+import ListItemText from "@mui/material/ListItemText";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { DataTable, Column } from "../../components/ui/DataTable";
 import { useToast } from "../../hooks/useToast";
 import { getApiErrorMessage } from "../../services/api";
 import { subjectsService } from "../../services/subjects.service";
+import { systemSettingsService } from "../../services/system-settings.service";
+import {
+  syllabusService,
+  SyllabusTopic,
+} from "../../services/syllabus.service";
+
+interface PrereqInfo {
+  id: string;
+  name: string;
+  code: string;
+}
 
 interface SubjectItem {
   id: string;
   name: string;
   code: string;
   credits: number;
+  tuitionAmount: number | null;
   isActive: boolean;
+  prerequisites: {
+    prerequisiteId: string;
+    prerequisite: PrereqInfo;
+  }[];
 }
 
 interface SubjectForm {
   name: string;
   code: string;
   credits: number;
+  tuitionAmount: string;
+  prerequisiteIds: string[];
 }
 
 export default function SubjectsPage() {
@@ -43,12 +69,24 @@ export default function SubjectsPage() {
     name: "",
     code: "",
     credits: 1,
+    tuitionAmount: "",
+    prerequisiteIds: [],
   });
   const [codeUserEdited, setCodeUserEdited] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SubjectItem | null>(null);
   const { toast, showToast, clearToast } = useToast();
 
-  const load = async () => {
+  // Syllabus dialog
+  const [syllabusSubject, setSyllabusSubject] = useState<SubjectItem | null>(
+    null,
+  );
+  const [syllabusTopics, setSyllabusTopics] = useState<SyllabusTopic[]>([]);
+  const [syllabusLoading, setSyllabusLoading] = useState(false);
+  const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [newTopicDesc, setNewTopicDesc] = useState("");
+  const [maxCreditsPerSubject, setMaxCreditsPerSubject] = useState(24);
+
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const data = await subjectsService.getAll();
@@ -58,10 +96,21 @@ export default function SubjectsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    systemSettingsService
+      .get()
+      .then((data: { maxCreditsPerSubject?: number }) =>
+        setMaxCreditsPerSubject(
+          Math.max(1, Math.min(99, Number(data.maxCreditsPerSubject ?? 24))),
+        ),
+      )
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -95,28 +144,46 @@ export default function SubjectsPage() {
   const openCreate = () => {
     setEditTarget(null);
     setCodeUserEdited(false);
-    setForm({ name: "", code: "", credits: 1 });
+    setForm({
+      name: "",
+      code: "",
+      credits: 1,
+      tuitionAmount: "",
+      prerequisiteIds: [],
+    });
     setDialogOpen(true);
   };
 
   const openEdit = (item: SubjectItem) => {
     setEditTarget(item);
-    setForm({ name: item.name, code: item.code, credits: item.credits });
+    setForm({
+      name: item.name,
+      code: item.code,
+      credits: item.credits,
+      tuitionAmount: item.tuitionAmount != null ? String(item.tuitionAmount) : "",
+      prerequisiteIds: item.prerequisites.map((p) => p.prerequisiteId),
+    });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        credits: form.credits,
+        prerequisiteIds: form.prerequisiteIds,
+        tuitionAmount:
+          form.tuitionAmount.trim() === ""
+            ? null
+            : parseFloat(form.tuitionAmount),
+      };
       if (editTarget) {
-        await subjectsService.update(editTarget.id, form);
+        await subjectsService.update(editTarget.id, payload);
         showToast("Materia actualizada exitosamente");
       } else {
         const trimmedCode = form.code.trim();
-        await subjectsService.create({
-          name: form.name,
-          credits: form.credits,
-          ...(trimmedCode.length > 0 ? { code: trimmedCode } : {}),
-        });
+        if (trimmedCode.length > 0) payload.code = trimmedCode;
+        await subjectsService.create(payload);
         showToast("Materia creada exitosamente");
       }
       setDialogOpen(false);
@@ -138,18 +205,94 @@ export default function SubjectsPage() {
     }
   };
 
+  // Prerequisite options: exclude self and already-selected
+  const prereqOptions = items.filter(
+    (s) => s.isActive && (!editTarget || s.id !== editTarget.id),
+  );
+  const selectedPrereqItems = prereqOptions.filter((s) =>
+    form.prerequisiteIds.includes(s.id),
+  );
+
+  // ──── Syllabus management ────
+  const openSyllabus = async (item: SubjectItem) => {
+    setSyllabusSubject(item);
+    setSyllabusLoading(true);
+    try {
+      const topics = await syllabusService.listBySubject(item.id);
+      setSyllabusTopics(topics);
+    } catch {
+      showToast("Error al cargar temario", "error");
+    } finally {
+      setSyllabusLoading(false);
+    }
+  };
+
+  const addTopic = async () => {
+    if (!syllabusSubject || !newTopicTitle.trim()) return;
+    try {
+      const topic = await syllabusService.createTopic(syllabusSubject.id, {
+        title: newTopicTitle.trim(),
+        description: newTopicDesc.trim() || null,
+      });
+      setSyllabusTopics((prev) => [...prev, topic]);
+      setNewTopicTitle("");
+      setNewTopicDesc("");
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al agregar tema"), "error");
+    }
+  };
+
+  const removeTopic = async (topicId: string) => {
+    try {
+      await syllabusService.deleteTopic(topicId);
+      setSyllabusTopics((prev) => prev.filter((t) => t.id !== topicId));
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al eliminar tema"), "error");
+    }
+  };
+
+  const moveTopic = async (idx: number, dir: "up" | "down") => {
+    const newTopics = [...syllabusTopics];
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= newTopics.length) return;
+    [newTopics[idx], newTopics[swapIdx]] = [newTopics[swapIdx], newTopics[idx]];
+    setSyllabusTopics(newTopics);
+    try {
+      await syllabusService.reorderTopics(
+        syllabusSubject!.id,
+        newTopics.map((t) => t.id),
+      );
+    } catch (err: unknown) {
+      showToast(getApiErrorMessage(err, "Error al reordenar"), "error");
+      const topics = await syllabusService.listBySubject(syllabusSubject!.id);
+      setSyllabusTopics(topics);
+    }
+  };
+
   const columns: Column<SubjectItem>[] = [
+    { key: "code", label: "Código" },
+    { key: "name", label: "Nombre" },
+    { key: "credits", label: "Créditos" },
     {
-      key: "code",
-      label: "Código",
-    },
-    {
-      key: "name",
-      label: "Nombre",
-    },
-    {
-      key: "credits",
-      label: "Créditos",
+      key: "prerequisites",
+      label: "Prerrequisitos",
+      render: (row) =>
+        row.prerequisites.length > 0 ? (
+          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+            {row.prerequisites.map((p) => (
+              <Chip
+                key={p.prerequisiteId}
+                label={p.prerequisite.code}
+                size="small"
+                variant="outlined"
+              />
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="caption" color="text.secondary">
+            Ninguno
+          </Typography>
+        ),
     },
     {
       key: "isActive",
@@ -167,6 +310,17 @@ export default function SubjectsPage() {
       label: "Acciones",
       render: (row) => (
         <>
+          <Tooltip title="Temario">
+            <span>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => openSyllabus(row)}
+              >
+                <MenuBookIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
           <IconButton size="small" onClick={() => openEdit(row)} title="Editar">
             <EditIcon fontSize="small" />
           </IconButton>
@@ -203,6 +357,7 @@ export default function SubjectsPage() {
         getRowKey={(r) => r.id}
       />
 
+      {/* Create/Edit Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -252,15 +407,53 @@ export default function SubjectsPage() {
             label="Créditos"
             type="number"
             value={form.credits}
-            onChange={(e) =>
+            onChange={(e) => {
+              const raw = parseInt(e.target.value, 10);
+              const n = Number.isFinite(raw) ? raw : 1;
               setForm({
                 ...form,
-                credits: Math.max(1, parseInt(e.target.value, 10) || 1),
-              })
-            }
-            inputProps={{ min: 1 }}
+                credits: Math.min(maxCreditsPerSubject, Math.max(1, n)),
+              });
+            }}
+            inputProps={{ min: 1, max: maxCreditsPerSubject, step: 1 }}
+            helperText={`Entre 1 y ${maxCreditsPerSubject} (Configuración → Máx. créditos por materia)`}
             fullWidth
             margin="dense"
+          />
+          <TextField
+            label="Monto de matrícula (opcional)"
+            type="number"
+            value={form.tuitionAmount}
+            onChange={(e) =>
+              setForm({ ...form, tuitionAmount: e.target.value })
+            }
+            fullWidth
+            margin="dense"
+            helperText="Vacío = se usa créditos × tarifa global de crédito"
+            inputProps={{ min: 0, step: "0.01" }}
+          />
+          <Autocomplete
+            multiple
+            options={prereqOptions}
+            value={selectedPrereqItems}
+            onChange={(_e, val) =>
+              setForm({ ...form, prerequisiteIds: val.map((v) => v.id) })
+            }
+            getOptionLabel={(opt) => `${opt.code} — ${opt.name}`}
+            isOptionEqualToValue={(opt, val) => opt.id === val.id}
+            renderInput={(params) => (
+              <TextField {...params} label="Prerrequisitos" margin="dense" />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  label={option.code}
+                  size="small"
+                  {...getTagProps({ index })}
+                  key={option.id}
+                />
+              ))
+            }
           />
         </DialogContent>
         <DialogActions>
@@ -271,6 +464,7 @@ export default function SubjectsPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Delete confirmation */}
       <Dialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
@@ -296,6 +490,101 @@ export default function SubjectsPage() {
           >
             Eliminar
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Syllabus topics dialog */}
+      <Dialog
+        open={!!syllabusSubject}
+        onClose={() => setSyllabusSubject(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Temario — {syllabusSubject?.code} {syllabusSubject?.name}
+        </DialogTitle>
+        <DialogContent>
+          {syllabusLoading ? (
+            <Typography>Cargando...</Typography>
+          ) : (
+            <>
+              <List dense>
+                {syllabusTopics.map((t, idx) => (
+                  <ListItem
+                    key={t.id}
+                    secondaryAction={
+                      <Box>
+                        <IconButton
+                          size="small"
+                          disabled={idx === 0}
+                          onClick={() => moveTopic(idx, "up")}
+                        >
+                          <ArrowUpwardIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          disabled={idx === syllabusTopics.length - 1}
+                          onClick={() => moveTopic(idx, "down")}
+                        >
+                          <ArrowDownwardIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => removeTopic(t.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    }
+                  >
+                    <ListItemText
+                      primary={`${idx + 1}. ${t.title}`}
+                      secondary={t.description}
+                    />
+                  </ListItem>
+                ))}
+                {syllabusTopics.length === 0 && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ py: 2, textAlign: "center" }}
+                  >
+                    Sin temas definidos
+                  </Typography>
+                )}
+              </List>
+              <Box sx={{ display: "flex", gap: 1, mt: 2, flexDirection: "column" }}>
+                <TextField
+                  size="small"
+                  label="Título del tema"
+                  value={newTopicTitle}
+                  onChange={(e) => setNewTopicTitle(e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  size="small"
+                  label="Descripción (opcional)"
+                  value={newTopicDesc}
+                  onChange={(e) => setNewTopicDesc(e.target.value)}
+                  fullWidth
+                  multiline
+                  minRows={2}
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={addTopic}
+                  disabled={!newTopicTitle.trim()}
+                >
+                  Agregar tema
+                </Button>
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSyllabusSubject(null)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 

@@ -42,6 +42,7 @@ interface AvailableGroup {
   maxStudents: number;
   currentStudents: number;
   prerequisitesMet: boolean;
+  computedTuition: number;
   groupClassrooms: Array<{
     dayOfWeek: number;
     startTime: string;
@@ -193,6 +194,9 @@ export default function StudentSelfEnrollPage() {
   };
 
   const totalCredits = cart.reduce((sum, g) => sum + g.subject.credits, 0);
+  const totalTuition = cart.reduce((sum, g) => sum + g.computedTuition, 0);
+  const fmtMoney = (n: number) =>
+    n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
 
   const handleConfirmEnroll = async () => {
     if (!activePeriodId || cart.length === 0) return;
@@ -494,6 +498,11 @@ export default function StudentSelfEnrollPage() {
                                 <Typography variant="caption" color="text.secondary">
                                   {g.groupCode} · {g.subject.credits} créditos
                                 </Typography>
+                                {g.computedTuition > 0 && (
+                                  <Typography variant="caption" display="block" color="text.secondary">
+                                    Matrícula: {fmtMoney(g.computedTuition)}
+                                  </Typography>
+                                )}
                                 {!g.prerequisitesMet && (
                                   <Box sx={{ mt: 0.5 }}>
                                     <Chip
@@ -517,7 +526,7 @@ export default function StudentSelfEnrollPage() {
                         ))}
 
                         <Divider sx={{ my: 2 }} />
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
                           <Typography variant="body2" color="text.secondary">
                             Total créditos
                           </Typography>
@@ -525,6 +534,16 @@ export default function StudentSelfEnrollPage() {
                             {totalCredits}
                           </Typography>
                         </Box>
+                        {totalTuition > 0 && (
+                          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              Total matrícula
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600} color="primary.main">
+                              {fmtMoney(totalTuition)}
+                            </Typography>
+                          </Box>
+                        )}
 
                         {cart.some((g) => !g.prerequisitesMet) && (
                           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -590,11 +609,24 @@ export default function StudentSelfEnrollPage() {
               ) : (
                 <ErrorOutlineIcon color="warning" fontSize="small" />
               )}
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ flex: 1 }}>
                 {g.subject.name} — {g.groupCode}
               </Typography>
+              {g.computedTuition > 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  {fmtMoney(g.computedTuition)}
+                </Typography>
+              )}
             </Box>
           ))}
+          {totalTuition > 0 && (
+            <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }}>
+              <Typography variant="body2" fontWeight={600}>Total matrícula</Typography>
+              <Typography variant="body2" fontWeight={600} color="primary.main">
+                {fmtMoney(totalTuition)}
+              </Typography>
+            </Box>
+          )}
           {cart.some((g) => !g.prerequisitesMet) && (
             <Alert severity="warning" sx={{ mt: 2 }}>
               Las materias marcadas con ⚠ serán validadas por el sistema al confirmar.

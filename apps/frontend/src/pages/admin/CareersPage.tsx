@@ -8,6 +8,13 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import Paper from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
@@ -273,6 +280,14 @@ export default function CareersPage() {
   );
   const subjectChoices = allSubjects.filter((s) => !inPlanIds.has(s.id));
 
+  const sortedPlanSubjects = (planDetail?.careerSubjects ?? [])
+    .slice()
+    .sort(
+      (a, b) =>
+        a.semesterNumber - b.semesterNumber ||
+        a.subject.code.localeCompare(b.subject.code),
+    );
+
   const columns: Column<CareerItem>[] = [
     { key: "code", label: "Código" },
     { key: "name", label: "Nombre" },
@@ -412,13 +427,33 @@ export default function CareersPage() {
       <Dialog
         open={planOpen}
         onClose={() => setPlanOpen(false)}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
+        scroll="paper"
+        PaperProps={{
+          sx: {
+            maxHeight: "min(92vh, 960px)",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+          },
+        }}
       >
-        <DialogTitle>
+        <DialogTitle sx={{ flexShrink: 0, pr: 6 }}>
           Plan de estudios — {planCareer?.name ?? ""}
         </DialogTitle>
-        <DialogContent className="flex flex-col gap-3 pt-2">
+        <DialogContent
+          dividers
+          sx={{
+            flex: "1 1 auto",
+            minHeight: 0,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            py: 2,
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             Aquí se relacionan las materias que pertenecen a la carrera (por
             semestre). Esto alimenta requisitos de inscripción y trámites
@@ -428,40 +463,161 @@ export default function CareersPage() {
             <Typography color="text.secondary">Cargando…</Typography>
           ) : (
             <>
-              <Box sx={{ overflowX: "auto" }}>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-left text-gray-600">
-                      <th className="py-2 pr-2">Código</th>
-                      <th className="py-2 pr-2">Materia</th>
-                      <th className="py-2 pr-2">Sem.</th>
-                      <th className="py-2 pr-2">Tipo</th>
-                      <th className="py-2"> </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(planDetail?.careerSubjects ?? [])
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          a.semesterNumber - b.semesterNumber ||
-                          a.subject.code.localeCompare(b.subject.code),
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  bgcolor: "action.hover",
+                  borderStyle: "dashed",
+                  flexShrink: 0,
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                  Agregar materia al plan
+                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 2,
+                    alignItems: "flex-end",
+                  }}
+                >
+                  <TextField
+                    select
+                    label="Materia"
+                    value={addSubjectId}
+                    onChange={(e) => setAddSubjectId(e.target.value)}
+                    sx={{ minWidth: { xs: "100%", sm: 260 }, flex: "1 1 220px" }}
+                    size="small"
+                  >
+                    <MenuItem value="">— Seleccione —</MenuItem>
+                    {subjectChoices.map((s) => (
+                      <MenuItem key={s.id} value={s.id}>
+                        {s.code} — {s.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    label="Semestre"
+                    type="number"
+                    value={addSemester}
+                    onChange={(e) =>
+                      setAddSemester(
+                        Math.max(1, parseInt(e.target.value, 10) || 1),
                       )
-                      .map((cs) => (
-                        <tr key={cs.id} className="border-b border-gray-100">
-                          <td className="py-2 pr-2 font-mono">
+                    }
+                    inputProps={{ min: 1 }}
+                    size="small"
+                    sx={{ width: { xs: "100%", sm: 100 } }}
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={addMandatory}
+                        onChange={(e) => setAddMandatory(e.target.checked)}
+                      />
+                    }
+                    label="Obligatoria"
+                    sx={{ mr: "auto" }}
+                  />
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddToPlan}
+                    disabled={!addSubjectId}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    Agregar
+                  </Button>
+                </Box>
+              </Paper>
+
+              <Box sx={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Typography variant="subtitle2">
+                    Materias del plan ({sortedPlanSubjects.length})
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Desplácese para ver todas; la cabecera permanece fija.
+                  </Typography>
+                </Box>
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{
+                    flex: "1 1 auto",
+                    minHeight: 200,
+                    maxHeight: { xs: "42vh", sm: "min(52vh, 520px)" },
+                    overflow: "auto",
+                  }}
+                >
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700, bgcolor: "background.paper", minWidth: 88 }}>
+                          Código
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 700, bgcolor: "background.paper", minWidth: 160 }}>
+                          Materia
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{ fontWeight: 700, bgcolor: "background.paper", width: 72 }}
+                        >
+                          Sem.
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 700, bgcolor: "background.paper", width: 120 }}>
+                          Tipo
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ fontWeight: 700, bgcolor: "background.paper", width: 56 }}
+                        >
+                          {" "}
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {sortedPlanSubjects.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} sx={{ py: 4, textAlign: "center", color: "text.secondary" }}>
+                            No hay materias en el plan todavía. Use el formulario superior para agregarlas.
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                      {sortedPlanSubjects.map((cs) => (
+                        <TableRow key={cs.id} hover>
+                          <TableCell
+                            sx={{
+                              fontFamily: "ui-monospace, monospace",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {cs.subject.code}
-                          </td>
-                          <td className="py-2 pr-2">{cs.subject.name}</td>
-                          <td className="py-2 pr-2">{cs.semesterNumber}</td>
-                          <td className="py-2 pr-2">
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: { xs: 200, sm: 360 } }}>
+                            <Typography variant="body2" component="span" sx={{ wordBreak: "break-word" }}>
+                              {cs.subject.name}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="center">{cs.semesterNumber}</TableCell>
+                          <TableCell>
                             <Chip
                               size="small"
                               label={cs.isMandatory ? "Obligatoria" : "Optativa"}
                               variant="outlined"
                             />
-                          </td>
-                          <td className="py-2 text-right">
+                          </TableCell>
+                          <TableCell align="right" sx={{ verticalAlign: "middle" }}>
                             <IconButton
                               size="small"
                               color="error"
@@ -475,72 +631,17 @@ export default function CareersPage() {
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                  </tbody>
-                </table>
-              </Box>
-
-              <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                Agregar materia al plan
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 2,
-                  alignItems: "flex-end",
-                }}
-              >
-                <TextField
-                  select
-                  label="Materia"
-                  value={addSubjectId}
-                  onChange={(e) => setAddSubjectId(e.target.value)}
-                  sx={{ minWidth: 220 }}
-                  size="small"
-                >
-                  <MenuItem value="">— Seleccione —</MenuItem>
-                  {subjectChoices.map((s) => (
-                    <MenuItem key={s.id} value={s.id}>
-                      {s.code} — {s.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  label="Semestre"
-                  type="number"
-                  value={addSemester}
-                  onChange={(e) =>
-                    setAddSemester(Math.max(1, parseInt(e.target.value, 10) || 1))
-                  }
-                  inputProps={{ min: 1 }}
-                  size="small"
-                  sx={{ width: 100 }}
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={addMandatory}
-                      onChange={(e) => setAddMandatory(e.target.checked)}
-                    />
-                  }
-                  label="Obligatoria"
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddToPlan}
-                  disabled={!addSubjectId}
-                >
-                  Agregar
-                </Button>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Box>
             </>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ flexShrink: 0, px: 3, py: 2 }}>
           <Button onClick={() => setPlanOpen(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>

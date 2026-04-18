@@ -48,6 +48,11 @@ import {
   type StudentSubmissionWithEval,
 } from "../../services/student-submissions.service";
 import { getApiErrorMessage } from "../../services/api";
+import {
+  syllabusService,
+  type TopicWithProgress,
+} from "../../services/syllabus.service";
+import LinearProgress from "@mui/material/LinearProgress";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,11 +152,12 @@ export default function StudentContentPage() {
 
   // Detail view
   const [selectedCard, setSelectedCard] = useState<GroupCard | null>(null);
-  const [activeTab, setActiveTab] = useState<"content" | "submissions">(
+  const [activeTab, setActiveTab] = useState<"content" | "submissions" | "syllabus">(
     "content",
   );
   const [topics, setTopics] = useState<TopicItem[]>([]);
   const [evaluations, setEvaluations] = useState<EvaluationItem[]>([]);
+  const [syllabusTopics, setSyllabusTopics] = useState<TopicWithProgress[]>([]);
   const [submissions, setSubmissions] = useState<StudentSubmissionWithEval[]>(
     [],
   );
@@ -253,12 +259,14 @@ export default function StudentContentPage() {
     setActiveTab("content");
     setDetailLoading(true);
     try {
-      const [topicData, evalData] = await Promise.all([
+      const [topicData, evalData, syllabusData] = await Promise.all([
         topicsService.getByGroup(card.groupId),
         evaluationsService.getByGroup(card.groupId),
+        syllabusService.getGroupProgress(card.groupId).catch(() => [] as TopicWithProgress[]),
       ]);
       setTopics(topicData);
       setEvaluations(evalData);
+      setSyllabusTopics(syllabusData);
     } catch {
       showToast("Error al cargar contenido", "error");
     } finally {
@@ -270,6 +278,7 @@ export default function StudentContentPage() {
     setSelectedCard(null);
     setTopics([]);
     setEvaluations([]);
+    setSyllabusTopics([]);
   };
 
   // ─── Submission CRUD ─────────────────────────────────────────────────────────
@@ -502,6 +511,8 @@ export default function StudentContentPage() {
       <Tabs
         value={activeTab}
         onChange={(_, v) => setActiveTab(v)}
+        textColor="primary"
+        indicatorColor="primary"
         sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
       >
         <Tab label="Contenido del curso" value="content" />
@@ -513,6 +524,9 @@ export default function StudentContentPage() {
           }
           value="submissions"
         />
+        {syllabusTopics.length > 0 && (
+          <Tab label="Temario" value="syllabus" />
+        )}
       </Tabs>
 
       {detailLoading && (
@@ -775,6 +789,71 @@ export default function StudentContentPage() {
               );
             })
           )}
+        </Box>
+      )}
+
+      {/* ── Syllabus tab ── */}
+      {!detailLoading && activeTab === "syllabus" && syllabusTopics.length > 0 && (
+        <Box>
+          {(() => {
+            const covered = syllabusTopics.filter((t) => t.progress !== null).length;
+            const total = syllabusTopics.length;
+            const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
+            return (
+              <>
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                    <Typography variant="subtitle2">Progreso del temario</Typography>
+                    <Chip
+                      label={`${covered}/${total} (${pct}%)`}
+                      size="small"
+                      color={pct === 100 ? "success" : "primary"}
+                      variant="outlined"
+                    />
+                  </Box>
+                  <LinearProgress
+                    variant="determinate"
+                    value={pct}
+                    sx={{ height: 8, borderRadius: 4 }}
+                  />
+                </Box>
+                <List dense>
+                  {syllabusTopics.map((t, idx) => {
+                    const done = !!t.progress;
+                    return (
+                      <ListItem key={t.id} sx={{ bgcolor: done ? "action.hover" : "transparent", borderRadius: 1, mb: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {done ? (
+                            <CheckCircleIcon color="success" fontSize="small" />
+                          ) : (
+                            <PendingIcon color="disabled" fontSize="small" />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: done ? 600 : 400 }}>
+                                {idx + 1}. {t.title}
+                              </Typography>
+                              {done && t.progress && (
+                                <Chip
+                                  label={`Sem. ${t.progress.weekNumber} · ${new Date(t.progress.coveredAt).toLocaleDateString("es-MX")}`}
+                                  size="small"
+                                  variant="outlined"
+                                  color="success"
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={t.description}
+                        />
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </>
+            );
+          })()}
         </Box>
       )}
 

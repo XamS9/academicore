@@ -45,6 +45,46 @@ export class SystemSettingsService {
       oldValues.atRiskThreshold = settings.atRiskThreshold;
       newValues.atRiskThreshold = dto.atRiskThreshold;
     }
+    if (
+      dto.creditCost !== undefined &&
+      Number(settings.creditCost) !== dto.creditCost
+    ) {
+      oldValues.creditCost = Number(settings.creditCost);
+      newValues.creditCost = dto.creditCost;
+    }
+    if (
+      dto.inscriptionFee !== undefined &&
+      Number(settings.inscriptionFee) !== dto.inscriptionFee
+    ) {
+      oldValues.inscriptionFee = Number(settings.inscriptionFee);
+      newValues.inscriptionFee = dto.inscriptionFee;
+    }
+    if (
+      dto.cyclesPerYear !== undefined &&
+      settings.cyclesPerYear !== dto.cyclesPerYear
+    ) {
+      oldValues.cyclesPerYear = settings.cyclesPerYear;
+      newValues.cyclesPerYear = dto.cyclesPerYear;
+    }
+    if (
+      dto.maxCreditsPerSubject !== undefined &&
+      settings.maxCreditsPerSubject !== dto.maxCreditsPerSubject
+    ) {
+      const subjectsOver = await prisma.subject.count({
+        where: {
+          deletedAt: null,
+          credits: { gt: dto.maxCreditsPerSubject },
+        },
+      });
+      if (subjectsOver > 0) {
+        throw new HttpError(
+          400,
+          `No se puede fijar este máximo: hay ${subjectsOver} materia(s) con más créditos. Reduzca los créditos de esas materias antes.`,
+        );
+      }
+      oldValues.maxCreditsPerSubject = settings.maxCreditsPerSubject;
+      newValues.maxCreditsPerSubject = dto.maxCreditsPerSubject;
+    }
 
     const updated = await prisma.systemSettings.update({
       where: { id: settings.id },
@@ -60,6 +100,18 @@ export class SystemSettingsService {
         }),
         ...(dto.atRiskThreshold !== undefined && {
           atRiskThreshold: dto.atRiskThreshold,
+        }),
+        ...(dto.creditCost !== undefined && {
+          creditCost: dto.creditCost,
+        }),
+        ...(dto.inscriptionFee !== undefined && {
+          inscriptionFee: dto.inscriptionFee,
+        }),
+        ...(dto.cyclesPerYear !== undefined && {
+          cyclesPerYear: dto.cyclesPerYear,
+        }),
+        ...(dto.maxCreditsPerSubject !== undefined && {
+          maxCreditsPerSubject: dto.maxCreditsPerSubject,
         }),
         ...(dto.signatureImage1 !== undefined && {
           signatureImage1: dto.signatureImage1,

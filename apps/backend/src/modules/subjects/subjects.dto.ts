@@ -5,6 +5,8 @@ export const CreateSubjectDto = z.object({
   /** Omit or empty: generated from name + sequence (same algorithm as GET suggest-code). */
   code: z.string().max(20).optional(),
   credits: z.number().int().min(1),
+  tuitionAmount: z.number().nonnegative().nullable().optional(),
+  prerequisiteIds: z.array(z.string().uuid()).optional(),
 });
 export type CreateSubjectDto = z.infer<typeof CreateSubjectDto>;
 

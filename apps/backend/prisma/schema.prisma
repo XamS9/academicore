@@ -5,7 +5,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  
 }
 
 datasource db {
@@ -122,6 +121,20 @@ enum PeriodStatus {
   CLOSED
 }
 
+enum AdmissionDocumentType {
+  ID_CARD
+  HIGH_SCHOOL_DIPLOMA
+  PHOTO
+  MEDICAL_CERT
+  OTHER
+}
+
+enum AdmissionDocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─────────────────────────────────────────────
 // 1. USERS — Supertype
 // ─────────────────────────────────────────────
@@ -141,12 +154,13 @@ model User {
   student         Student?
   teacher         Teacher?
   userRoles       UserRole[]
-  gradesGiven     Grade[]          @relation("GradedBy")
-  certIssued      Certification[]  @relation("IssuedBy")
+  gradesGiven     Grade[]             @relation("GradedBy")
+  certIssued      Certification[]     @relation("IssuedBy")
   auditLogs       AuditLog[]
-  settingsUpdates SystemSettings[] @relation("SettingsUpdatedBy")
+  settingsUpdates SystemSettings[]    @relation("SettingsUpdatedBy")
   notifications   Notification[]
   announcements   Announcement[]
+  docsReviewed    AdmissionDocument[] @relation("AdmissionDocsReviewed")
 
   @@map("users")
 }
@@ -166,14 +180,15 @@ model Student {
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user            User               @relation(fields: [userId], references: [id])
-  career          Career             @relation(fields: [careerId], references: [id])
-  enrollments     Enrollment[]
-  grades          Grade[]
-  academicRecords AcademicRecord[]
-  certifications  Certification[]
-  studentFees     StudentFee[]
-  submissions     StudentSubmission[]
+  user               User                @relation(fields: [userId], references: [id])
+  career             Career              @relation(fields: [careerId], references: [id])
+  enrollments        Enrollment[]
+  grades             Grade[]
+  academicRecords    AcademicRecord[]
+  certifications     Certification[]
+  studentFees        StudentFee[]
+  submissions        StudentSubmission[]
+  admissionDocuments AdmissionDocument[]
 
   @@map("students")
 }
@@ -191,8 +206,9 @@ model Teacher {
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user   User    @relation(fields: [userId], references: [id])
-  groups Group[]
+  user          User                 @relation(fields: [userId], references: [id])
+  groups        Group[]
+  topicProgress GroupTopicProgress[]
 
   @@map("teachers")
 }
@@ -256,19 +272,21 @@ model Career {
 // ─────────────────────────────────────────────
 
 model Subject {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String    @db.VarChar(200)
-  code      String    @unique @db.VarChar(20)
-  credits   Int       @db.SmallInt
-  isActive  Boolean   @default(true) @map("is_active")
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String    @db.VarChar(200)
+  code          String    @unique @db.VarChar(20)
+  credits       Int       @db.SmallInt
+  tuitionAmount Decimal?  @map("tuition_amount") @db.Decimal(10, 2)
+  isActive      Boolean   @default(true) @map("is_active")
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   careerSubjects CareerSubject[]
   groups         Group[]
   prerequisites  SubjectPrerequisite[] @relation("SubjectPrereqs")
   isPrereqOf     SubjectPrerequisite[] @relation("PrereqOf")
+  syllabusTopics SyllabusTopic[]
 
   @@map("subjects")
 }
@@ -355,26 +373,27 @@ model Classroom {
 // ─────────────────────────────────────────────
 
 model Group {
-  id               String             @id @default(uuid()) @db.Uuid
-  subjectId        String             @map("subject_id") @db.Uuid
-  academicPeriodId String             @map("academic_period_id") @db.Uuid
-  teacherId        String             @map("teacher_id") @db.Uuid
-  groupCode        String             @map("group_code") @db.VarChar(20)
-  deliveryMode     GroupDeliveryMode  @default(ON_SITE) @map("delivery_mode")
-  maxStudents      Int                @map("max_students") @db.SmallInt
-  currentStudents  Int                @default(0) @map("current_students") @db.SmallInt
-  isActive         Boolean            @default(true) @map("is_active")
-  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id               String            @id @default(uuid()) @db.Uuid
+  subjectId        String            @map("subject_id") @db.Uuid
+  academicPeriodId String            @map("academic_period_id") @db.Uuid
+  teacherId        String            @map("teacher_id") @db.Uuid
+  groupCode        String            @map("group_code") @db.VarChar(20)
+  deliveryMode     GroupDeliveryMode @default(ON_SITE) @map("delivery_mode")
+  maxStudents      Int               @map("max_students") @db.SmallInt
+  currentStudents  Int               @default(0) @map("current_students") @db.SmallInt
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  subject            Subject             @relation(fields: [subjectId], references: [id])
-  academicPeriod     AcademicPeriod      @relation(fields: [academicPeriodId], references: [id])
-  teacher            Teacher             @relation(fields: [teacherId], references: [id])
+  subject            Subject              @relation(fields: [subjectId], references: [id])
+  academicPeriod     AcademicPeriod       @relation(fields: [academicPeriodId], references: [id])
+  teacher            Teacher              @relation(fields: [teacherId], references: [id])
   groupClassrooms    GroupClassroom[]
   enrollmentSubjects EnrollmentSubject[]
   evaluations        Evaluation[]
   academicRecords    AcademicRecord[]
   topics             Topic[]
+  topicProgress      GroupTopicProgress[]
 
   @@unique([subjectId, academicPeriodId, groupCode])
   @@map("groups")
@@ -469,8 +488,8 @@ model Evaluation {
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  group          Group          @relation(fields: [groupId], references: [id])
-  evaluationType EvaluationType @relation(fields: [evaluationTypeId], references: [id])
+  group          Group               @relation(fields: [groupId], references: [id])
+  evaluationType EvaluationType      @relation(fields: [evaluationTypeId], references: [id])
   grades         Grade[]
   submissions    StudentSubmission[]
 
@@ -487,8 +506,8 @@ model StudentSubmission {
   evaluationId String          @map("evaluation_id") @db.Uuid
   title        String          @db.VarChar(255)
   type         ContentItemType
-  content      String          @db.Text       // URL/text/file URL
-  fileKey      String?         @map("file_key") @db.VarChar(500)  // storage key for deletion
+  content      String          @db.Text // URL/text/file URL
+  fileKey      String?         @map("file_key") @db.VarChar(500) // storage key for deletion
   fileName     String?         @map("file_name") @db.VarChar(255)
   fileSize     Int?            @map("file_size")
   fileMimeType String?         @map("file_mime_type") @db.VarChar(100)
@@ -667,6 +686,10 @@ model SystemSettings {
   maxSubjectsPerEnrollment Int      @default(7) @map("max_subjects_per_enrollment") @db.SmallInt
   maxEvaluationWeight      Decimal  @default(100) @map("max_evaluation_weight") @db.Decimal(5, 2)
   atRiskThreshold          Int      @default(3) @map("at_risk_threshold") @db.SmallInt
+  creditCost               Decimal  @default(0) @map("credit_cost") @db.Decimal(10, 2)
+  inscriptionFee         Decimal  @default(5000) @map("inscription_fee") @db.Decimal(10, 2)
+  cyclesPerYear            Int      @default(2) @map("cycles_per_year") @db.SmallInt
+  maxCreditsPerSubject     Int      @default(24) @map("max_credits_per_subject") @db.SmallInt
   signatureImage1          String?  @map("signature_image_1") @db.Text
   signatureName1           String?  @map("signature_name_1") @db.VarChar(200)
   signatureTitle1          String?  @map("signature_title_1") @db.VarChar(200)
@@ -733,6 +756,7 @@ model StudentFee {
   amount       Decimal   @db.Decimal(10, 2)
   dueDate      DateTime  @map("due_date") @db.Date
   status       FeeStatus @default(PENDING)
+  installmentNumber Int?    @map("installment_number") @db.SmallInt
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -813,4 +837,74 @@ model Department {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("departments")
+}
+
+// ─────────────────────────────────────────────
+// 32. SYLLABUS_TOPICS — Subject-level curriculum template
+// ─────────────────────────────────────────────
+
+model SyllabusTopic {
+  id          String   @id @default(uuid()) @db.Uuid
+  subjectId   String   @map("subject_id") @db.Uuid
+  sortOrder   Int      @map("sort_order") @db.SmallInt
+  title       String   @db.VarChar(200)
+  description String?  @db.VarChar(1000)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  subject  Subject              @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  progress GroupTopicProgress[]
+
+  @@unique([subjectId, sortOrder])
+  @@map("syllabus_topics")
+}
+
+// ─────────────────────────────────────────────
+// 33. GROUP_TOPIC_PROGRESS — Teacher marks syllabus progress per group
+// ─────────────────────────────────────────────
+
+model GroupTopicProgress {
+  id         String   @id @default(uuid()) @db.Uuid
+  groupId    String   @map("group_id") @db.Uuid
+  topicId    String   @map("topic_id") @db.Uuid
+  teacherId  String   @map("teacher_id") @db.Uuid
+  coveredAt  DateTime @map("covered_at") @db.Date
+  weekNumber Int      @map("week_number") @db.SmallInt
+  notes      String?  @db.VarChar(1000)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  group   Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  topic   SyllabusTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  teacher Teacher       @relation(fields: [teacherId], references: [id])
+
+  @@unique([groupId, topicId])
+  @@map("group_topic_progress")
+}
+
+// ─────────────────────────────────────────────
+// 34. ADMISSION_DOCUMENTS — Scanned docs uploaded at registration
+// ─────────────────────────────────────────────
+
+model AdmissionDocument {
+  id              String                  @id @default(uuid()) @db.Uuid
+  studentId       String                  @map("student_id") @db.Uuid
+  type            AdmissionDocumentType
+  fileKey         String                  @map("file_key") @db.VarChar(500)
+  fileName        String                  @map("file_name") @db.VarChar(255)
+  fileSize        Int                     @map("file_size")
+  fileMimeType    String                  @map("file_mime_type") @db.VarChar(100)
+  status          AdmissionDocumentStatus @default(PENDING)
+  reviewedBy      String?                 @map("reviewed_by") @db.Uuid
+  reviewedAt      DateTime?               @map("reviewed_at") @db.Timestamptz(6)
+  rejectionReason String?                 @map("rejection_reason") @db.VarChar(500)
+  uploadedAt      DateTime                @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  reviewer User?   @relation("AdmissionDocsReviewed", fields: [reviewedBy], references: [id])
+
+  @@index([studentId], name: "idx_admission_docs_student")
+  @@index([status], name: "idx_admission_docs_status")
+  @@map("admission_documents")
 }
