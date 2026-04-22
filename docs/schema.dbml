@@ -1,0 +1,685 @@
+// ============================================================
+// ACADEMICORE — Database Schema (DBML)
+// Source of truth: apps/backend/prisma/schema.prisma
+// Keep this file in sync whenever the Prisma schema changes.
+//
+// Tables: 38
+//   users, students, teachers, roles, user_roles,
+//   careers, subjects, subject_prerequisites, career_subjects,
+//   academic_periods, classrooms, groups, group_classrooms,
+//   enrollments, enrollment_subjects,
+//   evaluation_types, evaluations, student_submissions, grades,
+//   academic_records, certification_criteria, certifications,
+//   audit_logs, topics, content_items, system_settings,
+//   tuition_group_requests,
+//   notifications, fee_concepts, student_fees, payments,
+//   announcements, calendar_events, departments,
+//   syllabus_topics, group_topic_progress,
+//   admission_document_rejection_reasons, admission_documents
+// ============================================================
+
+// ─── ENUMS ──────────────────────────────────────────────────
+
+Enum UserType {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+Enum AcademicStatus {
+  PENDING
+  ACTIVE
+  AT_RISK
+  ELIGIBLE_FOR_GRADUATION
+  SUSPENDED
+  GRADUATED
+  WITHDRAWN
+}
+
+Enum PeriodStatus {
+  OPEN
+  GRADING
+  CLOSED
+}
+
+Enum EnrollmentStatus {
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
+Enum EnrollmentSubjectStatus {
+  ENROLLED
+  DROPPED
+  COMPLETED
+  FAILED
+}
+
+Enum CertificationType {
+  DEGREE
+  TRANSCRIPT
+  COMPLETION
+}
+
+Enum CertificationStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+Enum AuditAction {
+  CREATED
+  UPDATED
+  DELETED
+  REVOKED
+  ISSUED
+  ENROLLED
+  DROPPED
+  STATUS_CHANGE
+}
+
+Enum ContentItemType {
+  LINK
+  TEXT
+  FILE_REF
+}
+
+Enum NotificationType {
+  GRADE_POSTED
+  ENROLLMENT_CONFIRMED
+  CERTIFICATION_ISSUED
+  ANNOUNCEMENT
+  PAYMENT_DUE
+  PAYMENT_CONFIRMED
+  GENERAL
+}
+
+Enum FeeStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+Enum PaymentMethod {
+  CARD
+  TRANSFER
+  CASH
+}
+
+Enum AnnouncementAudience {
+  ALL
+  CAREER
+  GROUP
+}
+
+Enum CalendarEventType {
+  HOLIDAY
+  EXAM_WEEK
+  DEADLINE
+  OTHER
+}
+
+Enum GroupDeliveryMode {
+  ON_SITE
+  VIRTUAL
+  HYBRID
+}
+
+Enum AdmissionDocumentType {
+  ID_CARD
+  HIGH_SCHOOL_DIPLOMA
+  PHOTO
+  MEDICAL_CERT
+  OTHER
+}
+
+Enum AdmissionDocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+Enum TuitionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// ─── TABLES ─────────────────────────────────────────────────
+
+Table users {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  user_type     UserType    [not null]
+  first_name    varchar(100) [not null]
+  last_name     varchar(100) [not null]
+  email         varchar(255) [not null, unique]
+  password_hash varchar(255) [not null]
+  is_active     boolean     [not null, default: true]
+  deleted_at    timestamptz
+  created_at    timestamptz [not null, default: `now()`]
+  updated_at    timestamptz [not null]
+}
+
+Table students {
+  id              uuid            [pk, default: `gen_random_uuid()`]
+  user_id         uuid            [not null, unique, ref: - users.id]
+  student_code    varchar(50)     [not null, unique]
+  career_id       uuid            [not null, ref: > careers.id]
+  academic_status AcademicStatus  [not null, default: 'ACTIVE']
+  enrollment_date date            [not null, default: `now()`]
+  deleted_at      timestamptz
+  created_at      timestamptz     [not null, default: `now()`]
+  updated_at      timestamptz     [not null]
+}
+
+Table teachers {
+  id            uuid        [pk, default: `gen_random_uuid()`]
+  user_id       uuid        [not null, unique, ref: - users.id]
+  employee_code varchar(50) [not null, unique]
+  department    varchar(150)
+  deleted_at    timestamptz
+  created_at    timestamptz [not null, default: `now()`]
+  updated_at    timestamptz [not null]
+}
+
+Table roles {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  name        varchar(50) [not null, unique]
+  description varchar(255)
+  created_at  timestamptz [not null, default: `now()`]
+}
+
+Table user_roles {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  user_id     uuid        [not null, ref: > users.id]
+  role_id     uuid        [not null, ref: > roles.id]
+  assigned_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, role_id) [unique]
+  }
+}
+
+Table careers {
+  id              uuid        [pk, default: `gen_random_uuid()`]
+  name            varchar(200) [not null]
+  code            varchar(20) [not null, unique]
+  total_semesters smallint    [not null]
+  is_active       boolean     [not null, default: true]
+  deleted_at      timestamptz
+  created_at      timestamptz [not null, default: `now()`]
+  updated_at      timestamptz [not null]
+}
+
+Table subjects {
+  id              uuid          [pk, default: `gen_random_uuid()`]
+  name            varchar(200)  [not null]
+  code            varchar(20)   [not null, unique]
+  credits         smallint      [not null]
+  tuition_amount  decimal(10,2) [note: 'Optional per-subject tuition override. NULL = use credits × global creditCost']
+  is_active       boolean       [not null, default: true]
+  deleted_at      timestamptz
+  created_at      timestamptz   [not null, default: `now()`]
+  updated_at      timestamptz   [not null]
+}
+
+Table subject_prerequisites {
+  id              uuid [pk, default: `gen_random_uuid()`]
+  subject_id      uuid [not null, ref: > subjects.id]
+  prerequisite_id uuid [not null, ref: > subjects.id]
+
+  indexes {
+    (subject_id, prerequisite_id) [unique]
+  }
+}
+
+Table career_subjects {
+  id              uuid     [pk, default: `gen_random_uuid()`]
+  career_id       uuid     [not null, ref: > careers.id]
+  subject_id      uuid     [not null, ref: > subjects.id]
+  semester_number smallint [not null]
+  is_mandatory    boolean  [not null, default: true]
+
+  indexes {
+    (career_id, subject_id) [unique]
+  }
+}
+
+Table academic_periods {
+  id              uuid         [pk, default: `gen_random_uuid()`]
+  name            varchar(50)  [not null]
+  start_date      date         [not null]
+  end_date        date         [not null]
+  enrollment_phase_start_date date [note: 'Optional inclusive start (UTC calendar day); with enrollment_open gates self-service enrollment']
+  enrollment_phase_end_date   date [note: 'Optional inclusive end; API sets enrollment_open=false after this day (UTC) on sync']
+  enrollment_open boolean      [not null, default: false, note: 'When status=GRADING must be false (enforced in application layer)']
+  is_active       boolean      [not null, default: true]
+  status          PeriodStatus [not null, default: 'OPEN', note: 'Lifecycle: OPEN → GRADING → CLOSED; GRADING only after enrollment closed at end of cycle']
+  created_at      timestamptz  [not null, default: `now()`]
+  updated_at      timestamptz  [not null]
+}
+
+Table classrooms {
+  id         uuid        [pk, default: `gen_random_uuid()`]
+  name       varchar(50) [not null]
+  building   varchar(100)
+  capacity   smallint    [not null]
+  is_active  boolean     [not null, default: true]
+  deleted_at timestamptz
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null]
+}
+
+Table groups {
+  id                 uuid              [pk, default: `gen_random_uuid()`]
+  subject_id         uuid              [not null, ref: > subjects.id]
+  academic_period_id uuid              [not null, ref: > academic_periods.id]
+  teacher_id         uuid              [not null, ref: > teachers.id]
+  group_code         varchar(20)       [not null, note: 'Auto: prefijo materia + secuencia por materia/período']
+  delivery_mode      GroupDeliveryMode [not null, default: `ON_SITE`, note: 'Presencial, virtual o mixto']
+  max_students       smallint          [not null]
+  current_students   smallint    [not null, default: 0]
+  is_active          boolean     [not null, default: true]
+  created_at         timestamptz [not null, default: `now()`]
+  updated_at         timestamptz [not null]
+
+  indexes {
+    (subject_id, academic_period_id, group_code) [unique]
+  }
+}
+
+Table group_classrooms {
+  id           uuid     [pk, default: `gen_random_uuid()`]
+  group_id     uuid     [not null, ref: > groups.id]
+  classroom_id uuid     [not null, ref: > classrooms.id]
+  day_of_week  smallint [not null, note: '0=Sun, 6=Sat']
+  start_time   time     [not null]
+  end_time     time     [not null]
+
+  indexes {
+    (classroom_id, day_of_week, start_time, end_time) [unique]
+  }
+}
+
+Table enrollments {
+  id                 uuid             [pk, default: `gen_random_uuid()`]
+  student_id         uuid             [not null, ref: > students.id]
+  academic_period_id uuid             [not null, ref: > academic_periods.id]
+  status             EnrollmentStatus [not null, default: 'ACTIVE']
+  enrolled_at        timestamptz      [not null, default: `now()`]
+  created_at         timestamptz      [not null, default: `now()`]
+  updated_at         timestamptz      [not null]
+
+  indexes {
+    (student_id, academic_period_id) [unique]
+  }
+}
+
+Table enrollment_subjects {
+  id            uuid                    [pk, default: `gen_random_uuid()`]
+  enrollment_id uuid                    [not null, ref: > enrollments.id]
+  group_id      uuid                    [not null, ref: > groups.id]
+  status        EnrollmentSubjectStatus [not null, default: 'ENROLLED']
+  created_at    timestamptz             [not null, default: `now()`]
+  updated_at    timestamptz             [not null]
+
+  indexes {
+    (enrollment_id, group_id) [unique]
+  }
+}
+
+Table evaluation_types {
+  id          uuid         [pk, default: `gen_random_uuid()`]
+  name        varchar(100) [not null, unique]
+  description varchar(255)
+  created_at  timestamptz  [not null, default: `now()`]
+}
+
+Table evaluations {
+  id                 uuid         [pk, default: `gen_random_uuid()`]
+  group_id           uuid         [not null, ref: > groups.id]
+  evaluation_type_id uuid         [not null, ref: > evaluation_types.id]
+  name               varchar(200) [not null]
+  weight             decimal(5,2) [not null, note: 'Sum per group <= 100']
+  max_score          decimal(5,2) [not null, default: 100]
+  due_date           date
+  created_at         timestamptz  [not null, default: `now()`]
+  updated_at         timestamptz  [not null]
+}
+
+Table student_submissions {
+  id             uuid            [pk, default: `gen_random_uuid()`]
+  student_id     uuid            [not null, ref: > students.id]
+  evaluation_id  uuid            [not null, ref: > evaluations.id]
+  title          varchar(255)    [not null]
+  type           ContentItemType [not null]
+  content        text            [not null, note: 'URL, text body, or file URL']
+  file_key       varchar(500)    [note: 'Storage key for deletion']
+  file_name      varchar(255)
+  file_size      int
+  file_mime_type varchar(100)
+  submitted_at   timestamptz     [not null, default: `now()`]
+  updated_at     timestamptz     [not null]
+
+  indexes {
+    (student_id, evaluation_id) [unique]
+  }
+}
+
+Table grades {
+  id            uuid         [pk, default: `gen_random_uuid()`]
+  evaluation_id uuid         [not null, ref: > evaluations.id]
+  student_id    uuid         [not null, ref: > students.id]
+  score         decimal(5,2) [not null]
+  graded_by     uuid         [not null, ref: > users.id, note: 'Teacher/admin who graded']
+  graded_at     timestamptz  [not null, default: `now()`]
+  created_at    timestamptz  [not null, default: `now()`]
+  updated_at    timestamptz  [not null]
+
+  indexes {
+    (evaluation_id, student_id) [unique]
+  }
+
+  Note: 'Trigger fn_generate_academic_record fires AFTER INSERT/UPDATE'
+}
+
+Table academic_records {
+  id                 uuid         [pk, default: `gen_random_uuid()`]
+  student_id         uuid         [not null, ref: > students.id]
+  group_id           uuid         [not null, ref: > groups.id]
+  academic_period_id uuid         [not null, ref: > academic_periods.id]
+  final_grade        decimal(5,2) [not null, note: 'Weighted: SUM(score*weight/100)']
+  passed             boolean      [not null, note: 'true if final_grade >= passing_grade']
+  attempt_number     smallint     [not null, default: 1]
+  generated_at       timestamptz  [not null, default: `now()`]
+
+  indexes {
+    (student_id, group_id) [unique]
+  }
+
+  Note: 'Auto-generated by DB trigger when all evaluations are graded'
+}
+
+Table certification_criteria {
+  id                    uuid              [pk, default: `gen_random_uuid()`]
+  certification_type    CertificationType [not null]
+  career_id             uuid              [ref: > careers.id, note: 'NULL = global criteria']
+  min_grade             decimal(5,2)      [not null, default: 60.00]
+  validity_months       smallint          [not null]
+  min_credits           smallint
+  require_all_mandatory boolean           [not null, default: false]
+  description           varchar(255)
+  created_at            timestamptz       [not null, default: `now()`]
+  updated_at            timestamptz       [not null]
+
+  indexes {
+    (certification_type, career_id) [unique]
+  }
+}
+
+Table certifications {
+  id                 uuid                [pk, default: `gen_random_uuid()`]
+  student_id         uuid                [not null, ref: > students.id]
+  career_id          uuid                [ref: > careers.id]
+  certification_type CertificationType   [not null]
+  status             CertificationStatus [not null, default: 'ACTIVE']
+  verification_code  varchar(100)        [not null, unique]
+  document_hash      varchar(64)         [not null, note: 'SHA-256']
+  issued_by          uuid                [not null, ref: > users.id]
+  issued_at          timestamptz         [not null, default: `now()`]
+  expires_at         timestamptz
+  revoked_at         timestamptz
+  revoked_reason     varchar(500)
+  created_at         timestamptz         [not null, default: `now()`]
+}
+
+Table audit_logs {
+  id           uuid        [pk, default: `gen_random_uuid()`]
+  entity_type  varchar(50) [not null]
+  entity_id    uuid        [not null]
+  action       AuditAction [not null]
+  performed_by uuid        [ref: > users.id]
+  old_values   jsonb
+  new_values   jsonb
+  ip_address   varchar(45)
+  created_at   timestamptz [not null, default: `now()`]
+
+  indexes {
+    (entity_type, entity_id) [name: 'idx_audit_entity']
+    created_at [name: 'idx_audit_created_at']
+  }
+
+  Note: 'Append-only — no updates or deletes'
+}
+
+Table topics {
+  id          uuid         [pk, default: `gen_random_uuid()`]
+  group_id    uuid         [not null, ref: > groups.id]
+  title       varchar(200) [not null]
+  description varchar(500)
+  sort_order  smallint     [not null]
+  week_number smallint     [note: 'Maps topic to week of period. Dates auto-computed from period.start_date + (N-1)*7']
+  created_at  timestamptz  [not null, default: `now()`]
+  updated_at  timestamptz  [not null]
+
+  indexes {
+    (group_id, sort_order) [unique]
+  }
+}
+
+Table content_items {
+  id         uuid            [pk, default: `gen_random_uuid()`]
+  topic_id   uuid            [not null, ref: > topics.id, note: 'ON DELETE CASCADE']
+  title      varchar(200)    [not null]
+  type       ContentItemType [not null]
+  content    text            [not null]
+  sort_order smallint        [not null]
+  created_at timestamptz     [not null, default: `now()`]
+  updated_at timestamptz     [not null]
+
+  indexes {
+    (topic_id, sort_order) [unique]
+  }
+}
+
+Table system_settings {
+  id                          uuid          [pk, default: `gen_random_uuid()`]
+  passing_grade               decimal(5,2)  [not null, default: 60.00, note: 'Min grade to pass (0-100)']
+  max_subjects_per_enrollment smallint      [not null, default: 7, note: 'Max subjects per student per period']
+  max_evaluation_weight       decimal(5,2)  [not null, default: 100.00, note: 'Max sum of eval weights per group']
+  at_risk_threshold           smallint      [not null, default: 3, note: 'Failed subjects for AT_RISK status']
+  credit_cost                 decimal(10,2) [not null, default: 0, note: 'Global rate per credit for tuition calculation']
+  inscription_fee             decimal(10,2) [not null, default: 5000, note: 'Auto fee on first group enrollment per period (requires active inscription fee concept); 0 disables']
+  cycles_per_year             smallint      [not null, default: 2, note: 'Academic cycles per calendar year; months per cycle = 12 / cycles_per_year']
+  min_students_to_open_group  smallint      [not null, default: 0, note: 'Min enrolled students to treat group as «open». 0 = off; under-min groups may allow tutoría requests after enrollment closes']
+  max_credits_per_subject     smallint      [not null, default: 24, note: 'Maximum credits allowed per subject (catalog validation)']
+  signature_image_1           text          [note: 'Base64 or URL for first signature image on certificates']
+  signature_name_1            varchar(200)  [note: 'Name below first signature']
+  signature_title_1           varchar(200)  [note: 'Title/role below first signature']
+  signature_image_2           text          [note: 'Base64 or URL for second signature image']
+  signature_name_2            varchar(200)  [note: 'Name below second signature']
+  signature_title_2           varchar(200)  [note: 'Title/role below second signature']
+  updated_at                  timestamptz   [not null]
+  updated_by                  uuid          [ref: > users.id]
+}
+
+Table tuition_group_requests {
+  id                  uuid                  [pk, default: `gen_random_uuid()`]
+  student_id          uuid                  [not null, ref: > students.id, note: 'ON DELETE CASCADE']
+  academic_period_id  uuid                  [not null, ref: > academic_periods.id, note: 'ON DELETE CASCADE']
+  subject_id          uuid                  [not null, ref: > subjects.id, note: 'ON DELETE CASCADE']
+  group_id            uuid                  [not null, ref: > groups.id, note: 'ON DELETE CASCADE']
+  status              TuitionRequestStatus  [not null, default: 'PENDING']
+  student_note        varchar(500)          [note: 'Optional message from student']
+  admin_note          varchar(500)          [note: 'Optional admin response']
+  created_at          timestamptz           [not null, default: `now()`]
+  updated_at          timestamptz           [not null]
+
+  indexes {
+    (student_id, academic_period_id) [name: 'idx_tuition_req_student_period']
+    status [name: 'idx_tuition_req_status']
+  }
+
+  Note: 'After enrollment closes, students may request tutoría for groups below min_students_to_open_group (see system_settings).'
+}
+
+Table notifications {
+  id                uuid             [pk, default: `gen_random_uuid()`]
+  user_id           uuid             [not null, ref: > users.id]
+  title             varchar(200)     [not null]
+  message           varchar(500)     [not null]
+  type              NotificationType [not null]
+  is_read           boolean          [not null, default: false]
+  related_entity    varchar(50)
+  related_entity_id uuid
+  created_at        timestamptz      [not null, default: `now()`]
+
+  indexes {
+    (user_id, is_read) [name: 'idx_notification_user_read']
+    created_at [name: 'idx_notification_created_at']
+  }
+}
+
+Table fee_concepts {
+  id          uuid         [pk, default: `gen_random_uuid()`]
+  name        varchar(200) [not null]
+  amount      decimal(10,2) [not null]
+  description varchar(500)
+  is_active   boolean      [not null, default: true]
+  created_at  timestamptz  [not null, default: `now()`]
+  updated_at  timestamptz  [not null]
+}
+
+Table student_fees {
+  id             uuid      [pk, default: `gen_random_uuid()`]
+  student_id     uuid      [not null, ref: > students.id]
+  fee_concept_id uuid      [not null, ref: > fee_concepts.id]
+  period_id      uuid      [not null, ref: > academic_periods.id]
+  amount         decimal(10,2) [not null]
+  due_date       date      [not null]
+  status         FeeStatus [not null, default: 'PENDING']
+  installment_number smallint [note: 'Monthly installment index (mensualidades); null for other charges']
+  created_at     timestamptz [not null, default: `now()`]
+  updated_at     timestamptz [not null]
+}
+
+Table payments {
+  id             uuid          [pk, default: `gen_random_uuid()`]
+  student_fee_id uuid          [not null, ref: > student_fees.id]
+  amount         decimal(10,2) [not null]
+  method         PaymentMethod [not null]
+  reference_code varchar(50)   [not null, unique]
+  paid_at        timestamptz   [not null, default: `now()`]
+  created_at     timestamptz   [not null, default: `now()`]
+}
+
+Table announcements {
+  id           uuid                 [pk, default: `gen_random_uuid()`]
+  author_id    uuid                 [not null, ref: > users.id]
+  title        varchar(200)         [not null]
+  body         text                 [not null]
+  audience     AnnouncementAudience [not null]
+  target_id    uuid                 [note: 'careerId or groupId depending on audience']
+  published_at timestamptz          [not null, default: `now()`]
+  created_at   timestamptz          [not null, default: `now()`]
+  updated_at   timestamptz          [not null]
+
+  indexes {
+    (audience, target_id) [name: 'idx_announcement_audience']
+  }
+}
+
+Table calendar_events {
+  id          uuid              [pk, default: `gen_random_uuid()`]
+  title       varchar(200)      [not null]
+  description varchar(500)
+  event_type  CalendarEventType [not null]
+  start_date  date              [not null]
+  end_date    date              [not null]
+  period_id   uuid              [ref: > academic_periods.id]
+  created_at  timestamptz       [not null, default: `now()`]
+  updated_at  timestamptz       [not null]
+}
+
+Table departments {
+  id         uuid        [pk, default: `gen_random_uuid()`]
+  name       varchar(150) [not null, unique, note: 'Seeded catalogue — 21 academic departments']
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Read-only catalogue. teachers.department is a varchar FK-by-value (not a hard foreign key) for historical stability.'
+}
+
+Table syllabus_topics {
+  id          uuid         [pk, default: `gen_random_uuid()`]
+  subject_id  uuid         [not null, ref: > subjects.id, note: 'ON DELETE CASCADE']
+  sort_order  smallint     [not null]
+  title       varchar(200) [not null]
+  description varchar(1000)
+  created_at  timestamptz  [not null, default: `now()`]
+  updated_at  timestamptz  [not null]
+
+  indexes {
+    (subject_id, sort_order) [unique]
+  }
+
+  Note: 'Subject-level curriculum template. Each topic is a standardized unit of content to be covered across all groups of that subject.'
+}
+
+Table group_topic_progress {
+  id          uuid        [pk, default: `gen_random_uuid()`]
+  group_id    uuid        [not null, ref: > groups.id, note: 'ON DELETE CASCADE']
+  topic_id    uuid        [not null, ref: > syllabus_topics.id, note: 'ON DELETE CASCADE']
+  teacher_id  uuid        [not null, ref: > teachers.id]
+  covered_at  date        [not null]
+  week_number smallint    [not null]
+  notes       varchar(1000)
+  created_at  timestamptz [not null, default: `now()`]
+  updated_at  timestamptz [not null]
+
+  indexes {
+    (group_id, topic_id) [unique]
+  }
+
+  Note: 'Teacher marks each syllabus topic as covered for a specific group, with week number and optional notes.'
+}
+
+Table admission_document_rejection_reasons {
+  id         serial      [pk, note: 'autoincrement; migration 20260421173000 seeds ids 1–9']
+  code       varchar(64) [unique, note: 'Stable API key; nullable allowed']
+  label      varchar(300) [not null]
+  sort_order int         [not null, default: 0]
+  is_active  boolean     [not null, default: true]
+
+  Note: '''
+    Seeded rows (id, code): 1 INVALID_DOCUMENT, 2 DIPLOMA_NOT_LEGALIZED,
+    3 ILLEGIBLE_INCOMPLETE, 4 EXPIRED_NOT_VALID, 5 WRONG_FILE_TYPE,
+    6 DATA_MISMATCH, 7 PHOTO_SPECS, 8 DIPLOMA_NOT_ALIGNED, 9 OTHER.
+    admission_documents.rejection_reason_id → FK; rejection_reason = optional detail (required for OTHER).
+  '''
+}
+
+Table admission_documents {
+  id                  uuid                     [pk, default: `gen_random_uuid()`]
+  student_id          uuid                     [not null, ref: > students.id, note: 'ON DELETE CASCADE']
+  type                AdmissionDocumentType    [not null]
+  file_key            varchar(500)             [not null]
+  file_name           varchar(255)             [not null]
+  file_size           int                      [not null]
+  file_mime_type      varchar(100)             [not null]
+  status              AdmissionDocumentStatus  [not null, default: 'PENDING']
+  reviewed_by         uuid                     [ref: > users.id]
+  reviewed_at         timestamptz
+  rejection_reason_id int                      [null, ref: > admission_document_rejection_reasons.id, note: 'ON DELETE SET NULL']
+  rejection_reason    varchar(500)             [null, note: 'Extra detail; required when catalog code is OTHER; legacy free-text only if id null']
+  uploaded_at         timestamptz              [not null, default: `now()`]
+  updated_at          timestamptz              [not null]
+
+  indexes {
+    student_id [name: 'idx_admission_docs_student']
+    status [name: 'idx_admission_docs_status']
+  }
+
+  Note: 'Scanned documents uploaded during student self-registration. Required types (ID_CARD, HIGH_SCHOOL_DIPLOMA, PHOTO) must all be APPROVED before admin can activate the student account.'
+}

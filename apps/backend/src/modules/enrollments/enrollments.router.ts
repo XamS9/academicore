@@ -1,0 +1,73 @@
+import { Router } from "express";
+import { authenticate, authorize } from "../../middleware/auth.middleware";
+import { enrollmentsService } from "./enrollments.service";
+import { EnrollmentsController } from "./enrollments.controller";
+
+export const enrollmentsRouter = Router();
+const controller = new EnrollmentsController(enrollmentsService);
+
+enrollmentsRouter.post(
+  "/enroll",
+  authenticate,
+  authorize("ADMIN", "STUDENT"),
+  controller.enrollStudent,
+);
+enrollmentsRouter.get(
+  "/available-groups",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findAvailableGroups,
+);
+enrollmentsRouter.get(
+  "/tuition-request-options",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findTuitionRequestOptions,
+);
+enrollmentsRouter.post(
+  "/tuition-request",
+  authenticate,
+  authorize("STUDENT"),
+  controller.createTuitionRequest,
+);
+enrollmentsRouter.get(
+  "/tuition-requests",
+  authenticate,
+  authorize("ADMIN"),
+  controller.listTuitionRequestsAdmin,
+);
+enrollmentsRouter.get(
+  "/me/schedule",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findMySchedule,
+);
+enrollmentsRouter.get(
+  "/me/nav-state",
+  authenticate,
+  authorize("STUDENT"),
+  controller.getMyNavState,
+);
+enrollmentsRouter.get(
+  "/me",
+  authenticate,
+  authorize("STUDENT"),
+  controller.findMine,
+);
+enrollmentsRouter.get(
+  "/student/:studentId",
+  authenticate,
+  controller.findByStudent,
+);
+enrollmentsRouter.get(
+  "/period/:periodId",
+  authenticate,
+  authorize("ADMIN"),
+  controller.findByPeriod,
+);
+enrollmentsRouter.patch(
+  "/drop",
+  authenticate,
+  authorize("ADMIN", "STUDENT"),
+  controller.dropSubject,
+);
